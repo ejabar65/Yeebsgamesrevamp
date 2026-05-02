@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>1v1.lol</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: black; }
+        .webgl-content { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <script src="https://cdn.jsdelivr.net/gh/n-101-1/1@main/UnityProgress.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/n-101-1/1@main/2.7.js"></script>
+    <script type="text/javascript">
+      var gameInstance;
+      window.onload = function () {
+        gameInstance = UnityLoader.instantiate("gameContainer", "https://cdn.jsdelivr.net/gh/n-101-1/1@main/2.7.json", {
+          onProgress: UnityProgress,
+          Module: {
+            onRuntimeInitialized: function () {
+              UnityProgress(gameInstance, "complete");
+            },
+          },
+        });
+      };
+    </script>
+    <div class="webgl-content">
+      <div id="gameContainer" style="width: 100%; height: 100%; margin: 0px; padding: 0px; border: 0px; position: relative; background: rgb(0, 0, 0);"></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/gh/n-101-1/1@main/1firebase-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/n-101-1/1@main/1firebase-auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/n-101-1/1@main/1firebase-firestore.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/n-101-1/1@main/1firebase.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/n-101-1/1@main/1login.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/gh/n-101-1/1@main/1firestore.js"></script>
+    <script>
+      function initializeFireBase() { console.log("Firebase init placeholder"); }
+      initializeFireBase();
+    </script>
+</body>
+</html>
