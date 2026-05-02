@@ -8,17 +8,25 @@ service cloud.firestore {
 
     // --- Helpers ---
     function isSignedIn() {
-      return request.auth != null && request.auth.token.email_verified == true;
+      return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
+    // Check if the current user IS the admin 'Yeebs'
     function isAdmin() {
       return isSignedIn() && (
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        request.auth.token.email == 'therealyeebs@gmail.com'
+        // Yeebs document must exist and have the current user's UID
+        exists(/databases/$(database)/documents/users/Yeebs) &&
+        get(/databases/$(database)/documents/users/Yeebs).data.uid == request.auth.uid
+      );
+    }
+
+    function isOwner(username) {
+      return isSignedIn() && (
+        (exists(/databases/$(database)/documents/users/$(username)) && 
+         get(/databases/$(database)/documents/users/$(username)).data.uid == request.auth.uid) ||
+        // For creation, if they are claiming it
+        (!exists(/databases/$(database)/documents/users/$(username)) && 
+         request.resource.data.uid == request.auth.uid)
       );
     }
 
@@ -36,9 +44,9 @@ service cloud.firestore {
 
     // --- Entity Validations ---
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'email']) &&
+      return data.keys().hasAll(['uid', 'username']) &&
              data.uid is string && data.uid.size() <= 128 &&
-             data.email is string && data.email.size() <= 256 &&
+             data.username is string && data.username.size() <= 50 &&
              (data.get('favoriteGameIds', []) is list) &&
              data.uid == request.auth.uid;
     }
@@ -55,31 +63,24 @@ service cloud.firestore {
 
     // --- Collections ---
 
-    match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin(); // Only admins can browse all users
-      allow create: if isOwner(userId) && isValidUser(incoming());
-      allow update: if isOwner(userId) && isValidUser(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'favoriteGameIds'])
+    match /users/{username} {
+      allow get: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && !exists(/databases/$(database)/documents/users/$(username)) && isValidUser(incoming());
+      allow update: if isSignedIn() && existing().uid == request.auth.uid && isValidUser(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds'])
       );
       allow delete: if isAdmin();
     }
 
     match /games/{gameId} {
-      allow read: if true; // Publicly readable
+      allow read: if true;
       allow create: if isAdmin() && isValidGame(incoming());
       allow update: if (isAdmin() && isValidGame(incoming())) || (
-        // Public action: Incremental updates for stats
-        // No longer requiring isSignedIn() for play counts to allow guest tracking
         isValidGame(incoming()) && 
         incoming().diff(existing()).affectedKeys().hasOnly(['playCount', 'rating'])
       );
       allow delete: if isAdmin();
-    }
-
-    match /admins/{adminId} {
-      allow read: if isSignedIn();
-      allow write: if false; // Only manageable via Firebase Console or special script
     }
   }
 }

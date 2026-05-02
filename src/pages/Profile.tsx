@@ -7,7 +7,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import GameCard from '../components/GameCard';
 
 export default function Profile() {
-  const { user, games, favorites, authLoading, toggleFavorite } = useGames();
+  const { user, games, favorites, authLoading, toggleFavorite, logout } = useGames();
   const navigate = useNavigate();
 
   if (authLoading) {
@@ -25,7 +25,7 @@ export default function Profile() {
           <User className="w-12 h-12 text-primary" />
         </div>
         <h1 className="text-3xl font-display font-black uppercase mb-4">Access Denied</h1>
-        <p className="text-gray-400 mb-8 max-w-sm">Please login to view your profile and saved inventory.</p>
+        <p className="text-gray-400 mb-8 max-w-sm">Please login through the system portal to view your custom inventory.</p>
         <button 
           onClick={() => navigate('/')}
           className="px-8 py-3 rounded-xl bg-primary text-dark-surface font-black uppercase tracking-widest hover:bg-white transition-all shadow-[0_0_20px_rgba(250,204,21,0.2)]"
@@ -39,7 +39,7 @@ export default function Profile() {
   const savedGames = games.filter(game => favorites.includes(game.id));
 
   const handleLogout = async () => {
-    await signOut(auth);
+    await logout();
     navigate('/');
   };
 
@@ -52,14 +52,16 @@ export default function Profile() {
             <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
             <img 
               src={user.photoURL || ''} 
-              alt={user.displayName || ''} 
+              alt={user.username} 
               className="w-32 h-32 rounded-full border-4 border-primary/20 relative z-10"
             />
           </div>
           
           <div className="flex-1 text-center md:text-left">
-            <h1 className="text-4xl font-display font-black uppercase mb-2">{user.displayName}</h1>
-            <p className="text-gray-400 mb-6">{user.email}</p>
+            <h1 className="text-4xl font-display font-black uppercase mb-2">@{user.username}</h1>
+            <p className="text-gray-400 mb-6 font-mono text-xs uppercase tracking-widest">
+              {user.isAdmin ? 'System Administrator' : 'Portal User'} • ID: {user.uid.slice(0, 8)}
+            </p>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
               <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
                 <Package className="w-4 h-4 text-primary" />
@@ -77,7 +79,7 @@ export default function Profile() {
             className="px-6 py-3 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 font-bold uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2"
           >
             <LogOut className="w-4 h-4" />
-            Sign Out
+            Log Out
           </button>
         </div>
 

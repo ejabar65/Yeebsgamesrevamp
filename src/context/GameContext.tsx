@@ -13,8 +13,17 @@ import {
   collection,
   onSnapshot,
   query,
-  orderBy
+  orderBy,
+  signInAnonymously,
+  signOut
 } from '../lib/firebase';
+
+export interface AuthUser {
+  uid: string;
+  username: string;
+  isAdmin: boolean;
+  photoURL?: string;
+}
 
 enum OperationType {
   CREATE = 'create',
@@ -58,12 +67,14 @@ interface GameContextType {
   favorites: string[];
   searchQuery: string;
   sortBy: string;
-  user: User | null;
+  user: AuthUser | null;
   setSearchQuery: (query: string) => void;
   setSortBy: (sort: string) => void;
   toggleFavorite: (gameId: string) => void;
   isFavorite: (gameId: string) => boolean;
   refreshGames: () => Promise<void>;
+  login: (username: string) => Promise<boolean>;
+  logout: () => Promise<void>;
   loading: boolean;
   authLoading: boolean;
 }
@@ -76,50 +87,100 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Sync favorites with Firestore if logged in
+  // Load username from local storage on mount
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      setAuthLoading(false);
+    const savedUsername = localStorage.getItem('yeebsgames_username');
+    
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser && savedUsername) {
+        // Restore session
+        const username = savedUsername;
+        setUser({
+          uid: firebaseUser.uid,
+          username: username,
+          isAdmin: username.toLowerCase() === 'yeebs',
+          photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
+        });
 
-      if (currentUser) {
-        // Load favorites from Firestore
-        const userRef = doc(db, 'users', currentUser.uid);
+        // Load favorites
+        const userRef = doc(db, 'users', username);
         try {
           const userDoc = await getDoc(userRef);
           if (userDoc.exists()) {
             setFavorites(userDoc.data().favoriteGameIds || []);
-          } else {
-            // Initialize user doc
-            await setDoc(userRef, {
-              uid: currentUser.uid,
-              email: currentUser.email,
-              displayName: currentUser.displayName,
-              photoURL: currentUser.photoURL,
-              favoriteGameIds: [],
-              createdAt: new Date().toISOString()
-            });
-            setFavorites([]);
           }
-        } catch (error) {
-          console.error("Error loading user profile", error);
+        } catch (e) {
+          console.error("Error loading profile", e);
         }
-      } else {
-        // Load favorites from local storage if not logged in
+      } else if (!firebaseUser && !savedUsername) {
+        // Guest mode
         const saved = localStorage.getItem('yeebsgames_favorites');
-        if (saved) {
-          setFavorites(JSON.parse(saved));
-        } else {
-          setFavorites([]);
-        }
+        if (saved) setFavorites(JSON.parse(saved));
       }
+      setAuthLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  const login = async (username: string): Promise<boolean> => {
+    try {
+      const cleanUsername = username.trim();
+      if (!cleanUsername) return false;
+
+      // Sign in anonymously if not already
+      let firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        const credential = await signInAnonymously(auth);
+        firebaseUser = credential.user;
+      }
+
+      const userRef = doc(db, 'users', cleanUsername);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        if (data.uid !== firebaseUser.uid) {
+          // Username taken by another device/session
+          // In a "username-only" system, we might allow it if we don't care about security,
+          // but "used once type system" suggests ownership.
+          // However, to keep it simple, we'll allow it but link the UID.
+          // OR: reject it. Let's reject if it's already owned by a DIFFERENT UID.
+          alert('Username already claimed by another user.');
+          return false;
+        }
+      } else {
+        // Register new username
+        await setDoc(userRef, {
+          username: cleanUsername,
+          uid: firebaseUser.uid,
+          favoriteGameIds: favorites, // Carry over local favorites
+          createdAt: new Date().toISOString()
+        });
+      }
+
+      setUser({
+        uid: firebaseUser.uid,
+        username: cleanUsername,
+        isAdmin: cleanUsername.toLowerCase() === 'yeebs',
+        photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`
+      });
+      localStorage.setItem('yeebsgames_username', cleanUsername);
+      return true;
+    } catch (e) {
+      console.error("Login failed", e);
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    localStorage.removeItem('yeebsgames_username');
+    setUser(null);
+    setFavorites([]);
+  };
 
   const initGames = async () => {
     setLoading(true);
@@ -149,11 +210,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setFavorites(next);
 
     if (user) {
-      const userRef = doc(db, 'users', user.uid);
+      const userRef = doc(db, 'users', user.username);
       try {
         await updateDoc(userRef, { favoriteGameIds: next });
       } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+        handleFirestoreError(error, OperationType.UPDATE, `users/${user.username}`);
       }
     } else {
       localStorage.setItem('yeebsgames_favorites', JSON.stringify(next));
@@ -173,6 +234,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       toggleFavorite, 
       isFavorite,
       refreshGames,
+      login,
+      logout,
       user,
       loading,
       authLoading

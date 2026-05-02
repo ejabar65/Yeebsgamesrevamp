@@ -7,8 +7,6 @@ import { useGames } from '../context/GameContext';
 
 export default function Admin() {
   const { games, refreshGames, user, authLoading, setSearchQuery, setSortBy } = useGames();
-  const [password, setPassword] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -21,27 +19,6 @@ export default function Admin() {
     htmlBlock: '',
     url: ''
   });
-
-  // Simple admin check: either password or being the specific user
-  const isAdminUser = user?.email === 'therealyeebs@gmail.com';
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === '$#GS29gs67' || isAdminUser) {
-      setIsAuthenticated(true);
-    } else {
-      alert('Invalid password');
-    }
-  };
-
-  const handleFirebaseAuth = async () => {
-    try {
-      const { auth, googleProvider, signInWithPopup } = await import('../lib/firebase');
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Firebase Sign-In failed", error);
-    }
-  };
 
   const handleEdit = (game: any) => {
     setEditingId(game.id);
@@ -71,8 +48,8 @@ export default function Admin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
-      alert('You must be signed in with Google to perform Firestore writes. Please click "Sign in with Google" first.');
+    if (!user?.isAdmin) {
+      alert('Access forbidden. Required clearance missing.');
       return;
     }
 
@@ -139,48 +116,35 @@ export default function Admin() {
     );
   }
 
-  if (!isAuthenticated && !isAdminUser) {
+  if (!user?.isAdmin) {
     return (
       <div className="min-h-screen pt-32 px-4 flex items-center justify-center">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md p-8 glass rounded-3xl"
+          className="w-full max-w-md p-8 glass rounded-3xl text-center"
         >
           <div className="flex flex-col items-center mb-8">
-            <div className="p-4 rounded-2xl bg-primary/20 mb-4">
-              <Shield className="w-8 h-8 text-primary" />
+            <div className="p-4 rounded-2xl bg-red-500/10 mb-4 border border-red-500/20">
+              <Shield className="w-8 h-8 text-red-500" />
             </div>
-            <h1 className="text-2xl font-display font-bold">Admin Portal</h1>
-            <p className="text-gray-400 text-sm text-center">Use admin credentials or sign in with an authorized Google account</p>
+            <h1 className="text-2xl font-display font-bold">Access Denied</h1>
+            <p className="text-gray-400 text-sm mt-4 leading-relaxed">
+              This portal is reserved for authorized supervisors. 
+              {user ? (
+                <span> You are currently logged in as <span className="text-white font-bold">{user.username}</span>.</span>
+              ) : (
+                <span> Please login through the system portal.</span>
+              )}
+            </p>
           </div>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold uppercase text-gray-400 mb-2 px-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-hidden focus:border-primary transition-all"
-                placeholder="••••••••"
-              />
-            </div>
-            <button className="w-full py-4 rounded-xl bg-primary text-dark-surface font-display font-black hover:bg-white transition-all shadow-[0_0_20px_rgba(250,204,21,0.2)]">
-              ACCESS DASHBOARD
-            </button>
-          </form>
-
-          <div className="mt-8 pt-8 border-t border-white/10 flex flex-col items-center gap-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Or bypass with Google</p>
-            <button 
-              onClick={handleFirebaseAuth}
-              className="flex items-center gap-3 px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all group"
-            >
-              <Globe className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-              <span className="font-bold text-sm tracking-tight text-white">Sign in with Google</span>
-            </button>
-          </div>
+          
+          <Link 
+            to="/" 
+            className="inline-flex w-full py-4 rounded-xl bg-primary text-dark-surface font-display font-black hover:bg-white transition-all shadow-[0_0_20px_rgba(250,204,21,0.2)] justify-center"
+          >
+            RETURN TO BASE
+          </Link>
         </motion.div>
       </div>
     );
@@ -199,8 +163,8 @@ export default function Admin() {
           <div className="flex items-center gap-4">
             {user && (
               <div className="hidden md:flex flex-col items-end">
-                <span className="text-xs font-bold text-white">{user.displayName || user.email}</span>
-                <span className="text-[10px] uppercase font-black tracking-tighter text-primary">Authorized Admin</span>
+                <span className="text-xs font-bold text-white">@{user.username}</span>
+                <span className="text-[10px] uppercase font-black tracking-tighter text-primary">Master Controller</span>
               </div>
             )}
             <div className={`p-3 rounded-xl border transition-all ${editingId ? 'bg-orange-500/10 border-orange-500/20 text-orange-500' : 'bg-primary/10 border-primary/20 text-primary'}`}>
@@ -225,22 +189,15 @@ export default function Admin() {
           )}
         </AnimatePresence>
 
-        {!user && (
-          <div className="mb-6 p-6 rounded-3xl bg-orange-500/10 border border-orange-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
+        {!user?.isAdmin && (
+          <div className="mb-6 p-6 rounded-3xl bg-red-500/10 border border-red-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <AlertCircle className="w-6 h-6 text-orange-500" />
+              <AlertCircle className="w-6 h-6 text-red-500" />
               <div>
-                <p className="font-bold text-orange-500 uppercase text-xs tracking-widest">Firebase Session Required</p>
-                <p className="text-[10px] text-orange-500/70 uppercase font-bold">You must be signed in with Google to perform updates.</p>
+                <p className="font-bold text-red-500 uppercase text-xs tracking-widest">Unauthorized Access</p>
+                <p className="text-[10px] text-red-500/70 uppercase font-bold">You are attempting to modify the library without admin privileges.</p>
               </div>
             </div>
-            <button 
-              type="button"
-              onClick={handleFirebaseAuth}
-              className="px-6 py-2.5 rounded-xl bg-orange-500 text-white font-bold text-xs uppercase tracking-widest hover:bg-white hover:text-orange-500 transition-all shadow-lg"
-            >
-              Link Google Account
-            </button>
           </div>
         )}
 

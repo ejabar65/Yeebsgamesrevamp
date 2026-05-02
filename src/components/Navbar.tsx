@@ -1,29 +1,44 @@
-import React from 'react';
-import { Bug, Search, Trophy, TrendingUp, Home, LogIn, LogOut, User as UserIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bug, Search, Trophy, TrendingUp, Home, LogIn, LogOut, User as UserIcon, X, Shield, Zap } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGames } from '../context/GameContext';
-import { auth, googleProvider, signInWithPopup, signOut } from '../lib/firebase';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { searchQuery, setSearchQuery, setSortBy, user } = useGames();
+  const { searchQuery, setSearchQuery, setSortBy, user, login, logout } = useGames();
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState(''); // Only for Yeebs
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Login failed", error);
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    // Simple logic: If Yeebs, check password
+    // Other users can just claim a name
+    if (username.toLowerCase() === 'yeebs') {
+      if (password !== '$#GS29gs67') {
+        alert('Invalid password for admin account.');
+        setIsSubmitting(false);
+        return;
+      }
     }
+
+    const success = await login(username);
+    if (success) {
+      setShowLoginModal(false);
+      setUsername('');
+      setPassword('');
+    }
+    setIsSubmitting(false);
   };
 
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      navigate('/');
-    } catch (error) {
-      console.error("Logout failed", error);
-    }
+    await logout();
+    navigate('/');
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,7 +113,7 @@ export default function Navbar() {
               className="w-9 h-9 rounded-full overflow-hidden border border-white/10 hover:border-primary transition-all group/profile"
               title="Profile"
             >
-              <img src={user.photoURL || ''} alt={user.displayName || 'User'} className="w-full h-full object-cover group-hover/profile:scale-110 transition-transform" />
+              <img src={user.photoURL || ''} alt={user.username || 'User'} className="w-full h-full object-cover group-hover/profile:scale-110 transition-transform" />
             </Link>
             <button 
               onClick={handleLogout}
@@ -110,7 +125,7 @@ export default function Navbar() {
           </div>
         ) : (
           <button 
-            onClick={handleLogin}
+            onClick={() => setShowLoginModal(true)}
             className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary text-dark-surface font-bold text-xs uppercase tracking-widest hover:bg-white transition-all shadow-[0_0_20px_rgba(250,204,21,0.2)]"
           >
             <LogIn className="w-4 h-4" />
@@ -118,6 +133,90 @@ export default function Navbar() {
           </button>
         )}
       </div>
+
+      <AnimatePresence>
+        {showLoginModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowLoginModal(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-md glass p-8 rounded-3xl border border-white/10"
+            >
+              <button 
+                onClick={() => setShowLoginModal(false)}
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="mb-8 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 border border-primary/20">
+                  <UserIcon className="w-8 h-8 text-primary" />
+                </div>
+                <h2 className="text-2xl font-display font-black uppercase tracking-tight">Access <span className="text-primary">Portal</span></h2>
+                <p className="text-gray-400 text-sm mt-1">Claim your username to save favorites</p>
+              </div>
+
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-gray-500 px-1 tracking-widest">Username</label>
+                  <input 
+                    autoFocus
+                    required
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary focus:outline-hidden transition-all text-sm"
+                    placeholder="Enter unique name..."
+                  />
+                </div>
+
+                {username.toLowerCase() === 'yeebs' && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-2"
+                  >
+                    <label className="text-[10px] font-bold uppercase text-gray-500 px-1 tracking-widest flex items-center gap-2">
+                      <Shield className="w-3 h-3 text-primary" /> Admin Key
+                    </label>
+                    <input 
+                      required
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-primary/50 focus:border-primary focus:outline-hidden transition-all text-sm"
+                      placeholder="Enter master password..."
+                    />
+                  </motion.div>
+                )}
+
+                <button 
+                  disabled={isSubmitting}
+                  className="w-full py-4 rounded-xl bg-primary text-dark-surface font-display font-black text-sm uppercase tracking-widest hover:bg-white transition-all disabled:opacity-50 mt-4 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <div className="w-4 h-4 border-2 border-dark-surface border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4 fill-current" />
+                      INITIALIZE SESSION
+                    </>
+                  )}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }
