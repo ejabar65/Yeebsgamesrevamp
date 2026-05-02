@@ -20,15 +20,12 @@ export default function GameGrid() {
     })
     .sort((a, b) => {
       if (sortBy === 'trending') {
-        // Mock trending logic for now (e.g. alphabetical reverse or just mixed)
-        return b.title.length - a.title.length;
+        return (b.playCount || 0) - (a.playCount || 0);
       }
       if (sortBy === 'top') {
-        // Mock top rated logic (alphabetical)
-        return a.title.localeCompare(b.title);
+        return (b.rating || 0) - (a.rating || 0);
       }
-      // Default: Newest (index-based since we don't have dates in current schema)
-      return 0; 
+      return 0;
     });
 
   const categories = ['All', 'Favorites', ...new Set(games.map(g => g.category))];

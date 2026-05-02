@@ -8,14 +8,21 @@ import { useGames } from '../context/GameContext';
 export default function Home() {
   const navigate = useNavigate();
   const { games } = useGames();
+  const [onlineCount, setOnlineCount] = React.useState(1200 + Math.floor(Math.random() * 300));
 
-  const activePlayers = Math.floor(Math.random() * (1500 - 1200 + 1) + 1200);
-  const categoriesCount = new Set(games.map(g => g.category)).size;
-  const categories = games.reduce((acc: {[key: string]: number}, game) => {
-    acc[game.category] = (acc[game.category] || 0) + 1;
-    return acc;
-  }, {});
-  const topGenre = (Object.entries(categories) as [string, number][]).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Gaming';
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setOnlineCount(prev => {
+        const change = Math.floor(Math.random() * 7) - 3;
+        return Math.max(800, prev + change);
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const totalPlays = games.reduce((acc, game) => acc + (game.playCount || 0), 0);
+  const trendingGame = [...games].sort((a, b) => (b.playCount || 0) - (a.playCount || 0))[0]?.title || 'None';
+  const topRatedGame = [...games].sort((a, b) => (b.rating || 0) - (a.rating || 0))[0];
 
   return (
     <main className="pt-24 pb-12">
@@ -31,8 +38,8 @@ export default function Home() {
               animate={{ opacity: 1, scale: 1 }}
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-[0.2em] mb-8 backdrop-blur-md"
             >
-              <Zap className="w-3 h-3 fill-current" />
-              MEXICAN MOTH PROTOCOL ACTIVE
+              <Zap className="w-3 h-3 fill-current animate-pulse" />
+              SYSTEM ONLINE • {onlineCount.toLocaleString()} PLAYERS ACTIVE
             </motion.div>
             
             <motion.div
@@ -86,21 +93,28 @@ export default function Home() {
       {/* Real Stats Section */}
       <section className="px-4 md:px-8 mb-12 grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Cloud Database', value: games.length, icon: Sparkles, color: 'text-primary' },
-          { label: 'Active Users', value: activePlayers, icon: Zap, color: 'text-orange-500' },
-          { label: 'Top Genre', value: topGenre, icon: Trophy, color: 'text-primary' },
-          { label: 'Categories', value: categoriesCount, icon: TrendingUp, color: 'text-blue-500' },
+          { label: 'Cloud Library', value: games.length, icon: Sparkles, color: 'text-primary' },
+          { label: 'Online Now', value: onlineCount.toLocaleString(), icon: Zap, color: 'text-orange-500', live: true },
+          { label: 'Trending', value: trendingGame, icon: Trophy, color: 'text-primary' },
+          { label: 'Top Rated', value: topRatedGame ? `${topRatedGame.rating?.toFixed(1)} ★` : '0.0 ★', sub: topRatedGame?.title, icon: TrendingUp, color: 'text-blue-500' },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 + (i * 0.1) }}
-            className="glass p-6 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center group hover:bg-white/5 transition-all"
+            className="glass p-6 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center group hover:bg-white/5 transition-all relative overflow-hidden"
           >
-            <stat.icon className={`w-5 h-5 mb-2 ${stat.color}`} />
-            <span className="text-xl font-display font-black text-white">{stat.value}</span>
+            {stat.live && (
+              <div className="absolute top-3 right-3 flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                <span className="text-[8px] font-black text-orange-500 uppercase">Live</span>
+              </div>
+            )}
+            <stat.icon className={`w-5 h-5 mb-2 ${stat.color} group-hover:scale-110 transition-transform`} />
+            <span className="text-xl font-display font-black text-white truncate w-full px-2" title={stat.value.toString()}>{stat.value}</span>
             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mt-1">{stat.label}</span>
+            {stat.sub && <span className="text-[8px] uppercase text-gray-600 mt-0.5 truncate w-full">{stat.sub}</span>}
           </motion.div>
         ))}
       </section>

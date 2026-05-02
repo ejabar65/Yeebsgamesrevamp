@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'therealyeebs@gmail.com'
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Entity Validations ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid is string && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             (data.get('favoriteGameIds', []) is list) &&
+             data.uid == request.auth.uid;
+    }
+
+    function isValidGame(data) {
+      return data.keys().hasAll(['id', 'title', 'url', 'category']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.url is string && data.url.size() <= 1000 &&
+             data.category is string && data.category.size() <= 100 &&
+             (data.get('playCount', 0) is number) &&
+             (data.get('rating', 0) is number);
+    }
+
+    // --- Collections ---
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin(); // Only admins can browse all users
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'favoriteGameIds'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /games/{gameId} {
+      allow read: if true; // Publicly readable
+      allow create: if isAdmin() && isValidGame(incoming());
+      allow update: if (isAdmin() && isValidGame(incoming())) || (
+        // Public action: Incremental updates for stats
+        // No longer requiring isSignedIn() for play counts to allow guest tracking
+        isValidGame(incoming()) && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['playCount', 'rating'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only manageable via Firebase Console or special script
+    }
+  }
+}

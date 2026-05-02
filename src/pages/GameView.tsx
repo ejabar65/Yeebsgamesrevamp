@@ -1,13 +1,31 @@
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, Maximize2, RotateCw, Flag, Share2, Star, Zap, Heart } from 'lucide-react';
+import { ChevronLeft, Maximize2, RotateCw, Flag, Share2, Star, Zap, Heart, Play } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useGames } from '../context/GameContext';
+import { db, doc, updateDoc, increment } from '../lib/firebase';
 
 export default function GameView() {
   const { id } = useParams();
   const { games, toggleFavorite, isFavorite, loading } = useGames();
   const game = games.find((g) => g.id === id);
   const favorite = game ? isFavorite(game.id) : false;
+
+  useEffect(() => {
+    if (game && id) {
+      // Increment play count in Firestore
+      const incrementPlay = async () => {
+        try {
+          const gameRef = doc(db, 'games', id);
+          await updateDoc(gameRef, {
+            playCount: increment(1)
+          });
+        } catch (error) {
+          console.error("Error incrementing play count", error);
+        }
+      };
+      incrementPlay();
+    }
+  }, [id, !!game]);
 
   if (loading) {
     return (
@@ -35,6 +53,21 @@ export default function GameView() {
     }
   };
 
+  const handleLike = async () => {
+    await toggleFavorite(game.id);
+    // Extra: Slightly boost rating on like
+    if (!favorite) {
+      try {
+        const gameRef = doc(db, 'games', game.id);
+        await updateDoc(gameRef, {
+          rating: increment(0.1)
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+
   const shareGame = () => {
     if (navigator.share) {
       navigator.share({
@@ -59,13 +92,23 @@ export default function GameView() {
           {/* Game Player Area */}
           <div className="lg:col-span-2">
             <div className="rounded-2xl overflow-hidden bg-black border border-white/10 aspect-video relative group" id="game-container">
-              <iframe
-                id="game-frame"
-                src={game.url}
-                className="w-full h-full border-0"
-                allowFullScreen
-                title={game.title}
-              />
+              {game.htmlBlock ? (
+                <iframe
+                  id="game-frame"
+                  srcDoc={game.htmlBlock}
+                  className="w-full h-full border-0"
+                  allowFullScreen
+                  title={game.title}
+                />
+              ) : (
+                <iframe
+                  id="game-frame"
+                  src={game.url}
+                  className="w-full h-full border-0"
+                  allowFullScreen
+                  title={game.title}
+                />
+              )}
             </div>
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4 p-4 glass rounded-2xl">
@@ -76,11 +119,15 @@ export default function GameView() {
                 <button onClick={toggleFullScreen} className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition-colors" title="Fullscreen">
                   <Maximize2 className="w-5 h-5" />
                 </button>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20">
+                  <Play className="w-3 h-3 fill-current" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">{(game.playCount || 0).toLocaleString()} Plays</span>
+                </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <button 
-                  onClick={() => toggleFavorite(game.id)}
+                  onClick={handleLike}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
                     favorite 
                       ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]' 
@@ -129,7 +176,7 @@ export default function GameView() {
             
             <div className="mt-8 flex items-center gap-4">
               <button 
-                onClick={() => alert('Game reloaded!')}
+                onClick={() => window.location.reload()}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 text-xs font-bold uppercase tracking-wider transition-all"
               >
                 <RotateCw className="w-3 h-3" />

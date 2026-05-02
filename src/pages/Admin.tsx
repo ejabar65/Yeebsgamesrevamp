@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Plus, Tag, FileCode, Type, Image as ImageIcon, CheckCircle2, AlertCircle, Trash2, Globe } from 'lucide-react';
-import { addGame, deleteGame } from '../services/gameService';
+import { Shield, Plus, Tag, FileCode, Type, Image as ImageIcon, CheckCircle2, AlertCircle, Trash2, Globe, Edit2, X, Play } from 'lucide-react';
+import { addGame, deleteGame, updateGame } from '../services/gameService';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGames } from '../context/GameContext';
 
 export default function Admin() {
-  const { games, refreshGames } = useGames();
+  const { games, refreshGames, user, authLoading, setSearchQuery, setSortBy } = useGames();
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -18,40 +19,102 @@ export default function Admin() {
     category: 'Action',
     thumbnail: '',
     htmlBlock: '',
+    url: ''
   });
+
+  // Simple admin check: either password or being the specific user
+  const isAdminUser = user?.email === 'therealyeebs@gmail.com';
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === '$#GS29gs67') {
+    if (password === '$#GS29gs67' || isAdminUser) {
       setIsAuthenticated(true);
     } else {
       alert('Invalid password');
     }
   };
 
+  const handleFirebaseAuth = async () => {
+    try {
+      const { auth, googleProvider, signInWithPopup } = await import('../lib/firebase');
+      await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+      console.error("Firebase Sign-In failed", error);
+    }
+  };
+
+  const handleEdit = (game: any) => {
+    setEditingId(game.id);
+    setFormData({
+      title: game.title,
+      description: game.description,
+      category: game.category,
+      thumbnail: game.thumbnail,
+      htmlBlock: game.htmlBlock || '',
+      url: game.url || ''
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setFormData({
+      title: '',
+      description: '',
+      category: 'Action',
+      thumbnail: '',
+      htmlBlock: '',
+      url: ''
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      alert('You must be signed in with Google to perform Firestore writes. Please click "Sign in with Google" first.');
+      return;
+    }
+
     setLoading(true);
     setStatus(null);
 
-    const gameId = formData.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    const success = await addGame(password, {
-      ...formData,
-      id: gameId,
-    });
+    const gameId = editingId || formData.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    
+    let success = false;
+    if (editingId) {
+      success = await updateGame({
+        ...formData,
+        id: editingId,
+        playCount: games.find(g => g.id === editingId)?.playCount || 0,
+        rating: games.find(g => g.id === editingId)?.rating || 5
+      });
+    } else {
+      success = await addGame({
+        ...formData,
+        id: gameId,
+        playCount: 0,
+        rating: 5
+      });
+    }
 
     if (success) {
-      setStatus({ type: 'success', message: 'Game added successfully!' });
-      setFormData({
-        title: '',
-        description: '',
-        category: 'Action',
-        thumbnail: '',
-        htmlBlock: '',
-      });
+      setStatus({ type: 'success', message: `Game ${editingId ? 'updated' : 'added'} successfully!` });
+      if (!editingId) {
+        setFormData({
+          title: '',
+          description: '',
+          category: 'Action',
+          thumbnail: '',
+          htmlBlock: '',
+          url: ''
+        });
+      } else {
+        setEditingId(null);
+      }
       await refreshGames();
     } else {
-      setStatus({ type: 'error', message: 'Failed to add game. Check console.' });
+      setStatus({ type: 'error', message: `Failed to ${editingId ? 'update' : 'add'} game. Check console.` });
     }
     setLoading(false);
   };
@@ -59,7 +122,7 @@ export default function Admin() {
   const handleDelete = async (gameId: string) => {
     if (!confirm('Are you sure you want to delete this game?')) return;
     
-    const success = await deleteGame(password, gameId);
+    const success = await deleteGame(gameId);
     if (success) {
       setStatus({ type: 'success', message: 'Game deleted successfully!' });
       await refreshGames();
@@ -68,7 +131,15 @@ export default function Admin() {
     }
   };
 
-  if (!isAuthenticated) {
+  if (authLoading) {
+    return (
+      <div className="min-h-screen pt-32 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && !isAdminUser) {
     return (
       <div className="min-h-screen pt-32 px-4 flex items-center justify-center">
         <motion.div 
@@ -81,7 +152,7 @@ export default function Admin() {
               <Shield className="w-8 h-8 text-primary" />
             </div>
             <h1 className="text-2xl font-display font-bold">Admin Portal</h1>
-            <p className="text-gray-400 text-sm">Enter password to access YEEBSGAMES settings</p>
+            <p className="text-gray-400 text-sm text-center">Use admin credentials or sign in with an authorized Google account</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
@@ -99,6 +170,17 @@ export default function Admin() {
               ACCESS DASHBOARD
             </button>
           </form>
+
+          <div className="mt-8 pt-8 border-t border-white/10 flex flex-col items-center gap-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Or bypass with Google</p>
+            <button 
+              onClick={handleFirebaseAuth}
+              className="flex items-center gap-3 px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all group"
+            >
+              <Globe className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+              <span className="font-bold text-sm tracking-tight text-white">Sign in with Google</span>
+            </button>
+          </div>
         </motion.div>
       </div>
     );
@@ -109,11 +191,21 @@ export default function Admin() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-4xl font-display font-black tracking-tight">ADD NEW <span className="text-primary">GAME</span></h1>
-            <p className="text-gray-400">Expand the YEEBSGAMES catalog</p>
+            <h1 className="text-4xl font-display font-black tracking-tight uppercase">
+              {editingId ? 'Edit' : 'Add New'} <span className="text-primary">Game</span>
+            </h1>
+            <p className="text-gray-400">{editingId ? `Modifying ${formData.title}` : 'Expand the YEEBSGAMES catalog'}</p>
           </div>
-          <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-primary">
-            <Plus className="w-6 h-6" />
+          <div className="flex items-center gap-4">
+            {user && (
+              <div className="hidden md:flex flex-col items-end">
+                <span className="text-xs font-bold text-white">{user.displayName || user.email}</span>
+                <span className="text-[10px] uppercase font-black tracking-tighter text-primary">Authorized Admin</span>
+              </div>
+            )}
+            <div className={`p-3 rounded-xl border transition-all ${editingId ? 'bg-orange-500/10 border-orange-500/20 text-orange-500' : 'bg-primary/10 border-primary/20 text-primary'}`}>
+              {editingId ? <Edit2 className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+            </div>
           </div>
         </div>
 
@@ -133,7 +225,26 @@ export default function Admin() {
           )}
         </AnimatePresence>
 
-        <form onSubmit={handleSubmit} className="space-y-6 glass p-8 rounded-3xl">
+        {!user && (
+          <div className="mb-6 p-6 rounded-3xl bg-orange-500/10 border border-orange-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-6 h-6 text-orange-500" />
+              <div>
+                <p className="font-bold text-orange-500 uppercase text-xs tracking-widest">Firebase Session Required</p>
+                <p className="text-[10px] text-orange-500/70 uppercase font-bold">You must be signed in with Google to perform updates.</p>
+              </div>
+            </div>
+            <button 
+              type="button"
+              onClick={handleFirebaseAuth}
+              className="px-6 py-2.5 rounded-xl bg-orange-500 text-white font-bold text-xs uppercase tracking-widest hover:bg-white hover:text-orange-500 transition-all shadow-lg"
+            >
+              Link Google Account
+            </button>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6 glass p-8 rounded-3xl border border-white/5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-xs font-bold uppercase text-gray-400 px-1">
@@ -157,7 +268,7 @@ export default function Admin() {
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-hidden focus:border-primary transition-all appearance-none"
               >
-                {['Action', 'Sports', 'Puzzle', 'IO', 'Racing', 'Horror', 'Skill', 'Idle'].map(c => (
+                {['Action', 'Sports', 'Puzzle', 'IO', 'Racing', 'Horror', 'Skill', 'Idle', 'Adventure'].map(c => (
                   <option key={c} value={c} className="bg-dark-card">{c}</option>
                 ))}
               </select>
@@ -194,11 +305,10 @@ export default function Admin() {
 
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-xs font-bold uppercase text-gray-400 px-1">
-              <FileCode className="w-3 h-3" /> HTML Code Block
+              <FileCode className="w-3 h-3" /> HTML Code Block (Optional if URL provided)
             </label>
             <textarea
-              required
-              rows={8}
+              rows={6}
               value={formData.htmlBlock}
               onChange={(e) => setFormData({ ...formData, htmlBlock: e.target.value })}
               className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-hidden focus:border-primary transition-all font-mono text-sm resize-none"
@@ -206,20 +316,45 @@ export default function Admin() {
             />
           </div>
 
-          <button
-            disabled={loading}
-            className={`w-full py-4 rounded-xl bg-primary text-dark-surface font-display font-black transition-all shadow-[0_0_20px_rgba(250,204,21,0.2)] flex items-center justify-center gap-2 
-              ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white '}`}
-          >
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-dark-surface border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <Plus className="w-5 h-5" />
-                PUBLISH GAME
-              </>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-xs font-bold uppercase text-gray-400 px-1">
+              <Globe className="w-3 h-3" /> Redirect URL (Optional if HTML provided)
+            </label>
+            <input
+              type="text"
+              value={formData.url}
+              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-hidden focus:border-primary transition-all"
+              placeholder="/games/local-game.html"
+            />
+          </div>
+
+          <div className="flex gap-4">
+            {editingId && (
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="flex-1 py-4 rounded-xl bg-white/5 border border-white/10 text-white font-display font-black hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+              >
+                <X className="w-5 h-5" />
+                CANCEL
+              </button>
             )}
-          </button>
+            <button
+              disabled={loading}
+              className={`flex-[2] py-4 rounded-xl bg-primary text-dark-surface font-display font-black transition-all shadow-[0_0_20px_rgba(250,204,21,0.2)] flex items-center justify-center gap-2 
+                ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white '}`}
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-dark-surface border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  {editingId ? <CheckCircle2 className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                  {editingId ? 'UPDATE GAME' : 'PUBLISH GAME'}
+                </>
+              )}
+            </button>
+          </div>
         </form>
 
         <div className="mt-12 space-y-4">
@@ -229,7 +364,7 @@ export default function Admin() {
           </h2>
           <div className="grid gap-4">
             {games.map(game => (
-              <div key={game.id} className="glass p-4 rounded-2xl flex items-center justify-between group hover:border-primary/30 transition-all">
+              <div key={game.id} className="glass p-4 rounded-2xl flex items-center justify-between group hover:border-primary/30 transition-all border border-white/5">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-12 rounded-lg overflow-hidden bg-dark-card border border-white/5">
                     <img src={game.thumbnail} alt={game.title} className="w-full h-full object-cover" />
@@ -240,12 +375,19 @@ export default function Admin() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleEdit(game)}
+                    className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white transition-all"
+                    title="Edit Game"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
                   <Link 
                     to={`/game/${game.id}`}
                     className="p-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-dark-surface transition-all"
                     title="View Game"
                   >
-                    <Globe className="w-4 h-4" />
+                    <Play className="w-4 h-4" />
                   </Link>
                   <button 
                     onClick={() => handleDelete(game.id)}

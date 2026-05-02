@@ -5,4 +5,7 @@ export interface Game {
   url: string;
   category: string;
   description: string;
+  playCount: number;
+  rating: number;
+  htmlBlock?: string;
 }
