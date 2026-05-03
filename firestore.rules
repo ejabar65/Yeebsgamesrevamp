@@ -55,6 +55,7 @@ service cloud.firestore {
       // For updates, we check that if a field is present, it's the right type
       return (data.get('uid', 'uid') is string) &&
              (data.get('username', 'user') is string) &&
+             (data.get('bio', '') is string) && data.get('bio', '').size() <= 1000 &&
              (data.get('isBanned', false) is bool) &&
              (data.get('isAdmin', false) is bool) &&
              (data.get('avatarConfig', {}) is map) &&
@@ -98,8 +99,8 @@ service cloud.firestore {
       allow list: if true; // Relaxed for admin panel functionality since we don't use Auth
       allow create: if !exists(/databases/$(database)/documents/users/$(username)) && isValidUserCreate(incoming());
       allow update: if isValidUserUpdate(incoming()) && (
-        (isPasswordOwner(username) && incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'settings', 'history', 'isAdmin'])) ||
-        (isAdmin() && incoming().diff(existing()).affectedKeys().hasAny(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'isBanned', 'isAdmin', 'settings', 'history']))
+        (isPasswordOwner(username) && incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'settings', 'history', 'isAdmin', 'bio', 'avatarConfig'])) ||
+        (isAdmin() && incoming().diff(existing()).affectedKeys().hasAny(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'isBanned', 'isAdmin', 'settings', 'history', 'bio', 'avatarConfig']))
       );
       allow delete: if isAdmin();
     }

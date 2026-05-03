@@ -29,6 +29,7 @@
           }
         },
         "history": { "type": "array", "items": { "type": "string" } },
+        "bio": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "favoriteGameIds": { "type": "array", "items": { "type": "string" } }
       },
