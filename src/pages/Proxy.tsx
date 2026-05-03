@@ -6,6 +6,7 @@ export default function Proxy() {
   const [url, setUrl] = useState('');
   const [proxyUrl, setProxyUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [swReady, setSwReady] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -13,8 +14,27 @@ export default function Proxy() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/uv/sw.js', {
         scope: '/uv/service/'
-      }).then(() => {
+      }).then((registration) => {
         console.log('UV Service Worker registered');
+        
+        // Wait for it to be active
+        if (registration.active) {
+          setSwReady(true);
+        } else {
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            newWorker?.addEventListener('statechange', () => {
+              if (newWorker.state === 'activated') setSwReady(true);
+            });
+          });
+          // Also check existing
+          const checkReady = setInterval(() => {
+            if (navigator.serviceWorker.controller) {
+              setSwReady(true);
+              clearInterval(checkReady);
+            }
+          }, 500);
+        }
       }).catch(err => {
         console.error('UV Service Worker registration failed:', err);
       });
@@ -23,7 +43,7 @@ export default function Proxy() {
 
   const handleGo = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url) return;
+    if (!url || !swReady) return;
 
     // Check if configuration is loaded
     // @ts-ignore
@@ -99,7 +119,8 @@ export default function Proxy() {
                 />
                 <button
                   type="submit"
-                  className="p-3 bg-primary text-dark-surface rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg"
+                  disabled={!swReady}
+                  className={`p-3 rounded-xl transition-all shadow-lg ${!swReady ? 'bg-gray-700 cursor-not-allowed' : 'bg-primary text-dark-surface hover:scale-105 active:scale-95'}`}
                 >
                   <Search className="w-6 h-6" />
                 </button>
