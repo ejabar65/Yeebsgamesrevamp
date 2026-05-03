@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bug, Search, Trophy, TrendingUp, Home, LogIn, LogOut, User as UserIcon, X, Shield, Zap, MessageSquare, ChevronDown, Monitor } from 'lucide-react';
+import { Bug, Search, Trophy, TrendingUp, Home, LogIn, LogOut, User as UserIcon, X, Shield, Zap, MessageSquare, ChevronDown, Monitor, Users } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -114,15 +114,15 @@ export default function Navbar() {
         </AnimatePresence>
         {[
           { name: 'Home', icon: Home, path: '/', sort: 'newest' },
+          { name: 'Community', icon: Users, path: '/community' },
           { name: 'Chat', icon: MessageSquare, path: '/chat' },
-          { name: 'Proxy', icon: Shield, path: '/proxy', wip: true },
           { name: 'Trending', icon: TrendingUp, path: '/', sort: 'trending' },
           { name: 'Top Rated', icon: Trophy, path: '/', sort: 'top' },
         ].map((item) => (
           <button
             key={item.name}
             onClick={() => {
-              if (item.path === '/chat' || item.path === '/proxy') {
+              if (item.path === '/chat' || item.path === '/community') {
                 navigate(item.path);
               } else {
                 handleNavClick(item.path, item.sort);
@@ -133,9 +133,6 @@ export default function Navbar() {
           >
             <item.icon className="w-4 h-4" />
             {item.name}
-            {item.wip && (
-              <span className="absolute -top-2 -right-4 bg-orange-500 text-[6px] font-black px-1 rounded-xs text-white uppercase italic">WIP</span>
-            )}
           </button>
         ))}
       </div>
@@ -200,7 +197,7 @@ export default function Navbar() {
               className="w-9 h-9 rounded-full overflow-hidden border border-white/10 hover:border-primary transition-all group/profile"
               title="Profile"
             >
-              <img src={user.photoURL || ''} alt={user.username || 'User'} className="w-full h-full object-cover group-hover/profile:scale-110 transition-transform" />
+              <img src={user.photoURL || undefined} alt={user.username || 'User'} className="w-full h-full object-cover group-hover/profile:scale-110 transition-transform" />
             </Link>
             <button 
               onClick={handleLogout}

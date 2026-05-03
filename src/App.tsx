@@ -11,8 +11,8 @@ import Home from './pages/Home';
 import GameView from './pages/GameView';
 import Admin from './pages/Admin';
 import Profile from './pages/Profile';
+import Community from './pages/Community';
 import Chat from './pages/Chat';
-import Proxy from './pages/Proxy';
 import { GameProvider } from './context/GameContext';
 import { applyCloak, getSavedCloak } from './cloakUtils';
 import { useGames } from './context/GameContext';
@@ -42,10 +42,11 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/chat" element={<Chat />} />
-            <Route path="/proxy" element={<Proxy />} />
+            <Route path="/community" element={<Community />} />
             <Route path="/game/:id" element={<GameView />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:username" element={<Profile />} />
           </Routes>
           
           <footer className="py-12 px-4 md:px-8 border-t border-white/5 mt-12 bg-dark-card/50">
