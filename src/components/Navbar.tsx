@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bug, Search, Trophy, TrendingUp, Home, LogIn, LogOut, User as UserIcon, X, Shield, Zap, MessageSquare, ChevronDown, Monitor } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGames } from '../context/GameContext';
@@ -6,12 +6,31 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { MASCOT_URL, CLOAK_OPTIONS } from '../constants';
 import { applyCloak, getSavedCloak } from '../cloakUtils';
+import { db, collection, query, orderBy, limit, onSnapshot } from '../lib/firebase';
 
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { searchQuery, setSearchQuery, setSortBy, user, login, logout } = useGames();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [latestMessage, setLatestMessage] = useState<{ text: string, sender: string } | null>(null);
+
+  // Listen for new messages if chat preview is enabled
+  useEffect(() => {
+    if (user?.settings?.showChatPreview) {
+      const q = query(collection(db, 'global_messages'), orderBy('createdAt', 'desc'), limit(1));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data();
+          setLatestMessage({ text: data.text, sender: data.senderName });
+          // Clear after 5 seconds
+          const timer = setTimeout(() => setLatestMessage(null), 5000);
+          return () => clearTimeout(timer);
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [user?.settings?.showChatPreview]);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState(''); // Only for Yeebs
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -78,11 +97,25 @@ export default function Navbar() {
         </span>
       </Link>
 
-      <div className="hidden md:flex items-center gap-8">
+      <div className="hidden md:flex items-center gap-8 relative group">
+        <AnimatePresence>
+          {latestMessage && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="absolute -top-12 left-1/2 -translate-x-1/2 glass px-3 py-1.5 rounded-full border border-primary/20 flex items-center gap-2 pointer-events-none whitespace-nowrap shadow-2xl z-50"
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-[10px] font-black text-primary uppercase italic">{latestMessage.sender}:</span>
+              <span className="text-[10px] font-bold text-white/80 max-w-[150px] truncate">{latestMessage.text}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {[
           { name: 'Home', icon: Home, path: '/', sort: 'newest' },
           { name: 'Chat', icon: MessageSquare, path: '/chat' },
-          { name: 'Proxy', icon: Shield, path: '/proxy' },
+          { name: 'Proxy', icon: Shield, path: '/proxy', wip: true },
           { name: 'Trending', icon: TrendingUp, path: '/', sort: 'trending' },
           { name: 'Top Rated', icon: Trophy, path: '/', sort: 'top' },
         ].map((item) => (
@@ -95,11 +128,14 @@ export default function Navbar() {
                 handleNavClick(item.path, item.sort);
               }
             }}
-            className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary
+            className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary relative
               ${location.pathname === item.path ? 'text-primary' : 'text-gray-400'}`}
           >
             <item.icon className="w-4 h-4" />
             {item.name}
+            {item.wip && (
+              <span className="absolute -top-2 -right-4 bg-orange-500 text-[6px] font-black px-1 rounded-xs text-white uppercase italic">WIP</span>
+            )}
           </button>
         ))}
       </div>

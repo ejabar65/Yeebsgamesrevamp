@@ -9,6 +9,16 @@
         "username": { "type": "string" },
         "password": { "type": "string" },
         "photoURL": { "type": "string" },
+        "isBanned": { "type": "boolean" },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "compactMode": { "type": "boolean" },
+            "showChatPreview": { "type": "boolean" },
+            "customTheme": { "type": "string" }
+          }
+        },
+        "history": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" },
         "favoriteGameIds": { "type": "array", "items": { "type": "string" } }
       },

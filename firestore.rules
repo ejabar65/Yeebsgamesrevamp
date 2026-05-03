@@ -44,6 +44,7 @@ service cloud.firestore {
              data.uid is string &&
              data.username is string && data.username.size() <= 50 &&
              data.password is string && data.password.size() <= 100 &&
+             (data.get('isBanned', false) is bool) &&
              (data.get('favoriteGameIds', []) is list);
     }
 
@@ -81,8 +82,9 @@ service cloud.firestore {
       allow get: if true; 
       allow list: if isAdmin();
       allow create: if !exists(/databases/$(database)/documents/users/$(username)) && isValidUser(incoming());
-      allow update: if (isPasswordOwner(username) || isAdmin()) && isValidUser(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt'])
+      allow update: if isValidUser(incoming()) && (
+        (isPasswordOwner(username) && incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'settings', 'history'])) ||
+        (isAdmin() && incoming().diff(existing()).affectedKeys().hasAny(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'isBanned', 'settings', 'history']))
       );
       allow delete: if isAdmin();
     }

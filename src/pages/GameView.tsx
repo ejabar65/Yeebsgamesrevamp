@@ -6,7 +6,7 @@ import { db, doc, updateDoc, setDoc, increment } from '../lib/firebase';
 
 export default function GameView() {
   const { id } = useParams();
-  const { games, toggleFavorite, isFavorite, loading } = useGames();
+  const { games, toggleFavorite, isFavorite, loading, addToHistory } = useGames();
   const game = games.find((g) => g.id === id);
   const favorite = game ? isFavorite(game.id) : false;
 
@@ -25,6 +25,9 @@ export default function GameView() {
             url: game.url,
             id: game.id // Ensure ID matching
           }, { merge: true });
+
+          // Add to history (handles both local and cloud)
+          await addToHistory(id);
         } catch (error) {
           console.error("Error incrementing play count", error);
         }

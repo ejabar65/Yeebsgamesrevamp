@@ -12,6 +12,20 @@
   --color-dark-card: #1a140a;
 }
 
+[data-theme='cyber'] {
+  --color-primary: #00ff41;
+  --color-accent: #ff00ff;
+  --color-dark-surface: #0a0a0f;
+  --color-dark-card: #12121a;
+}
+
+[data-theme='retro'] {
+  --color-primary: #ff9d00;
+  --color-accent: #ff00ff;
+  --color-dark-surface: #1e1e1e;
+  --color-dark-card: #2a2a2a;
+}
+
 @layer base {
   body {
     @apply bg-dark-surface text-white font-sans antialiased selection:bg-primary selection:text-dark-surface;

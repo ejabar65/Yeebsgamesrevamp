@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Globe, Shield, Zap, RotateCcw, Share2, ExternalLink } from 'lucide-react';
+import { Search, Globe, Shield, Zap, RotateCcw, Share2, ExternalLink, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function Proxy() {
@@ -60,6 +60,14 @@ export default function Proxy() {
   return (
     <div className="min-h-screen pt-24 px-4 flex flex-col items-center">
       <div className="w-full max-w-6xl flex flex-col h-[calc(100vh-12rem)]">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 py-2 px-4 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-center justify-center gap-3 backdrop-blur-md"
+        >
+          <AlertCircle className="w-4 h-4 text-orange-500" />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500 italic">Work in Progress • Proxy stability may vary</span>
+        </motion.div>
         {!proxyUrl ? (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}

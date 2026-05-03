@@ -9,8 +9,9 @@ interface GameCardProps {
 }
 
 export default function GameCard({ game }: GameCardProps) {
-  const { toggleFavorite, isFavorite } = useGames();
+  const { toggleFavorite, isFavorite, user } = useGames();
   const favorite = isFavorite(game.id);
+  const isCompact = user?.settings?.compactMode;
 
   return (
     <motion.div
@@ -19,24 +20,24 @@ export default function GameCard({ game }: GameCardProps) {
       viewport={{ once: true }}
       className="group relative"
     >
-      <div className="absolute top-3 right-3 z-10">
+      <div className={`absolute z-10 ${isCompact ? 'top-1 right-1' : 'top-3 right-3'}`}>
         <button 
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             toggleFavorite(game.id);
           }}
-          className={`p-2 rounded-lg backdrop-blur-md transition-all ${
+          className={`${isCompact ? 'p-1.5' : 'p-2'} rounded-lg backdrop-blur-md transition-all ${
             favorite 
               ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]' 
               : 'bg-black/40 text-white/60 hover:bg-black/60 hover:text-white'
           }`}
         >
-          <Heart className={`w-4 h-4 ${favorite ? 'fill-current' : ''}`} />
+          <Heart className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'} ${favorite ? 'fill-current' : ''}`} />
         </button>
       </div>
       <Link to={`/game/${game.id}`}>
-        <div className="aspect-video rounded-xl overflow-hidden bg-dark-card border border-white/5 card-hover relative">
+        <div className={`${isCompact ? 'aspect-square' : 'aspect-video'} rounded-xl overflow-hidden bg-dark-card border border-white/5 card-hover relative`}>
           <img
             src={game.thumbnail}
             alt={game.title}
@@ -44,23 +45,27 @@ export default function GameCard({ game }: GameCardProps) {
             referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-linear-to-t from-dark-surface/90 via-dark-surface/20 to-transparent flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.5)]">
-              <Play className="w-5 h-5 text-dark-surface fill-current ml-1" />
+            <div className={`${isCompact ? 'w-8 h-8' : 'w-10 h-10'} rounded-full bg-primary flex items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.5)]`}>
+              <Play className={`${isCompact ? 'w-4 h-4' : 'w-5 h-5'} text-dark-surface fill-current ml-1`} />
             </div>
           </div>
         </div>
-        <div className="mt-3 px-1">
-          <div className="flex items-center justify-between">
-            <h3 className="font-display font-semibold text-white group-hover:text-primary transition-colors line-clamp-1">
+        <div className={`${isCompact ? 'mt-2' : 'mt-3'} px-1`}>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className={`font-display font-semibold text-white group-hover:text-primary transition-colors line-clamp-1 ${isCompact ? 'text-[11px]' : 'text-sm'}`}>
               {game.title}
             </h3>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-accent px-2 py-0.5 rounded-full border border-accent/30 bg-accent/5">
-              {game.category}
-            </span>
+            {!isCompact && (
+              <span className="text-[10px] font-bold uppercase tracking-widest text-accent px-2 py-0.5 rounded-full border border-accent/30 bg-accent/5">
+                {game.category}
+              </span>
+            )}
           </div>
-          <p className="text-xs text-gray-400 mt-1 line-clamp-2">
-            {game.description}
-          </p>
+          {!isCompact && (
+            <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+              {game.description}
+            </p>
+          )}
         </div>
       </Link>
     </motion.div>

@@ -1,14 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGames } from '../context/GameContext';
-import { motion } from 'motion/react';
-import { User, LogOut, Package, Heart, History, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { User, LogOut, Package, Heart, History, Trash2, Settings as SettingsIcon, Layout, MessageCircle, Palette, Save, CheckCircle2 } from 'lucide-react';
 import { auth, signOut } from '../lib/firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import GameCard from '../components/GameCard';
 
 export default function Profile() {
-  const { user, games, favorites, authLoading, toggleFavorite, logout } = useGames();
+  const { user, games, favorites, authLoading, toggleFavorite, logout, updateSettings } = useGames();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'inventory' | 'settings'>('inventory');
+  const [saveStatus, setSaveStatus] = useState(false);
+
+  const [settingsForm, setSettingsForm] = useState({
+    compactMode: user?.settings?.compactMode || false,
+    showChatPreview: user?.settings?.showChatPreview ?? true,
+    customTheme: user?.settings?.customTheme || 'default'
+  });
 
   if (authLoading) {
     return (
@@ -43,11 +51,21 @@ export default function Profile() {
     navigate('/');
   };
 
+  const handleSaveSettings = async () => {
+    await updateSettings(settingsForm);
+    setSaveStatus(true);
+    setTimeout(() => setSaveStatus(false), 2000);
+  };
+
   return (
     <main className="pt-24 pb-12 px-4 md:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Profile Header */}
-        <div className="glass rounded-3xl p-8 mb-12 flex flex-col md:flex-row items-center gap-8 border border-white/5">
+        <div className="glass rounded-3xl p-8 mb-8 flex flex-col md:flex-row items-center gap-8 border border-white/5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-5">
+             <SettingsIcon className="w-64 h-64 rotate-12" />
+          </div>
+
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
             <img 
@@ -57,7 +75,7 @@ export default function Profile() {
             />
           </div>
           
-          <div className="flex-1 text-center md:text-left">
+          <div className="flex-1 text-center md:text-left relative z-10">
             <h1 className="text-4xl font-display font-black uppercase mb-2">@{user.username}</h1>
             <p className="text-gray-400 mb-6 font-mono text-xs uppercase tracking-widest">
               {user.isAdmin ? 'System Administrator' : 'Portal User'} • ID: {user.uid.slice(0, 8)}
@@ -76,56 +94,179 @@ export default function Profile() {
 
           <button 
             onClick={handleLogout}
-            className="px-6 py-3 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 font-bold uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2"
+            className="px-6 py-3 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 font-bold uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 relative z-10"
           >
             <LogOut className="w-4 h-4" />
             Log Out
           </button>
         </div>
 
-        {/* Inventory Section */}
-        <section>
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-display font-black uppercase flex items-center gap-3">
-              <Package className="w-6 h-6 text-primary" />
-              Your Inventory
-            </h2>
-            <div className="text-xs text-gray-500 font-bold uppercase tracking-[0.2em]">
-              Saved for later
-            </div>
-          </div>
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-4 mb-8">
+           <button 
+             onClick={() => setActiveTab('inventory')}
+             className={`flex-1 md:flex-none px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border ${activeTab === 'inventory' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
+           >
+             Inventory
+           </button>
+           <button 
+             onClick={() => setActiveTab('settings')}
+             className={`flex-1 md:flex-none px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border ${activeTab === 'settings' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
+           >
+             Settings
+           </button>
+        </div>
 
-          {savedGames.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {savedGames.map(game => (
-                <div key={game.id} className="relative group">
-                  <GameCard game={game} />
-                  <button 
-                    onClick={() => toggleFavorite(game.id)}
-                    className="absolute bottom-4 right-4 p-2 rounded-lg bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                    title="Remove from inventory"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+        <AnimatePresence mode="wait">
+          {activeTab === 'inventory' ? (
+            <motion.section 
+              key="inventory"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-display font-black uppercase flex items-center gap-3">
+                  <Package className="w-6 h-6 text-primary" />
+                  Your Inventory
+                </h2>
+                <div className="text-xs text-gray-500 font-bold uppercase tracking-[0.2em]">
+                  Saved for later
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="glass rounded-3xl p-20 text-center flex flex-col items-center justify-center border-dashed border-2 border-white/5">
-              <div className="p-6 rounded-full bg-white/5 mb-6">
-                <History className="w-12 h-12 text-gray-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-400 mb-2">Inventory Empty</h3>
-              <p className="text-gray-500 text-sm mb-8 max-w-xs">Start building your collection by liking games across the platform.</p>
-              <Link 
-                to="/" 
-                className="px-8 py-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-primary hover:text-dark-surface transition-all font-bold uppercase tracking-widest"
-              >
-                Discover Games
-              </Link>
-            </div>
+
+              {savedGames.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  {savedGames.map(game => (
+                    <div key={game.id} className="relative group">
+                      <GameCard game={game} />
+                      <button 
+                        onClick={() => toggleFavorite(game.id)}
+                        className="absolute bottom-4 right-4 p-2 rounded-lg bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                        title="Remove from inventory"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="glass rounded-3xl p-20 text-center flex flex-col items-center justify-center border-dashed border-2 border-white/5">
+                  <div className="p-6 rounded-full bg-white/5 mb-6">
+                    <History className="w-12 h-12 text-gray-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-400 mb-2">Inventory Empty</h3>
+                  <p className="text-gray-500 text-sm mb-8 max-w-xs">Start building your collection by liking games across the platform.</p>
+                  <Link 
+                    to="/" 
+                    className="px-8 py-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-primary hover:text-dark-surface transition-all font-bold uppercase tracking-widest"
+                  >
+                    Discover Games
+                  </Link>
+                </div>
+              )}
+            </motion.section>
+          ) : (
+            <motion.section 
+              key="settings"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="max-w-3xl"
+            >
+              <div className="glass rounded-3xl p-8 border border-white/5 space-y-8">
+                 <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-display font-black uppercase flex items-center gap-3">
+                       <SettingsIcon className="w-5 h-5 text-primary" />
+                       Custom Preferences
+                    </h3>
+                    {saveStatus && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-2 text-green-500 text-[10px] font-black uppercase italic"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Settings Synced
+                      </motion.div>
+                    )}
+                 </div>
+
+                 <div className="grid gap-6">
+                    {/* Compact Mode */}
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                       <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-xl bg-primary/10">
+                             <Layout className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                             <h4 className="font-bold text-sm text-white">Compact Mode</h4>
+                             <p className="text-[10px] text-gray-500 uppercase tracking-widest">Denser UI for power users</p>
+                          </div>
+                       </div>
+                       <button 
+                         onClick={() => setSettingsForm({ ...settingsForm, compactMode: !settingsForm.compactMode })}
+                         className={`w-12 h-6 rounded-full relative transition-colors ${settingsForm.compactMode ? 'bg-primary' : 'bg-gray-700'}`}
+                       >
+                          <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-all ${settingsForm.compactMode ? 'translate-x-6' : ''}`} />
+                       </button>
+                    </div>
+
+                    {/* Chat Preview */}
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                       <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-xl bg-blue-500/10">
+                             <MessageCircle className="w-5 h-5 text-blue-500" />
+                          </div>
+                          <div>
+                             <h4 className="font-bold text-sm text-white">Chat Previews</h4>
+                             <p className="text-[10px] text-gray-500 uppercase tracking-widest">Show live chat snippets in navbar</p>
+                          </div>
+                       </div>
+                       <button 
+                         onClick={() => setSettingsForm({ ...settingsForm, showChatPreview: !settingsForm.showChatPreview })}
+                         className={`w-12 h-6 rounded-full relative transition-colors ${settingsForm.showChatPreview ? 'bg-primary' : 'bg-gray-700'}`}
+                       >
+                          <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-all ${settingsForm.showChatPreview ? 'translate-x-6' : ''}`} />
+                       </button>
+                    </div>
+
+                    {/* Custom Theme */}
+                    <div className="space-y-4">
+                       <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-xl bg-orange-500/10">
+                             <Palette className="w-5 h-5 text-orange-500" />
+                          </div>
+                          <div>
+                             <h4 className="font-bold text-sm text-white">System Theme</h4>
+                             <p className="text-[10px] text-gray-500 uppercase tracking-widest">Personalize your portal aesthetic</p>
+                          </div>
+                       </div>
+                       <div className="grid grid-cols-3 gap-3">
+                          {['default', 'cyber', 'retro'].map(theme => (
+                            <button
+                              key={theme}
+                              onClick={() => setSettingsForm({ ...settingsForm, customTheme: theme })}
+                              className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${settingsForm.customTheme === theme ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'}`}
+                            >
+                               {theme}
+                            </button>
+                          ))}
+                       </div>
+                    </div>
+                 </div>
+
+                 <button 
+                   onClick={handleSaveSettings}
+                   className="w-full py-4 rounded-2xl bg-primary text-dark-surface font-black uppercase tracking-[0.2em] hover:bg-white transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(250,204,21,0.2)]"
+                 >
+                    <Save className="w-5 h-5" />
+                    Save & Sync Settings
+                 </button>
+              </div>
+            </motion.section>
           )}
-        </section>
+        </AnimatePresence>
       </div>
     </main>
   );

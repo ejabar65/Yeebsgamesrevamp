@@ -29,6 +29,7 @@ export default function GameGrid() {
     });
 
   const categories = ['All', 'Favorites', ...new Set(games.map(g => g.category))];
+  const isCompact = useGames().user?.settings?.compactMode;
 
   if (loading) {
     return (
@@ -63,7 +64,11 @@ export default function GameGrid() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+      <div className={`grid gap-6 ${
+        isCompact 
+          ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8' 
+          : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+      }`}>
         {filteredAndSortedGames.map((game) => (
           <div key={game.id}>
             <GameCard game={game} />

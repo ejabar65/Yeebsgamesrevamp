@@ -1,8 +1,8 @@
 import React from 'react';
-import { Gamepad2, Zap, Trophy, TrendingUp, Sparkles, Shuffle } from 'lucide-react';
+import { Gamepad2, Zap, Trophy, TrendingUp, Sparkles, Shuffle, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
 import GameGrid from '../components/GameGrid';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useGames } from '../context/GameContext';
 import { MASCOT_URL } from '../constants';
 
@@ -24,6 +24,17 @@ export default function Home() {
   const totalPlays = games.reduce((acc, game) => acc + (game.playCount || 0), 0);
   const trendingGame = [...games].sort((a, b) => (b.playCount || 0) - (a.playCount || 0))[0]?.title || 'None';
   const topRatedGame = [...games].sort((a, b) => (b.rating || 0) - (a.rating || 0))[0];
+
+  const [recentIds, setRecentIds] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    const history = JSON.parse(localStorage.getItem('yeebsgames_recent') || '[]');
+    setRecentIds(history);
+  }, []);
+
+  const recentGames = recentIds
+    .map(id => games.find(g => g.id === id))
+    .filter((g): g is any => !!g);
 
   return (
     <main className="pt-24 pb-12">
@@ -91,34 +102,43 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Real Stats Section */}
-      <section className="px-4 md:px-8 mb-12 grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Cloud Library', value: games.length, icon: Sparkles, color: 'text-primary' },
-          { label: 'Online Now', value: onlineCount.toLocaleString(), icon: Zap, color: 'text-orange-500', live: true },
-          { label: 'Trending', value: trendingGame, icon: Trophy, color: 'text-primary' },
-          { label: 'Top Rated', value: topRatedGame ? `${topRatedGame.rating?.toFixed(1)} ★` : '0.0 ★', sub: topRatedGame?.title, icon: TrendingUp, color: 'text-blue-500' },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 + (i * 0.1) }}
-            className="glass p-6 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center group hover:bg-white/5 transition-all relative overflow-hidden"
-          >
-            {stat.live && (
-              <div className="absolute top-3 right-3 flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                <span className="text-[8px] font-black text-orange-500 uppercase">Live</span>
-              </div>
-            )}
-            <stat.icon className={`w-5 h-5 mb-2 ${stat.color} group-hover:scale-110 transition-transform`} />
-            <span className="text-xl font-display font-black text-white truncate w-full px-2" title={stat.value.toString()}>{stat.value}</span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mt-1">{stat.label}</span>
-            {stat.sub && <span className="text-[8px] uppercase text-gray-600 mt-0.5 truncate w-full">{stat.sub}</span>}
-          </motion.div>
-        ))}
-      </section>
+      {/* Recently Played Section */}
+      {recentGames.length > 0 && (
+        <section className="px-4 md:px-8 mb-12">
+          <div className="flex items-center gap-2 mb-6">
+            <Clock className="w-5 h-5 text-primary" />
+            <h2 className="text-2xl font-display font-black uppercase tracking-tight">Recently <span className="text-primary italic">Played</span></h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {recentGames.map((game, i) => (
+              <motion.div
+                key={game.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="group relative cursor-pointer"
+                onClick={() => navigate(`/game/${game.id}`)}
+              >
+                <div className="aspect-square rounded-2xl overflow-hidden border border-white/5 bg-dark-card relative mb-3">
+                  <img 
+                    src={game.thumbnail} 
+                    alt={game.title} 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 grayscale group-hover:grayscale-0 opacity-60 group-hover:opacity-100"
+                  />
+                  <div className="absolute inset-0 bg-linear-to-t from-dark-surface/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute bottom-3 left-3 right-3 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all">
+                    <button className="w-full py-2 bg-primary text-dark-surface text-[10px] font-black rounded-lg uppercase tracking-wider">
+                      Quick Play
+                    </button>
+                  </div>
+                </div>
+                <h3 className="text-xs font-bold uppercase tracking-tight text-gray-400 group-hover:text-primary transition-colors line-clamp-1">{game.title}</h3>
+                <span className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">{game.category}</span>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Game Content */}
       <div id="games" className="scroll-mt-24">

@@ -18,11 +18,19 @@ import {
   signOut
 } from '../lib/firebase';
 
+export interface UserSettings {
+  compactMode: boolean;
+  showChatPreview: boolean;
+  customTheme?: string;
+}
+
 export interface AuthUser {
   uid: string;
   username: string;
   isAdmin: boolean;
   photoURL?: string;
+  settings?: UserSettings;
+  history?: string[];
 }
 
 enum OperationType {
@@ -71,6 +79,8 @@ interface GameContextType {
   setSearchQuery: (query: string) => void;
   setSortBy: (sort: string) => void;
   toggleFavorite: (gameId: string) => void;
+  updateSettings: (settings: UserSettings) => Promise<void>;
+  addToHistory: (gameId: string) => Promise<void>;
   isFavorite: (gameId: string) => boolean;
   refreshGames: () => Promise<void>;
   login: (username: string, password?: string) => Promise<boolean>;
@@ -104,13 +114,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
           
           if (userSnap.exists() && userSnap.data().password === savedPassword) {
             const data = userSnap.data();
+            if (data.isBanned) {
+              localStorage.removeItem('yeebsgames_username');
+              localStorage.removeItem('yeebsgames_password');
+              setAuthLoading(false);
+              return;
+            }
             setUser({
               uid: data.uid,
               username: savedUsername,
               isAdmin: savedUsername.toLowerCase() === 'yeebs',
-              photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${savedUsername}`
+              photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${savedUsername}`,
+              settings: data.settings || { compactMode: false, showChatPreview: true },
+              history: data.history || []
             });
             setFavorites(data.favoriteGameIds || []);
+            if (data.history) {
+              localStorage.setItem('yeebsgames_recent', JSON.stringify(data.history));
+            }
           } else {
             // Invalid session
             localStorage.removeItem('yeebsgames_username');
@@ -141,6 +162,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       if (userSnap.exists()) {
         const data = userSnap.data();
+        if (data.isBanned) {
+          alert('This account has been banned from the system.');
+          return false;
+        }
         if (data.password !== cleanPassword) {
           alert('Invalid password for this account.');
           return false;
@@ -166,7 +191,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         uid: userSnap.exists() ? userSnap.data().uid : 'user_' + Math.random().toString(36).substr(2, 9),
         username: cleanUsername,
         isAdmin: cleanUsername.toLowerCase() === 'yeebs',
-        photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`
+        photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`,
+        settings: userSnap.exists() ? userSnap.data().settings : { compactMode: false, showChatPreview: true },
+        history: userSnap.exists() ? userSnap.data().history : []
       };
 
       setUser(finalUser);
@@ -228,6 +255,35 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const isFavorite = (gameId: string) => favorites.includes(gameId);
 
+  const updateSettings = async (settings: UserSettings) => {
+    if (!user) return;
+    try {
+      const userRef = doc(db, 'users', user.username);
+      await updateDoc(userRef, { settings });
+      setUser({ ...user, settings });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.username}`);
+    }
+  };
+
+  const addToHistory = async (gameId: string) => {
+    // Local storage history always happens
+    const history = JSON.parse(localStorage.getItem('yeebsgames_recent') || '[]');
+    const newHistory = [gameId, ...history.filter((hid: string) => hid !== gameId)].slice(0, 10);
+    localStorage.setItem('yeebsgames_recent', JSON.stringify(newHistory));
+
+    if (user) {
+      try {
+        const userRef = doc(db, 'users', user.username);
+        await updateDoc(userRef, { history: newHistory });
+        setUser({ ...user, history: newHistory });
+      } catch (error) {
+        // Silent error for history
+        console.error("Failed to sync history to cloud", error);
+      }
+    }
+  };
+
   return (
     <GameContext.Provider value={{ 
       games, 
@@ -237,6 +293,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       sortBy,
       setSortBy,
       toggleFavorite, 
+      updateSettings,
+      addToHistory,
       isFavorite,
       refreshGames,
       login,

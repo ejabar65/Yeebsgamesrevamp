@@ -1,15 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Plus, Tag, FileCode, Type, Image as ImageIcon, CheckCircle2, AlertCircle, Trash2, Globe, Edit2, X, Play } from 'lucide-react';
+import { Shield, Plus, Tag, FileCode, Type, Image as ImageIcon, CheckCircle2, AlertCircle, Trash2, Globe, Edit2, X, Play, Users, Ban, UserCheck, Gamepad2 } from 'lucide-react';
 import { addGame, deleteGame, updateGame } from '../services/gameService';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGames } from '../context/GameContext';
+import { db, collection, getDocs, doc, updateDoc } from '../lib/firebase';
 
 export default function Admin() {
   const { games, refreshGames, user, authLoading, setSearchQuery, setSortBy } = useGames();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'games' | 'users'>('games');
+  const [users, setUsers] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'users' && user?.isAdmin) {
+      fetchUsers();
+    }
+  }, [activeTab, user]);
+
+  const fetchUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const querySnapshot = await getDocs(collection(db, 'users'));
+      const usersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setUsers(usersList);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+    setUsersLoading(false);
+  };
+
+  const handleBanToggle = async (username: string, currentBanStatus: boolean) => {
+    try {
+      const userRef = doc(db, 'users', username);
+      await updateDoc(userRef, { isBanned: !currentBanStatus });
+      setUsers(prev => prev.map(u => u.username === username ? { ...u, isBanned: !currentBanStatus } : u));
+      setStatus({ type: 'success', message: `User ${username} ${!currentBanStatus ? 'banned' : 'unbanned'} successfully.` });
+    } catch (error) {
+      console.error("Error toggling ban:", error);
+      setStatus({ type: 'error', message: "Failed to update ban status." });
+    }
+  };
 
   const [formData, setFormData] = useState({
     title: '',
@@ -201,7 +235,34 @@ export default function Admin() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6 glass p-8 rounded-3xl border border-white/5">
+        <div className="flex items-center gap-4 mb-8">
+          <button
+            onClick={() => setActiveTab('games')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-display font-bold uppercase tracking-wider transition-all border ${
+              activeTab === 'games' 
+                ? 'bg-primary text-dark-surface border-primary shadow-[0_0_20px_rgba(250,204,21,0.2)]' 
+                : 'glass text-gray-400 border-white/5 hover:bg-white/5'
+            }`}
+          >
+            <Gamepad2 className="w-4 h-4" />
+            Games
+          </button>
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-display font-bold uppercase tracking-wider transition-all border ${
+              activeTab === 'users' 
+                ? 'bg-primary text-dark-surface border-primary shadow-[0_0_20px_rgba(250,204,21,0.2)]' 
+                : 'glass text-gray-400 border-white/5 hover:bg-white/5'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            Users
+          </button>
+        </div>
+
+        {activeTab === 'games' ? (
+          <>
+            <form onSubmit={handleSubmit} className="space-y-6 glass p-8 rounded-3xl border border-white/5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-xs font-bold uppercase text-gray-400 px-1">
@@ -358,6 +419,60 @@ export default function Admin() {
             ))}
           </div>
         </div>
+      </>
+    ) : (
+          <div className="space-y-6">
+            <div className="glass p-8 rounded-3xl border border-white/5">
+              <h2 className="text-2xl font-display font-bold mb-6 flex items-center gap-2">
+                <Users className="w-6 h-6 text-primary" />
+                User Management
+              </h2>
+              
+              {usersLoading ? (
+                <div className="flex justify-center py-12">
+                   <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {users.map(u => (
+                    <div key={u.id} className="glass p-4 rounded-2xl flex items-center justify-between border border-white/5 hover:border-white/10 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10">
+                          <img src={u.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} alt="" className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                             <h3 className="font-bold text-white">@{u.username}</h3>
+                             {u.username.toLowerCase() === 'yeebs' && <span className="bg-primary/20 text-primary text-[8px] font-black px-1.5 py-0.5 rounded uppercase italic">Admin</span>}
+                             {u.isBanned && <span className="bg-red-500/20 text-red-500 text-[8px] font-black px-1.5 py-0.5 rounded uppercase italic">Banned</span>}
+                          </div>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-widest">{u.uid}</p>
+                        </div>
+                      </div>
+                      
+                      {u.username.toLowerCase() !== 'yeebs' && (
+                        <button
+                          onClick={() => handleBanToggle(u.username, u.isBanned)}
+                          className={`p-3 rounded-xl transition-all flex items-center gap-2 font-bold text-xs uppercase tracking-widest ${
+                            u.isBanned 
+                              ? 'bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white' 
+                              : 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white'
+                          }`}
+                        >
+                          {u.isBanned ? <UserCheck className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                          {u.isBanned ? 'Unban' : 'Ban'}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {users.length === 0 && (
+                    <p className="text-center text-gray-500 py-12 italic">No users found in database.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
