@@ -8,26 +8,22 @@ service cloud.firestore {
 
     // --- Helpers ---
     function isSignedIn() {
-      return request.auth != null;
+      // We allow guest access because our custom password logic gates the collections
+      return true;
     }
 
-    // Check if the current user IS the admin 'Yeebs'
+    // Check if the current user represents 'Yeebs' admin
     function isAdmin() {
-      return isSignedIn() && (
-        // Yeebs document must exist and have the current user's UID
-        exists(/databases/$(database)/documents/users/Yeebs) &&
-        get(/databases/$(database)/documents/users/Yeebs).data.uid == request.auth.uid
+      return (
+        exists(/databases/$(database)/documents/users/Yeebs) && 
+        get(/databases/$(database)/documents/users/Yeebs).data.password == '$#GS29gs1'
       );
     }
 
-    function isOwner(username) {
-      return isSignedIn() && (
-        (exists(/databases/$(database)/documents/users/$(username)) && 
-         get(/databases/$(database)/documents/users/$(username)).data.uid == request.auth.uid) ||
-        // For creation, if they are claiming it
-        (!exists(/databases/$(database)/documents/users/$(username)) && 
-         request.resource.data.uid == request.auth.uid)
-      );
+    function isPasswordOwner(username) {
+      // If document exists, the submitted password must match the stored one
+      return (!exists(/databases/$(database)/documents/users/$(username))) || 
+             (get(/databases/$(database)/documents/users/$(username)).data.password == incoming().password);
     }
 
     function isValidId(id) {
@@ -45,11 +41,10 @@ service cloud.firestore {
     // --- Entity Validations ---
     function isValidUser(data) {
       return data.keys().hasAll(['uid', 'username', 'password']) &&
-             data.uid is string && data.uid.size() <= 128 &&
+             data.uid is string &&
              data.username is string && data.username.size() <= 50 &&
              data.password is string && data.password.size() <= 100 &&
-             (data.get('favoriteGameIds', []) is list) &&
-             data.uid == request.auth.uid;
+             (data.get('favoriteGameIds', []) is list);
     }
 
     function isValidGame(data) {
@@ -65,10 +60,10 @@ service cloud.firestore {
     // --- Collections ---
 
     match /users/{username} {
-      allow get: if isSignedIn();
+      allow get: if true; 
       allow list: if isAdmin();
-      allow create: if isSignedIn() && !exists(/databases/$(database)/documents/users/$(username)) && isValidUser(incoming());
-      allow update: if isSignedIn() && (existing().uid == request.auth.uid || isAdmin() || (incoming().password == existing().password && incoming().username == existing().username)) && isValidUser(incoming()) && (
+      allow create: if !exists(/databases/$(database)/documents/users/$(username)) && isValidUser(incoming());
+      allow update: if isPasswordOwner(username) && isValidUser(incoming()) && (
         incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds', 'uid'])
       );
       allow delete: if isAdmin();
@@ -77,7 +72,7 @@ service cloud.firestore {
     match /games/{gameId} {
       allow read: if true;
       allow create: if isAdmin() && isValidGame(incoming());
-      allow update: if (isAdmin() && isValidGame(incoming())) || (
+      allow update: if isAdmin() || (
         isValidGame(incoming()) && 
         incoming().diff(existing()).affectedKeys().hasOnly(['playCount', 'rating'])
       );

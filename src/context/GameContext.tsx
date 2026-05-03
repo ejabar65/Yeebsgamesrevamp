@@ -92,51 +92,42 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // Load username from local storage on mount
   useEffect(() => {
-    // Basic connection test
-    const testConnection = async () => {
-      try {
-        const { getDocFromServer } = await import('firebase/firestore');
-        await getDocFromServer(doc(db, 'system', 'ping'));
-      } catch (error: any) {
-        if (error.message?.includes('offline')) {
-          console.error("Firestore appears to be offline. Check configuration.");
-        }
-      }
-    };
-    testConnection();
-
     const savedUsername = localStorage.getItem('yeebsgames_username');
+    const savedPassword = localStorage.getItem('yeebsgames_password');
     
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser && savedUsername) {
-        // Restore session
-        const username = savedUsername;
-        setUser({
-          uid: firebaseUser.uid,
-          username: username,
-          isAdmin: username.toLowerCase() === 'yeebs',
-          photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
-        });
-
-        // Load favorites
-        const userRef = doc(db, 'users', username);
+    const initialize = async () => {
+      if (savedUsername && savedPassword) {
+        // Verify credentials
         try {
-          const userDoc = await getDoc(userRef);
-          if (userDoc.exists()) {
-            setFavorites(userDoc.data().favoriteGameIds || []);
+          const userRef = doc(db, 'users', savedUsername);
+          const userSnap = await getDoc(userRef);
+          
+          if (userSnap.exists() && userSnap.data().password === savedPassword) {
+            const data = userSnap.data();
+            setUser({
+              uid: data.uid,
+              username: savedUsername,
+              isAdmin: savedUsername.toLowerCase() === 'yeebs',
+              photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${savedUsername}`
+            });
+            setFavorites(data.favoriteGameIds || []);
+          } else {
+            // Invalid session
+            localStorage.removeItem('yeebsgames_username');
+            localStorage.removeItem('yeebsgames_password');
           }
         } catch (e) {
-          console.error("Error loading profile", e);
+          console.error("Session restoration failed", e);
         }
-      } else if (!firebaseUser && !savedUsername) {
+      } else {
         // Guest mode
         const saved = localStorage.getItem('yeebsgames_favorites');
         if (saved) setFavorites(JSON.parse(saved));
       }
       setAuthLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
+    initialize();
   }, []);
 
   const login = async (username: string, password?: string): Promise<boolean> => {
@@ -144,13 +135,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const cleanUsername = username.trim();
       const cleanPassword = password?.trim();
       if (!cleanUsername || !cleanPassword) return false;
-
-      // Sign in anonymously if not already
-      let firebaseUser = auth.currentUser;
-      if (!firebaseUser) {
-        const credential = await signInAnonymously(auth);
-        firebaseUser = credential.user;
-      }
 
       const userRef = doc(db, 'users', cleanUsername);
       const userSnap = await getDoc(userRef);
@@ -161,12 +145,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
           alert('Invalid password for this account.');
           return false;
         }
-        // Link current UID to the name if it's the right password
-        // This allows logging in from multiple devices if we don't strictly enforce UID
-        await updateDoc(userRef, { uid: firebaseUser.uid });
       } else {
         // Register new username
-        // Special case for Yeebs: only allow if using the system password
+        // Special case for Yeebs admin account
         if (cleanUsername.toLowerCase() === 'yeebs' && cleanPassword !== '$#GS29gs1') {
           alert('Unauthorized admin registration.');
           return false;
@@ -175,32 +156,33 @@ export function GameProvider({ children }: { children: ReactNode }) {
         await setDoc(userRef, {
           username: cleanUsername,
           password: cleanPassword,
-          uid: firebaseUser.uid,
-          favoriteGameIds: favorites, // Carry over local favorites
+          uid: 'user_' + Math.random().toString(36).substr(2, 9), // Local identifier
+          favoriteGameIds: favorites,
           createdAt: new Date().toISOString()
         });
       }
 
-      setUser({
-        uid: firebaseUser.uid,
+      const finalUser: AuthUser = {
+        uid: userSnap.exists() ? userSnap.data().uid : 'user_' + Math.random().toString(36).substr(2, 9),
         username: cleanUsername,
         isAdmin: cleanUsername.toLowerCase() === 'yeebs',
         photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`
-      });
+      };
+
+      setUser(finalUser);
       localStorage.setItem('yeebsgames_username', cleanUsername);
+      localStorage.setItem('yeebsgames_password', cleanPassword); // Store for syncing
       return true;
     } catch (e: any) {
       console.error("Login failed", e);
-      const errorMessage = e.code === 'auth/operation-not-allowed' 
-        ? 'Anonymous auth is not enabled in Firebase Console.' 
-        : e.message || 'Login failed. Please check internet connection.';
-      alert(`Login error: ${errorMessage}`);
+      alert('Login failed. Please verify your Firestore rules are deployed.');
       return false;
     }
   };
 
   const logout = async () => {
     localStorage.removeItem('yeebsgames_username');
+    localStorage.removeItem('yeebsgames_password');
     setUser(null);
     setFavorites([]);
   };
