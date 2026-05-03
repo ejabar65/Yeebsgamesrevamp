@@ -13,6 +13,8 @@ import Admin from './pages/Admin';
 import Profile from './pages/Profile';
 import Community from './pages/Community';
 import Chat from './pages/Chat';
+import Movies from './pages/Movies';
+import MovieView from './pages/MovieView';
 import { GameProvider } from './context/GameContext';
 import { applyCloak, getSavedCloak } from './cloakUtils';
 import { useGames } from './context/GameContext';
@@ -42,6 +44,8 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/chat" element={<Chat />} />
+            <Route path="/movies" element={<Movies />} />
+            <Route path="/movie/:id" element={<MovieView />} />
             <Route path="/community" element={<Community />} />
             <Route path="/game/:id" element={<GameView />} />
             <Route path="/admin" element={<Admin />} />

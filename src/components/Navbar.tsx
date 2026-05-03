@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bug, Search, Trophy, TrendingUp, Home, LogIn, LogOut, User as UserIcon, X, Shield, Zap, MessageSquare, ChevronDown, Monitor, Users } from 'lucide-react';
+import { Bug, Search, Trophy, TrendingUp, Home, LogIn, LogOut, User as UserIcon, X, Shield, Zap, MessageSquare, ChevronDown, Monitor, Users, Film } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -17,20 +17,27 @@ export default function Navbar() {
 
   // Listen for new messages if chat preview is enabled
   useEffect(() => {
+    let timer: NodeJS.Timeout;
     if (user?.settings?.showChatPreview) {
       const q = query(collection(db, 'global_messages'), orderBy('createdAt', 'desc'), limit(1));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         if (!snapshot.empty) {
           const data = snapshot.docs[0].data();
+          // Don't show if user is on chat page
+          if (location.pathname === '/chat') return;
+          
           setLatestMessage({ text: data.text, sender: data.senderName });
-          // Clear after 5 seconds
-          const timer = setTimeout(() => setLatestMessage(null), 5000);
-          return () => clearTimeout(timer);
+          
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => setLatestMessage(null), 5000);
         }
       });
-      return () => unsubscribe();
+      return () => {
+        unsubscribe();
+        if (timer) clearTimeout(timer);
+      };
     }
-  }, [user?.settings?.showChatPreview]);
+  }, [user?.settings?.showChatPreview, location.pathname]);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState(''); // Only for Yeebs
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,6 +88,35 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass h-16 px-4 md:px-8 flex items-center justify-between">
+      {/* iOS Style Chat Notification */}
+      <AnimatePresence>
+        {latestMessage && (
+          <motion.div 
+            initial={{ opacity: 0, y: -100, x: '-50%', scale: 0.8 }}
+            animate={{ opacity: 1, y: 20, x: '-50%', scale: 1 }}
+            exit={{ opacity: 0, y: -100, x: '-50%', scale: 0.8 }}
+            className="fixed top-0 left-1/2 z-[100] w-[90%] max-w-[400px] pointer-events-none"
+          >
+            <div className="bg-dark-surface rounded-[24px] px-4 py-3 border border-white/20 shadow-[0_20px_40px_rgba(0,0,0,0.6)] flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-linear-to-br from-primary to-primary/40 p-2 flex items-center justify-center shadow-lg shadow-primary/20">
+                <MessageSquare className="w-full h-full text-dark-surface fill-current" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary italic">Global Transmission</span>
+                  <span className="text-[8px] font-bold text-white/30 uppercase tracking-tighter">Just Now</span>
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xs font-black text-white whitespace-nowrap">{latestMessage.sender}</span>
+                  <p className="text-xs text-white/70 truncate font-medium">{latestMessage.text}</p>
+                </div>
+              </div>
+              <div className="w-1 h-8 rounded-full bg-white/5" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <Link to="/" onClick={() => handleNavClick('/')} className="flex items-center gap-2 group">
         <div className="w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-all flex items-center justify-center p-1.5 border border-primary/20">
           <img 
@@ -98,22 +134,9 @@ export default function Navbar() {
       </Link>
 
       <div className="hidden md:flex items-center gap-8 relative group">
-        <AnimatePresence>
-          {latestMessage && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute -top-12 left-1/2 -translate-x-1/2 glass px-3 py-1.5 rounded-full border border-primary/20 flex items-center gap-2 pointer-events-none whitespace-nowrap shadow-2xl z-50"
-            >
-              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-[10px] font-black text-primary uppercase italic">{latestMessage.sender}:</span>
-              <span className="text-[10px] font-bold text-white/80 max-w-[150px] truncate">{latestMessage.text}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
         {[
           { name: 'Home', icon: Home, path: '/', sort: 'newest' },
+          { name: 'Movies', icon: Film, path: '/movies' },
           { name: 'Community', icon: Users, path: '/community' },
           { name: 'Chat', icon: MessageSquare, path: '/chat' },
           { name: 'Trending', icon: TrendingUp, path: '/', sort: 'trending' },
@@ -122,7 +145,7 @@ export default function Navbar() {
           <button
             key={item.name}
             onClick={() => {
-              if (item.path === '/chat' || item.path === '/community') {
+              if (item.path === '/chat' || item.path === '/community' || item.path === '/movies') {
                 navigate(item.path);
               } else {
                 handleNavClick(item.path, item.sort);
