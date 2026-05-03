@@ -20,7 +20,7 @@ export default function Navbar() {
     // Simple logic: If Yeebs, check password
     // Other users can just claim a name
     if (username.toLowerCase() === 'yeebs') {
-      if (password !== '$#GS29gs67') {
+      if (password !== '$#GS29gs1') {
         alert('Invalid password for admin account.');
         setIsSubmitting(false);
         return;
