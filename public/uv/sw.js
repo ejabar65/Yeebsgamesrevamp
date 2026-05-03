@@ -1,6 +1,9 @@
 importScripts('uv.bundle.js');
-importScripts('uv.config.js');
 importScripts('libcurl.js');
+if (self.LibcurlTransport && self.LibcurlTransport.LibcurlClient) {
+    self.LibcurlTransport = self.LibcurlTransport.LibcurlClient;
+}
+importScripts('uv.config.js');
 importScripts('uv.sw.js');
 
 const sw = new UVServiceWorker();

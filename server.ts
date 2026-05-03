@@ -38,16 +38,23 @@ async function startServer() {
 
   app.get('/uv/sw.js', (req, res) => {
     res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Service-Worker-Allowed', '/uv/service/');
     res.sendFile(path.join(process.cwd(), 'public', 'uv', 'sw.js'));
   });
 
-  // Serve Ultraviolet assets
+  // Serve Ultraviolet assets with correct headers
   const uvPath = path.join(process.cwd(), 'node_modules', '@titaniumnetwork-dev', 'ultraviolet', 'dist');
-  app.use('/uv/', express.static(uvPath));
+  app.use('/uv/', (req, res, next) => {
+    res.setHeader('Service-Worker-Allowed', '/uv/service/');
+    next();
+  }, express.static(uvPath));
 
   // Serve Libcurl and Epoxy transports
   const libcurlPath = path.join(process.cwd(), 'node_modules', '@mercuryworkshop', 'libcurl-transport', 'dist');
-  app.use('/uv/libcurl/', express.static(libcurlPath));
+  app.use('/uv/libcurl/', (req, res, next) => {
+    res.setHeader('Service-Worker-Allowed', '/uv/service/');
+    next();
+  }, express.static(libcurlPath));
   
   // Also provide a direct link for uv.config.js to find it easily
   app.get('/uv/libcurl.js', (req, res) => {

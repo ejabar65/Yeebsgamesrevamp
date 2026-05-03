@@ -1,8 +1,12 @@
+if (self.LibcurlTransport && self.LibcurlTransport.LibcurlClient) {
+    self.LibcurlTransport = self.LibcurlTransport.LibcurlClient;
+}
+
 self.__uv$config = {
     prefix: '/uv/service/',
-    bare: 'https://tomp.app',
-    encodeUrl: Ultraviolet.codec.xor.encode,
-    decodeUrl: Ultraviolet.codec.xor.decode,
+    bare: 'https://tomp.app/',
+    encodeUrl: (url) => { return url ? Ultraviolet.codec.xor.encode(url) : url; },
+    decodeUrl: (url) => { return url ? Ultraviolet.codec.xor.decode(url) : url; },
     handler: '/uv/uv.handler.js',
     bundle: '/uv/uv.bundle.js',
     config: '/uv/uv.config.js',
