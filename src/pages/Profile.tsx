@@ -1,21 +1,30 @@
 import React, { useState } from 'react';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, LogOut, Package, Heart, History, Trash2, Settings as SettingsIcon, Layout, MessageCircle, Palette, Save, CheckCircle2 } from 'lucide-react';
+import { User, LogOut, Package, Heart, History, Trash2, Settings as SettingsIcon, Layout, MessageCircle, Palette, Save, CheckCircle2, Zap, Shield } from 'lucide-react';
 import { auth, signOut } from '../lib/firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import GameCard from '../components/GameCard';
 
 export default function Profile() {
-  const { user, games, favorites, authLoading, toggleFavorite, logout, updateSettings } = useGames();
+  const { user, games, favorites, authLoading, toggleFavorite, logout, updateSettings, updateAvatar } = useGames();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'inventory' | 'settings'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'settings' | 'avatar'>('inventory');
   const [saveStatus, setSaveStatus] = useState(false);
 
   const [settingsForm, setSettingsForm] = useState({
     compactMode: user?.settings?.compactMode || false,
     showChatPreview: user?.settings?.showChatPreview ?? true,
-    customTheme: user?.settings?.customTheme || 'default'
+    customTheme: user?.settings?.customTheme || 'default',
+    soundsEnabled: user?.settings?.soundsEnabled ?? true,
+    privateProfile: user?.settings?.privateProfile ?? false
+  });
+
+  const [avatarForm, setAvatarForm] = useState({
+    style: user?.avatarConfig?.style || 'avataaars',
+    seed: user?.avatarConfig?.seed || user?.username || 'yeebs',
+    backgroundColor: user?.avatarConfig?.backgroundColor || 'b6e3f4',
+    rotate: user?.avatarConfig?.rotate || 0
   });
 
   if (authLoading) {
@@ -102,19 +111,25 @@ export default function Profile() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-4 mb-8">
-           <button 
-             onClick={() => setActiveTab('inventory')}
-             className={`flex-1 md:flex-none px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border ${activeTab === 'inventory' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
-           >
-             Inventory
-           </button>
-           <button 
-             onClick={() => setActiveTab('settings')}
-             className={`flex-1 md:flex-none px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border ${activeTab === 'settings' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
-           >
-             Settings
-           </button>
+        <div className="flex items-center gap-4 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+            <button 
+              onClick={() => setActiveTab('inventory')}
+              className={`px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border whitespace-nowrap ${activeTab === 'inventory' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
+            >
+              Inventory
+            </button>
+            <button 
+              onClick={() => setActiveTab('avatar')}
+              className={`px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border whitespace-nowrap ${activeTab === 'avatar' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
+            >
+              Custom Avatar
+            </button>
+            <button 
+              onClick={() => setActiveTab('settings')}
+              className={`px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border whitespace-nowrap ${activeTab === 'settings' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
+            >
+              Settings
+            </button>
         </div>
 
         <AnimatePresence mode="wait">
@@ -165,6 +180,85 @@ export default function Profile() {
                   </Link>
                 </div>
               )}
+            </motion.section>
+          ) : activeTab === 'avatar' ? (
+            <motion.section 
+              key="avatar"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
+              className="max-w-4xl"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 <div className="glass rounded-3xl p-8 border border-white/5 text-center flex flex-col items-center justify-center">
+                    <div className="relative mb-8">
+                       <div className="absolute inset-0 bg-primary/30 blur-3xl rounded-full" />
+                       <img 
+                         src={`https://api.dicebear.com/7.x/${avatarForm.style}/svg?seed=${avatarForm.seed}`}
+                         alt="Preview"
+                         className="w-48 h-48 rounded-full border-8 border-white/10 relative z-10 bg-dark-card shadow-2xl"
+                       />
+                    </div>
+                    <h3 className="text-2xl font-display font-black uppercase mb-1">Avatar Preview</h3>
+                    <p className="text-gray-500 text-[10px] uppercase tracking-widest font-mono">Generated ID: {avatarForm.seed}</p>
+                 </div>
+
+                 <div className="glass rounded-3xl p-8 border border-white/5 space-y-8">
+                    <div className="space-y-4">
+                       <h4 className="text-sm font-black uppercase tracking-widest text-primary">1. Choose Your Vibe</h4>
+                       <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { id: 'avataaars', name: 'Original' },
+                            { id: 'pixel-art', name: 'Retro Pixel' },
+                            { id: 'bottts', name: 'Cyber Bot' },
+                            { id: 'human', name: 'Minimalist' },
+                            { id: 'identicon', name: 'Abstract' },
+                            { id: 'croodles', name: 'Hand-drawn' }
+                          ].map(style => (
+                            <button
+                              key={style.id}
+                              onClick={() => setAvatarForm({ ...avatarForm, style: style.id })}
+                              className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${avatarForm.style === style.id ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5 hover:border-white/20'}`}
+                            >
+                               {style.name}
+                            </button>
+                          ))}
+                       </div>
+                    </div>
+
+                    <div className="space-y-4">
+                       <h4 className="text-sm font-black uppercase tracking-widest text-primary">2. Personalize Seed</h4>
+                       <div className="relative">
+                          <input 
+                            type="text"
+                            value={avatarForm.seed}
+                            onChange={(e) => setAvatarForm({ ...avatarForm, seed: e.target.value })}
+                            placeholder="Type anything to randomize..."
+                            className="w-full px-4 py-4 pr-16 bg-white/5 border border-white/10 rounded-2xl focus:border-primary transition-all text-sm font-mono"
+                          />
+                          <button 
+                            onClick={() => setAvatarForm({ ...avatarForm, seed: Math.random().toString(36).substring(7) })}
+                            className="absolute right-2 top-2 p-3 rounded-xl bg-white/10 hover:bg-primary hover:text-dark-surface transition-all"
+                          >
+                             <History className="w-4 h-4" />
+                          </button>
+                       </div>
+                       <p className="text-[10px] text-gray-500 uppercase italic">Every character is unique. Share your seed with friends!</p>
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        updateAvatar(avatarForm);
+                        setSaveStatus(true);
+                        setTimeout(() => setSaveStatus(false), 2000);
+                      }}
+                      className="w-full py-4 rounded-2xl bg-white text-dark-surface font-black uppercase tracking-[0.2em] hover:bg-primary transition-all flex items-center justify-center gap-3"
+                    >
+                       <Save className="w-5 h-5" />
+                       Apply Character
+                    </button>
+                 </div>
+              </div>
             </motion.section>
           ) : (
             <motion.section 
@@ -242,8 +336,8 @@ export default function Profile() {
                              <p className="text-[10px] text-gray-500 uppercase tracking-widest">Personalize your portal aesthetic</p>
                           </div>
                        </div>
-                       <div className="grid grid-cols-3 gap-3">
-                          {['default', 'cyber', 'retro'].map(theme => (
+                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                          {['default', 'cyber', 'retro', 'minimal'].map(theme => (
                             <button
                               key={theme}
                               onClick={() => setSettingsForm({ ...settingsForm, customTheme: theme })}
@@ -253,6 +347,44 @@ export default function Profile() {
                             </button>
                           ))}
                        </div>
+                    </div>
+
+                    {/* Sounds Toggle */}
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                       <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-xl bg-emerald-500/10">
+                             <Zap className="w-5 h-5 text-emerald-500" />
+                          </div>
+                          <div>
+                             <h4 className="font-bold text-sm text-white">Audio Feedback</h4>
+                             <p className="text-[10px] text-gray-500 uppercase tracking-widest">Enable system sound effects</p>
+                          </div>
+                       </div>
+                       <button 
+                         onClick={() => setSettingsForm({ ...settingsForm, soundsEnabled: !settingsForm.soundsEnabled })}
+                         className={`w-12 h-6 rounded-full relative transition-colors ${settingsForm.soundsEnabled ? 'bg-primary' : 'bg-gray-700'}`}
+                       >
+                          <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-all ${settingsForm.soundsEnabled ? 'translate-x-6' : ''}`} />
+                       </button>
+                    </div>
+
+                    {/* Private Profile */}
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                       <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-xl bg-purple-500/10">
+                             <Shield className="w-5 h-5 text-purple-500" />
+                          </div>
+                          <div>
+                             <h4 className="font-bold text-sm text-white">Privacy Lock</h4>
+                             <p className="text-[10px] text-gray-500 uppercase tracking-widest">Hide your inventory from search</p>
+                          </div>
+                       </div>
+                       <button 
+                         onClick={() => setSettingsForm({ ...settingsForm, privateProfile: !settingsForm.privateProfile })}
+                         className={`w-12 h-6 rounded-full relative transition-colors ${settingsForm.privateProfile ? 'bg-primary' : 'bg-gray-700'}`}
+                       >
+                          <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-all ${settingsForm.privateProfile ? 'translate-x-6' : ''}`} />
+                       </button>
                     </div>
                  </div>
 

@@ -30,15 +30,29 @@ async function startServer() {
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
 
-  // Specifically serve our custom uv.config.js from public
+  // Specifically serve our custom uv.config.js and sw.js from public
   app.get('/uv/uv.config.js', (req, res) => {
     res.setHeader('Content-Type', 'application/javascript');
     res.sendFile(path.join(process.cwd(), 'public', 'uv', 'uv.config.js'));
   });
 
+  app.get('/uv/sw.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.join(process.cwd(), 'public', 'uv', 'sw.js'));
+  });
+
   // Serve Ultraviolet assets
   const uvPath = path.join(process.cwd(), 'node_modules', '@titaniumnetwork-dev', 'ultraviolet', 'dist');
   app.use('/uv/', express.static(uvPath));
+
+  // Serve Libcurl and Epoxy transports
+  const libcurlPath = path.join(process.cwd(), 'node_modules', '@mercuryworkshop', 'libcurl-transport', 'dist');
+  app.use('/uv/libcurl/', express.static(libcurlPath));
+  
+  // Also provide a direct link for uv.config.js to find it easily
+  app.get('/uv/libcurl.js', (req, res) => {
+    res.sendFile(path.join(libcurlPath, 'index.js'));
+  });
 
   // API Routes
   app.get('/api/games', (req, res) => {

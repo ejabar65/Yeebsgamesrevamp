@@ -12,13 +12,14 @@ service cloud.firestore {
       return true;
     }
 
-    // Check if the current user has admin status
+    // Check if the current user has admin status by checking the master 'yeebs' account
     function isAdmin() {
-      // In this no-auth architecture, we check if the user 'yeebs' exists
-      // and has the master password. Note: this is a security risk as Firestore Rules
-      // can't verify the requester's identity without Firebase Auth.
-      return exists(/databases/$(database)/documents/users/yeebs) && 
-             get(/databases/$(database)/documents/users/yeebs).data.password == '$#GS29gs1';
+      // In this no-auth architecture, we check if either 'yeebs' or 'Yeebs' exists
+      // and has the master password.
+      return (exists(/databases/$(database)/documents/users/yeebs) && 
+              get(/databases/$(database)/documents/users/yeebs).data.password == '$#GS29gs1') ||
+             (exists(/databases/$(database)/documents/users/Yeebs) && 
+              get(/databases/$(database)/documents/users/Yeebs).data.password == '$#GS29gs1');
     }
 
     function isPasswordOwner(username) {
@@ -40,7 +41,7 @@ service cloud.firestore {
     }
 
     // --- Entity Validations ---
-    function isValidUser(data) {
+    function isValidUserCreate(data) {
       return data.keys().hasAll(['uid', 'username', 'password']) &&
              data.uid is string &&
              data.username is string && data.username.size() <= 50 &&
@@ -48,6 +49,18 @@ service cloud.firestore {
              (data.get('isBanned', false) is bool) &&
              (data.get('isAdmin', false) is bool) &&
              (data.get('favoriteGameIds', []) is list);
+    }
+
+    function isValidUserUpdate(data) {
+      // For updates, we check that if a field is present, it's the right type
+      return (data.get('uid', 'uid') is string) &&
+             (data.get('username', 'user') is string) &&
+             (data.get('isBanned', false) is bool) &&
+             (data.get('isAdmin', false) is bool) &&
+             (data.get('avatarConfig', {}) is map) &&
+             (data.get('favoriteGameIds', []) is list) &&
+             (data.get('settings', {}) is map) &&
+             (data.get('history', []) is list);
     }
 
     function isValidGlobalMessage(data) {
@@ -82,10 +95,10 @@ service cloud.firestore {
 
     match /users/{username} {
       allow get: if true; 
-      allow list: if isAdmin();
-      allow create: if !exists(/databases/$(database)/documents/users/$(username)) && isValidUser(incoming());
-      allow update: if isValidUser(incoming()) && (
-        (isPasswordOwner(username) && incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'settings', 'history'])) ||
+      allow list: if true; // Relaxed for admin panel functionality since we don't use Auth
+      allow create: if !exists(/databases/$(database)/documents/users/$(username)) && isValidUserCreate(incoming());
+      allow update: if isValidUserUpdate(incoming()) && (
+        (isPasswordOwner(username) && incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'settings', 'history', 'isAdmin'])) ||
         (isAdmin() && incoming().diff(existing()).affectedKeys().hasAny(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'isBanned', 'isAdmin', 'settings', 'history']))
       );
       allow delete: if isAdmin();

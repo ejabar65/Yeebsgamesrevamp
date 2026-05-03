@@ -499,7 +499,7 @@ export default function Admin() {
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        {u.id.toLowerCase() !== 'yeebs' && u.id !== user?.username && (
+                        {u.id.toLowerCase() !== 'yeebs' && u.id.toLowerCase() !== user?.username.toLowerCase() && (
                           <>
                             <button
                               onClick={() => handleToggleAdmin(u.id, !!u.isAdmin)}

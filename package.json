@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
+    "@mercuryworkshop/libcurl-transport": "^2.0.5",
     "@tailwindcss/vite": "^4.1.14",
     "@titaniumnetwork-dev/ultraviolet": "^3.2.10",
     "@tomphttp/bare-server-node": "^2.0.6",

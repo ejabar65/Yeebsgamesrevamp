@@ -10,11 +10,12 @@ import {
   serverTimestamp,
   doc,
   updateDoc,
-  getDoc
+  getDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, User, MessageSquare, Zap, Shield, Loader2 } from 'lucide-react';
+import { Send, User, MessageSquare, Zap, Shield, Loader2, Trash2 } from 'lucide-react';
 import { Filter } from 'bad-words';
 
 const filter = new Filter();
@@ -65,13 +66,14 @@ export const ChatRoom: React.FC = () => {
     setTimeout(() => setSpamCooldown(false), 2000); // 2 second cooldown
 
     try {
+      const lowerUsername = user.username.toLowerCase();
       // Spam prevention check in user profile
-      const userRef = doc(db, 'users', user.username);
+      const userRef = doc(db, 'users', lowerUsername);
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
         const lastMsg = userSnap.data().lastMessageAt;
         if (lastMsg) {
-          const lastTime = lastMsg.toMillis();
+          const lastTime = lastMsg.toMillis ? lastMsg.toMillis() : new Date(lastMsg).getTime();
           if (Date.now() - lastTime < 1500) {
             alert('Slow down! Spam prevention active.');
             return;
@@ -94,6 +96,18 @@ export const ChatRoom: React.FC = () => {
       setNewMessage('');
     } catch (error) {
       console.error("Error sending message:", error);
+    }
+  };
+
+  const handleDeleteMessage = async (msgId: string) => {
+    if (!user?.isAdmin) return;
+    if (!confirm('Are you sure you want to delete this message?')) return;
+    
+    try {
+      await deleteDoc(doc(db, 'global_messages', msgId));
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      alert("Failed to delete message.");
     }
   };
 
@@ -130,10 +144,19 @@ export const ChatRoom: React.FC = () => {
               className={`flex flex-col ${msg.senderName === user?.username ? 'items-end' : 'items-start'}`}
             >
               <div className="flex items-center gap-2 mb-1">
-                <span className={`text-[10px] font-black uppercase ${msg.senderName === 'Yeebs' ? 'text-primary' : 'text-gray-400'}`}>
+                <span className={`text-[10px] font-black uppercase ${msg.senderName.toLowerCase() === 'yeebs' ? 'text-primary' : 'text-gray-400'}`}>
                   {msg.senderName}
                 </span>
-                {msg.senderName === 'Yeebs' && <Shield className="w-2.5 h-2.5 text-primary" />}
+                {(msg.senderName.toLowerCase() === 'yeebs' || msg.isAdmin) && <Shield className="w-2.5 h-2.5 text-primary" />}
+                {user?.isAdmin && (
+                  <button 
+                    onClick={() => handleDeleteMessage(msg.id)}
+                    className="p-1 rounded bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all ml-1"
+                    title="Delete Message"
+                  >
+                    <Trash2 className="w-2.5 h-2.5" />
+                  </button>
+                )}
                 {user && msg.senderName !== user.username && (
                   <button 
                     onClick={() => {

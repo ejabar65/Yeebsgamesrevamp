@@ -9,6 +9,13 @@
         "username": { "type": "string" },
         "password": { "type": "string" },
         "photoURL": { "type": "string" },
+        "avatarConfig": {
+          "type": "object",
+          "properties": {
+            "style": { "type": "string" },
+            "seed": { "type": "string" }
+          }
+        },
         "isBanned": { "type": "boolean" },
         "isAdmin": { "type": "boolean" },
         "settings": {
@@ -16,7 +23,9 @@
           "properties": {
             "compactMode": { "type": "boolean" },
             "showChatPreview": { "type": "boolean" },
-            "customTheme": { "type": "string" }
+            "customTheme": { "type": "string" },
+            "soundsEnabled": { "type": "boolean" },
+            "privateProfile": { "type": "boolean" }
           }
         },
         "history": { "type": "array", "items": { "type": "string" } },

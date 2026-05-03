@@ -22,6 +22,15 @@ export interface UserSettings {
   compactMode: boolean;
   showChatPreview: boolean;
   customTheme?: string;
+  soundsEnabled?: boolean;
+  privateProfile?: boolean;
+}
+
+export interface AvatarConfig {
+  style: string;
+  seed: string;
+  backgroundColor?: string;
+  rotate?: number;
 }
 
 export interface AuthUser {
@@ -29,6 +38,7 @@ export interface AuthUser {
   username: string;
   isAdmin: boolean;
   photoURL?: string;
+  avatarConfig?: AvatarConfig;
   settings?: UserSettings;
   history?: string[];
 }
@@ -83,6 +93,7 @@ interface GameContextType {
   addToHistory: (gameId: string) => Promise<void>;
   isFavorite: (gameId: string) => boolean;
   refreshGames: () => Promise<void>;
+  updateAvatar: (config: AvatarConfig) => Promise<void>;
   login: (username: string, password?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   loading: boolean;
@@ -109,7 +120,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (savedUsername && savedPassword) {
         // Verify credentials
         try {
-          const userRef = doc(db, 'users', savedUsername);
+          const userRef = doc(db, 'users', savedUsername.toLowerCase());
           const userSnap = await getDoc(userRef);
           
           if (userSnap.exists() && userSnap.data().password === savedPassword) {
@@ -123,9 +134,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
             setUser({
               uid: data.uid,
               username: savedUsername,
-              isAdmin: savedUsername.toLowerCase() === 'yeebs',
-              photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${savedUsername}`,
-              settings: data.settings || { compactMode: false, showChatPreview: true },
+              isAdmin: savedUsername.toLowerCase() === 'yeebs' || data.isAdmin,
+              photoURL: data.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${savedUsername}`,
+              avatarConfig: data.avatarConfig || { style: 'avataaars', seed: savedUsername },
+              settings: data.settings || { compactMode: false, showChatPreview: true, soundsEnabled: true, privateProfile: false },
               history: data.history || []
             });
             setFavorites(data.favoriteGameIds || []);
@@ -154,10 +166,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const login = async (username: string, password?: string): Promise<boolean> => {
     try {
       const cleanUsername = username.trim();
+      const lowerUsername = cleanUsername.toLowerCase();
       const cleanPassword = password?.trim();
       if (!cleanUsername || !cleanPassword) return false;
 
-      const userRef = doc(db, 'users', cleanUsername);
+      const userRef = doc(db, 'users', lowerUsername);
       const userSnap = await getDoc(userRef);
 
       if (userSnap.exists()) {
@@ -173,26 +186,29 @@ export function GameProvider({ children }: { children: ReactNode }) {
       } else {
         // Register new username
         // Special case for Yeebs admin account
-        if (cleanUsername.toLowerCase() === 'yeebs' && cleanPassword !== '$#GS29gs1') {
+        if (lowerUsername === 'yeebs' && cleanPassword !== '$#GS29gs1') {
           alert('Unauthorized admin registration.');
           return false;
         }
 
         await setDoc(userRef, {
-          username: cleanUsername,
+          username: cleanUsername, // Keep original for display? 
+          // Actually, let's just stick to cleanUsername for display but ID is lower
           password: cleanPassword,
-          uid: 'user_' + Math.random().toString(36).substr(2, 9), // Local identifier
+          uid: 'user_' + Math.random().toString(36).substr(2, 9),
           favoriteGameIds: favorites,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          isAdmin: lowerUsername === 'yeebs'
         });
       }
 
       const finalUser: AuthUser = {
         uid: userSnap.exists() ? userSnap.data().uid : 'user_' + Math.random().toString(36).substr(2, 9),
         username: cleanUsername,
-        isAdmin: cleanUsername.toLowerCase() === 'yeebs',
-        photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`,
-        settings: userSnap.exists() ? userSnap.data().settings : { compactMode: false, showChatPreview: true },
+        isAdmin: lowerUsername === 'yeebs' || (userSnap.exists() && userSnap.data().isAdmin),
+        photoURL: (userSnap.exists() && userSnap.data().photoURL) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`,
+        avatarConfig: (userSnap.exists() && userSnap.data().avatarConfig) || { style: 'avataaars', seed: cleanUsername },
+        settings: userSnap.exists() ? userSnap.data().settings : { compactMode: false, showChatPreview: true, soundsEnabled: true, privateProfile: false },
         history: userSnap.exists() ? userSnap.data().history : []
       };
 
@@ -242,11 +258,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setFavorites(next);
 
     if (user) {
-      const userRef = doc(db, 'users', user.username);
+      const userRef = doc(db, 'users', user.username.toLowerCase());
       try {
         await updateDoc(userRef, { favoriteGameIds: next });
       } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, `users/${user.username}`);
+        handleFirestoreError(error, OperationType.UPDATE, `users/${user.username.toLowerCase()}`);
       }
     } else {
       localStorage.setItem('yeebsgames_favorites', JSON.stringify(next));
@@ -258,11 +274,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const updateSettings = async (settings: UserSettings) => {
     if (!user) return;
     try {
-      const userRef = doc(db, 'users', user.username);
+      const userRef = doc(db, 'users', user.username.toLowerCase());
       await updateDoc(userRef, { settings });
       setUser({ ...user, settings });
+      if (settings.soundsEnabled) {
+        // Optional: play a subtle click sound
+      }
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${user.username}`);
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.username.toLowerCase()}`);
     }
   };
 
@@ -274,13 +293,28 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     if (user) {
       try {
-        const userRef = doc(db, 'users', user.username);
+        const userRef = doc(db, 'users', user.username.toLowerCase());
         await updateDoc(userRef, { history: newHistory });
         setUser({ ...user, history: newHistory });
       } catch (error) {
         // Silent error for history
         console.error("Failed to sync history to cloud", error);
       }
+    }
+  };
+
+  const updateAvatar = async (config: AvatarConfig) => {
+    if (!user) return;
+    try {
+      const userRef = doc(db, 'users', user.username.toLowerCase());
+      const newPhotoURL = `https://api.dicebear.com/7.x/${config.style}/svg?seed=${config.seed}${config.backgroundColor ? `&backgroundColor=${config.backgroundColor}` : ''}${config.rotate ? `&rotate=${config.rotate}` : ''}`;
+      await updateDoc(userRef, { 
+        avatarConfig: config,
+        photoURL: newPhotoURL
+      });
+      setUser({ ...user, avatarConfig: config, photoURL: newPhotoURL });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.username.toLowerCase()}/avatar`);
     }
   };
 
@@ -294,6 +328,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setSortBy,
       toggleFavorite, 
       updateSettings,
+      updateAvatar,
       addToHistory,
       isFavorite,
       refreshGames,
