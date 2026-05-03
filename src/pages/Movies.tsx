@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Film, Search, TrendingUp, Star, Play, Zap, Info } from 'lucide-react';
+import { Film, Search, TrendingUp, Star, Play, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { movieService, Movie } from '../services/movieService';
 import { useNavigate } from 'react-router-dom';
@@ -82,37 +82,6 @@ export default function Movies() {
     const results = await movieService.searchMovies(searchQuery);
     setSearchResults(results);
   };
-
-  const hasApiKey = !!(import.meta as any).env.VITE_TMDB_API_KEY;
-
-  if (!hasApiKey) {
-    return (
-      <div className="pt-32 px-4 text-center">
-        <div className="glass p-12 rounded-3xl max-w-2xl mx-auto border border-red-500/20">
-          <Info className="w-16 h-16 text-primary mx-auto mb-6" />
-          <h1 className="text-3xl font-display font-black uppercase mb-4 tracking-tight">API Key Required</h1>
-          <p className="text-gray-400 mb-8 font-medium">
-            The Movie Transmission System requires a TMDB API Key to function. 
-            Please add <code className="text-primary bg-primary/10 px-2 py-1 rounded">VITE_TMDB_API_KEY</code> to your environment secrets.
-          </p>
-          <div className="flex justify-center gap-4">
-            <button 
-              onClick={() => window.open('https://www.themoviedb.org/documentation/api', '_blank')}
-              className="px-6 py-3 rounded-xl bg-primary text-dark-surface font-black text-xs uppercase tracking-widest hover:bg-white transition-all shadow-[0_0_20px_rgba(250,204,21,0.3)]"
-            >
-              Get API Key
-            </button>
-            <button 
-              onClick={() => navigate('/')}
-              className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-black text-xs uppercase tracking-widest hover:bg-white/10 transition-all font-mono"
-            >
-              Back to Games
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <main className="pt-24 pb-12">
