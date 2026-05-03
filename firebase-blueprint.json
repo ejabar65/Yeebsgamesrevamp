@@ -6,13 +6,13 @@
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
-        "displayName": { "type": "string" },
-        "email": { "type": "string" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
         "photoURL": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "favoriteGameIds": { "type": "array", "items": { "type": "string" } }
       },
-      "required": ["uid", "email"]
+      "required": ["uid", "username", "password"]
     },
     "Game": {
       "title": "Game Meta",
@@ -33,7 +33,7 @@
     }
   },
   "firestore": {
-    "/users/{userId}": {
+    "/users/{username}": {
       "schema": "User",
       "description": "User profiles"
     },

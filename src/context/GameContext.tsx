@@ -92,6 +92,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // Load username from local storage on mount
   useEffect(() => {
+    // Basic connection test
+    const testConnection = async () => {
+      try {
+        const { getDocFromServer } = await import('firebase/firestore');
+        await getDocFromServer(doc(db, 'system', 'ping'));
+      } catch (error: any) {
+        if (error.message?.includes('offline')) {
+          console.error("Firestore appears to be offline. Check configuration.");
+        }
+      }
+    };
+    testConnection();
+
     const savedUsername = localStorage.getItem('yeebsgames_username');
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -176,9 +189,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       });
       localStorage.setItem('yeebsgames_username', cleanUsername);
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error("Login failed", e);
-      alert('Login failed. Please check internet connection.');
+      const errorMessage = e.code === 'auth/operation-not-allowed' 
+        ? 'Anonymous auth is not enabled in Firebase Console.' 
+        : e.message || 'Login failed. Please check internet connection.';
+      alert(`Login error: ${errorMessage}`);
       return false;
     }
   };
