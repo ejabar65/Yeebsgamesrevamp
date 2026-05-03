@@ -175,7 +175,6 @@ export default function MovieView() {
                   className="w-full h-full"
                   allowFullScreen
                   allow="autoplay; encrypted-media; picture-in-picture; clipboard-write"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   referrerPolicy="no-referrer"
                   title="Movie Player"
                 />
