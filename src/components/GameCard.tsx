@@ -37,19 +37,13 @@ export default function GameCard({ game }: GameCardProps) {
         </button>
       </div>
       <Link to={`/game/${game.id}`}>
-        <div className={`${isCompact ? 'aspect-square' : 'aspect-video'} rounded-xl overflow-hidden bg-dark-card border border-white/5 card-hover relative flex items-center justify-center`}>
-          {game.thumbnail ? (
-            <img
-              src={game.thumbnail}
-              alt={game.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <div className="w-full h-full bg-white/5 flex items-center justify-center">
-              <Play className={`${isCompact ? 'w-6 h-6' : 'w-10 h-10'} text-white/10`} />
-            </div>
-          )}
+        <div className={`${isCompact ? 'aspect-square' : 'aspect-video'} rounded-xl overflow-hidden bg-dark-card border border-white/5 card-hover relative`}>
+          <img
+            src={game.thumbnail}
+            alt={game.title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            referrerPolicy="no-referrer"
+          />
           <div className="absolute inset-0 bg-linear-to-t from-dark-surface/90 via-dark-surface/20 to-transparent flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity">
             <div className={`${isCompact ? 'w-8 h-8' : 'w-10 h-10'} rounded-full bg-primary flex items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.5)]`}>
               <Play className={`${isCompact ? 'w-4 h-4' : 'w-5 h-5'} text-dark-surface fill-current ml-1`} />

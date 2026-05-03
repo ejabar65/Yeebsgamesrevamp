@@ -4,6 +4,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import cors from 'cors';
+import { createBareServer } from '@tomphttp/bare-server-node';
+import http from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,10 +23,43 @@ if (!fs.existsSync(CUSTOM_GAMES_DIR)) {
 
 async function startServer() {
   const app = express();
+  const bare = createBareServer('/bare/');
+  const server = http.createServer();
   const PORT = 3000;
 
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
+
+  // Specifically serve our custom uv.config.js and sw.js from public
+  app.get('/uv/uv.config.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.join(process.cwd(), 'public', 'uv', 'uv.config.js'));
+  });
+
+  app.get('/uv/sw.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Service-Worker-Allowed', '/uv/service/');
+    res.sendFile(path.join(process.cwd(), 'public', 'uv', 'sw.js'));
+  });
+
+  // Serve Ultraviolet assets with correct headers
+  const uvPath = path.join(process.cwd(), 'node_modules', '@titaniumnetwork-dev', 'ultraviolet', 'dist');
+  app.use('/uv/', (req, res, next) => {
+    res.setHeader('Service-Worker-Allowed', '/uv/service/');
+    next();
+  }, express.static(uvPath));
+
+  // Serve Libcurl and Epoxy transports
+  const libcurlPath = path.join(process.cwd(), 'node_modules', '@mercuryworkshop', 'libcurl-transport', 'dist');
+  app.use('/uv/libcurl/', (req, res, next) => {
+    res.setHeader('Service-Worker-Allowed', '/uv/service/');
+    next();
+  }, express.static(libcurlPath));
+  
+  // Also provide a direct link for uv.config.js to find it easily
+  app.get('/uv/libcurl.js', (req, res) => {
+    res.sendFile(path.join(libcurlPath, 'index.js'));
+  });
 
   // API Routes
   app.get('/api/games', (req, res) => {
@@ -96,14 +131,32 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(__dirname, 'build');
+    const distPath = path.join(__dirname, 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  // Removed app.listen because we use server.listen for Bare+Express
+
+  server.on('upgrade', (req, socket, head) => {
+    if (bare.shouldRoute(req)) {
+      bare.routeUpgrade(req, socket, head);
+    } else {
+      // Allow other upgrades if needed (like HMR)
+    }
+  });
+
+  server.on('request', (req, res) => {
+    if (bare.shouldRoute(req)) {
+      bare.routeRequest(req, res);
+    } else {
+      app(req, res);
+    }
+  });
+
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://localhost:${PORT}`);
   });
 }

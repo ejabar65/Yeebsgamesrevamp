@@ -69,8 +69,8 @@ export default function GameGrid() {
           ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8' 
           : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
       }`}>
-        {filteredAndSortedGames.map((game, i) => (
-          <div key={`${game.id}-${i}`}>
+        {filteredAndSortedGames.map((game) => (
+          <div key={game.id}>
             <GameCard game={game} />
           </div>
         ))}

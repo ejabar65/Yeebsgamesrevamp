@@ -16,7 +16,6 @@ import {
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, User, MessageSquare, Zap, Shield, Loader2, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
 
 const filter = new Filter();
@@ -137,20 +136,17 @@ export const ChatRoom: React.FC = () => {
             <p className="text-sm">No transmissions yet. Start the conversation!</p>
           </div>
         ) : (
-          messages.map((msg, i) => (
+          messages.map((msg) => (
             <motion.div 
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              key={`${msg.id}-${i}`} 
+              key={msg.id} 
               className={`flex flex-col ${msg.senderName === user?.username ? 'items-end' : 'items-start'}`}
             >
               <div className="flex items-center gap-2 mb-1">
-                <Link 
-                  to={`/profile/${msg.senderName.toLowerCase()}`}
-                  className={`text-[10px] font-black uppercase hover:text-primary transition-colors cursor-pointer ${msg.senderName.toLowerCase() === 'yeebs' ? 'text-primary' : 'text-gray-400'}`}
-                >
+                <span className={`text-[10px] font-black uppercase ${msg.senderName.toLowerCase() === 'yeebs' ? 'text-primary' : 'text-gray-400'}`}>
                   {msg.senderName}
-                </Link>
+                </span>
                 {(msg.senderName.toLowerCase() === 'yeebs' || msg.isAdmin) && <Shield className="w-2.5 h-2.5 text-primary" />}
                 {user?.isAdmin && (
                   <button 

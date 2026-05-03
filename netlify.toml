@@ -1,0 +1,15 @@
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/uv/sw.js"
+  [headers.values]
+    Service-Worker-Allowed = "/uv/service/"
+    Content-Type = "application/javascript"
+
+[[headers]]
+  for = "/uv/*"
+  [headers.values]
+    Service-Worker-Allowed = "/uv/service/"

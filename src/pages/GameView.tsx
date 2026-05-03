@@ -114,7 +114,7 @@ export default function GameView() {
               ) : (
                 <iframe
                   id="game-frame"
-                  src={game.url || null}
+                  src={game.url}
                   className="w-full h-full border-0"
                   allowFullScreen
                   title={game.title}
@@ -207,15 +207,9 @@ export default function GameView() {
                     to={`/game/${suggested.id}`}
                     className="flex gap-3 group"
                   >
-                      <div className="w-20 aspect-square rounded-lg overflow-hidden flex-shrink-0 bg-dark-card border border-white/5">
-                        {suggested.thumbnail ? (
-                          <img src={suggested.thumbnail} alt={suggested.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-                        ) : (
-                          <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                            <Play className="w-6 h-6 text-white/10" />
-                          </div>
-                        )}
-                      </div>
+                    <div className="w-20 aspect-square rounded-lg overflow-hidden flex-shrink-0 bg-dark-card border border-white/5">
+                      <img src={suggested.thumbnail} alt={suggested.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{suggested.title}</h4>
                       <span className="text-[10px] text-primary font-bold uppercase tracking-wider">{suggested.category}</span>

@@ -16,7 +16,6 @@ import {
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, User, Search, MessageCircle, ArrowLeft, Loader2, UserPlus } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
 
 const filter = new Filter();
@@ -178,11 +177,12 @@ export const DirectMessages: React.FC = () => {
         </div>
         
         <div className="flex-1 overflow-y-auto scrollbar-hide">
-          {chats.map((chat, i) => {
+          {chats.map((chat) => {
             const recipient = chat.participants.find((p: string) => p !== user.username);
             return (
               <button
-                key={`${chat.id}-${i}`}
+                key={chat.id}
+                onClick={() => setActiveChat(chat)}
                 className={`w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors border-b border-white/5 text-left ${activeChat?.id === chat.id ? 'bg-white/10' : ''}`}
               >
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
@@ -218,12 +218,9 @@ export const DirectMessages: React.FC = () => {
                   {activeChat.participants.find((p: string) => p !== user.username)?.[0].toUpperCase()}
                 </div>
                 <div>
-                  <Link 
-                    to={`/profile/${activeChat.participants.find((p: string) => p !== user.username).toLowerCase()}`}
-                    className="font-bold text-sm tracking-tighter uppercase hover:text-primary transition-colors"
-                  >
+                  <h3 className="font-bold text-sm tracking-tighter uppercase">
                     {activeChat.participants.find((p: string) => p !== user.username)}
-                  </Link>
+                  </h3>
                   <div className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                     <span className="text-[10px] text-gray-500 font-bold">SECURE CHANNEL</span>
@@ -237,9 +234,9 @@ export const DirectMessages: React.FC = () => {
               className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
             >
               <AnimatePresence>
-                {messages.map((msg, i) => (
+                {messages.map((msg) => (
                   <motion.div 
-                    key={`${msg.id}-${i}`}
+                    key={msg.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className={`flex ${msg.senderId === user.username ? 'justify-end' : 'justify-start'}`}

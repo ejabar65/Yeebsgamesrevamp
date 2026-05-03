@@ -3,58 +3,31 @@ import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, LogOut, Package, Heart, History, Trash2, Settings as SettingsIcon, Layout, MessageCircle, Palette, Save, CheckCircle2, Zap, Shield } from 'lucide-react';
 import { auth, signOut } from '../lib/firebase';
-import { useNavigate, Link, useParams } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import GameCard from '../components/GameCard';
 
 export default function Profile() {
-  const { username: profileUsername } = useParams();
-  const { user: currentUser, games, favorites: currentFavorites, authLoading, toggleFavorite, logout, updateSettings, updateAvatar, updateBio, getPublicProfile } = useGames();
+  const { user, games, favorites, authLoading, toggleFavorite, logout, updateSettings, updateAvatar } = useGames();
   const navigate = useNavigate();
-  
   const [activeTab, setActiveTab] = useState<'inventory' | 'settings' | 'avatar'>('inventory');
   const [saveStatus, setSaveStatus] = useState(false);
-  const [publicUser, setPublicUser] = useState<any>(null);
-  const [loadingPublic, setLoadingPublic] = useState(false);
-  const [isEditingBio, setIsEditingBio] = useState(false);
-  const [bioDraft, setBioDraft] = useState('');
-
-  const isOwnProfile = !profileUsername || profileUsername.toLowerCase() === currentUser?.username.toLowerCase();
-
-  React.useEffect(() => {
-    if (isOwnProfile && currentUser) {
-      setBioDraft(currentUser.bio || '');
-    }
-  }, [isOwnProfile, currentUser]);
-
-  React.useEffect(() => {
-    if (!isOwnProfile && profileUsername) {
-      setLoadingPublic(true);
-      getPublicProfile(profileUsername).then(data => {
-        setPublicUser(data);
-        setLoadingPublic(false);
-      });
-    }
-  }, [profileUsername, isOwnProfile, getPublicProfile]);
-
-  const profileData = isOwnProfile ? currentUser : publicUser;
-  const profileFavorites = isOwnProfile ? currentFavorites : (publicUser?.favoriteGameIds || []);
 
   const [settingsForm, setSettingsForm] = useState({
-    compactMode: currentUser?.settings?.compactMode || false,
-    showChatPreview: currentUser?.settings?.showChatPreview ?? true,
-    customTheme: currentUser?.settings?.customTheme || 'default',
-    soundsEnabled: currentUser?.settings?.soundsEnabled ?? true,
-    privateProfile: currentUser?.settings?.privateProfile ?? false
+    compactMode: user?.settings?.compactMode || false,
+    showChatPreview: user?.settings?.showChatPreview ?? true,
+    customTheme: user?.settings?.customTheme || 'default',
+    soundsEnabled: user?.settings?.soundsEnabled ?? true,
+    privateProfile: user?.settings?.privateProfile ?? false
   });
 
   const [avatarForm, setAvatarForm] = useState({
-    style: currentUser?.avatarConfig?.style || 'avataaars',
-    seed: currentUser?.avatarConfig?.seed || currentUser?.username || 'yeebs',
-    backgroundColor: currentUser?.avatarConfig?.backgroundColor || 'b6e3f4',
-    rotate: currentUser?.avatarConfig?.rotate || 0
+    style: user?.avatarConfig?.style || 'avataaars',
+    seed: user?.avatarConfig?.seed || user?.username || 'yeebs',
+    backgroundColor: user?.avatarConfig?.backgroundColor || 'b6e3f4',
+    rotate: user?.avatarConfig?.rotate || 0
   });
 
-  if (authLoading || loadingPublic) {
+  if (authLoading) {
     return (
       <div className="min-h-screen pt-32 px-4 flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -62,19 +35,14 @@ export default function Profile() {
     );
   }
 
-  if (!profileData) {
+  if (!user) {
     return (
       <div className="min-h-screen pt-32 px-4 flex flex-col items-center justify-center text-center">
         <div className="p-6 rounded-full bg-primary/10 mb-6">
           <User className="w-12 h-12 text-primary" />
         </div>
-        <h1 className="text-3xl font-display font-black uppercase mb-4">{profileUsername ? 'User Not Found' : 'Access Denied'}</h1>
-        <p className="text-gray-400 mb-8 max-w-sm">
-          {profileUsername 
-            ? "This user doesn't exist or has set their profile to private."
-            : "Please login through the system portal to view your custom inventory."
-          }
-        </p>
+        <h1 className="text-3xl font-display font-black uppercase mb-4">Access Denied</h1>
+        <p className="text-gray-400 mb-8 max-w-sm">Please login through the system portal to view your custom inventory.</p>
         <button 
           onClick={() => navigate('/')}
           className="px-8 py-3 rounded-xl bg-primary text-dark-surface font-black uppercase tracking-widest hover:bg-white transition-all shadow-[0_0_20px_rgba(250,204,21,0.2)]"
@@ -85,7 +53,7 @@ export default function Profile() {
     );
   }
 
-  const savedGames = games.filter(game => profileFavorites.includes(game.id));
+  const savedGames = games.filter(game => favorites.includes(game.id));
 
   const handleLogout = async () => {
     await logout();
@@ -109,74 +77,17 @@ export default function Profile() {
 
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
-            <div className="w-32 h-32 rounded-full border-4 border-primary/20 relative z-10 overflow-hidden bg-dark-card flex items-center justify-center">
-              {profileData.photoURL ? (
-                <img 
-                  src={profileData.photoURL} 
-                  alt={profileData.username} 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User className="w-12 h-12 text-gray-600" />
-              )}
-            </div>
+            <img 
+              src={user.photoURL || ''} 
+              alt={user.username} 
+              className="w-32 h-32 rounded-full border-4 border-primary/20 relative z-10"
+            />
           </div>
           
           <div className="flex-1 text-center md:text-left relative z-10">
-            <h1 className="text-4xl font-display font-black uppercase mb-1">@{profileData.username}</h1>
-            
-            {isOwnProfile ? (
-              <div className="mb-4">
-                {isEditingBio ? (
-                  <div className="flex flex-col gap-2 max-w-md">
-                    <textarea 
-                      value={bioDraft}
-                      onChange={(e) => setBioDraft(e.target.value)}
-                      placeholder="Add a transmission to your profile..."
-                      className="bg-white/5 border border-white/10 rounded-xl p-3 text-sm font-mono focus:border-primary outline-hidden min-h-[80px]"
-                      autoFocus
-                    />
-                    <div className="flex gap-2">
-                       <button 
-                         onClick={async () => {
-                           await updateBio(bioDraft);
-                           setIsEditingBio(false);
-                         }}
-                         className="px-4 py-1.5 rounded-lg bg-primary text-dark-surface text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all"
-                       >
-                         Save Transmission
-                       </button>
-                       <button 
-                         onClick={() => {
-                           setBioDraft(currentUser?.bio || '');
-                           setIsEditingBio(false);
-                         }}
-                         className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
-                       >
-                         Cancel
-                       </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div 
-                    onClick={() => setIsEditingBio(true)}
-                    className="group cursor-pointer max-w-md"
-                  >
-                    <p className={`text-sm mb-1 ${!profileData.bio ? 'text-gray-500 italic' : 'text-gray-300'}`}>
-                      {profileData.bio || "No transmission set. Click to add a bio..."}
-                    </p>
-                    <div className="h-0.5 w-0 group-hover:w-full bg-primary/30 transition-all duration-300" />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-gray-300 text-sm mb-4 max-w-md font-medium leading-relaxed italic">
-                {profileData.bio ? `"${profileData.bio}"` : "This user hasn't transmitted a bio yet."}
-              </p>
-            )}
-
-            <p className="text-gray-500 mb-6 font-mono text-[10px] uppercase tracking-widest">
-              {profileData.isAdmin ? 'System Administrator' : 'Portal User'} • ID: {profileData.uid?.slice(0, 8) || 'PUBLIC'}
+            <h1 className="text-4xl font-display font-black uppercase mb-2">@{user.username}</h1>
+            <p className="text-gray-400 mb-6 font-mono text-xs uppercase tracking-widest">
+              {user.isAdmin ? 'System Administrator' : 'Portal User'} • ID: {user.uid.slice(0, 8)}
             </p>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
               <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
@@ -185,20 +96,18 @@ export default function Profile() {
               </div>
               <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
                 <Heart className="w-4 h-4 text-red-500" />
-                <span className="text-sm font-bold uppercase tracking-widest">{profileFavorites.length} Favs</span>
+                <span className="text-sm font-bold uppercase tracking-widest">{favorites.length} Favs</span>
               </div>
             </div>
           </div>
 
-          {isOwnProfile && (
-            <button 
-              onClick={handleLogout}
-              className="px-6 py-3 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 font-bold uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 relative z-10"
-            >
-              <LogOut className="w-4 h-4" />
-              Log Out
-            </button>
-          )}
+          <button 
+            onClick={handleLogout}
+            className="px-6 py-3 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 font-bold uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 relative z-10"
+          >
+            <LogOut className="w-4 h-4" />
+            Log Out
+          </button>
         </div>
 
         {/* Tab Navigation */}
@@ -209,22 +118,18 @@ export default function Profile() {
             >
               Inventory
             </button>
-            {isOwnProfile && (
-              <>
-                <button 
-                  onClick={() => setActiveTab('avatar')}
-                  className={`px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border whitespace-nowrap ${activeTab === 'avatar' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
-                >
-                  Custom Avatar
-                </button>
-                <button 
-                  onClick={() => setActiveTab('settings')}
-                  className={`px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border whitespace-nowrap ${activeTab === 'settings' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
-                >
-                  Settings
-                </button>
-              </>
-            )}
+            <button 
+              onClick={() => setActiveTab('avatar')}
+              className={`px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border whitespace-nowrap ${activeTab === 'avatar' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
+            >
+              Custom Avatar
+            </button>
+            <button 
+              onClick={() => setActiveTab('settings')}
+              className={`px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border whitespace-nowrap ${activeTab === 'settings' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
+            >
+              Settings
+            </button>
         </div>
 
         <AnimatePresence mode="wait">
@@ -238,7 +143,7 @@ export default function Profile() {
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-display font-black uppercase flex items-center gap-3">
                   <Package className="w-6 h-6 text-primary" />
-                  {isOwnProfile ? 'Your Inventory' : `${profileData.username}'s Collection`}
+                  Your Inventory
                 </h2>
                 <div className="text-xs text-gray-500 font-bold uppercase tracking-[0.2em]">
                   Saved for later
@@ -247,18 +152,16 @@ export default function Profile() {
 
               {savedGames.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                  {savedGames.map((game, i) => (
-                    <div key={`${game.id}-${i}`} className="relative group">
+                  {savedGames.map(game => (
+                    <div key={game.id} className="relative group">
                       <GameCard game={game} />
-                      {isOwnProfile && (
-                        <button 
-                          onClick={() => toggleFavorite(game.id)}
-                          className="absolute bottom-4 right-4 p-2 rounded-lg bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                          title="Remove from inventory"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button 
+                        onClick={() => toggleFavorite(game.id)}
+                        className="absolute bottom-4 right-4 p-2 rounded-lg bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                        title="Remove from inventory"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   ))}
                 </div>

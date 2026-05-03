@@ -416,17 +416,11 @@ export default function Admin() {
             Manage Games ({games.length})
           </h2>
           <div className="grid gap-4">
-            {games.map((game, i) => (
-              <div key={`${game.id}-${i}`} className="glass p-4 rounded-2xl flex items-center justify-between group hover:border-primary/30 transition-all border border-white/5">
+            {games.map(game => (
+              <div key={game.id} className="glass p-4 rounded-2xl flex items-center justify-between group hover:border-primary/30 transition-all border border-white/5">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-12 rounded-lg overflow-hidden bg-dark-card border border-white/5 flex items-center justify-center">
-                    {game.thumbnail ? (
-                      <img src={game.thumbnail} alt={game.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                        <Play className="w-4 h-4 text-white/20" />
-                      </div>
-                    )}
+                  <div className="w-16 h-12 rounded-lg overflow-hidden bg-dark-card border border-white/5">
+                    <img src={game.thumbnail} alt={game.title} className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <h3 className="font-bold text-white group-hover:text-primary transition-colors">{game.title}</h3>
@@ -487,17 +481,11 @@ export default function Admin() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredUsers.map((u, i) => (
-                    <div key={`${u.id}-${i}`} className="glass p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between border border-white/5 hover:border-white/10 transition-all gap-4">
+                  {filteredUsers.map(u => (
+                    <div key={u.id} className="glass p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between border border-white/5 hover:border-white/10 transition-all gap-4">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 bg-dark-card flex-shrink-0">
-                          {u.photoURL ? (
-                            <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full bg-white/10 flex items-center justify-center">
-                              <Users className="w-6 h-6 text-white/20" />
-                            </div>
-                          )}
+                          <img src={u.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} alt="" className="w-full h-full object-cover" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
@@ -506,7 +494,6 @@ export default function Admin() {
                              {u.isBanned && <span className="bg-red-500/20 text-red-500 text-[8px] font-black px-1.5 py-0.5 rounded uppercase italic border border-red-500/20">Banned</span>}
                           </div>
                           <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono line-clamp-1">{u.uid}</p>
-                          {u.bio && <p className="text-[10px] text-gray-400 mt-1 italic line-clamp-1 max-w-md">"{u.bio}"</p>}
                           {u.createdAt && <p className="text-[8px] text-gray-600 uppercase mt-1">Joined {new Date(u.createdAt).toLocaleDateString()}</p>}
                         </div>
                       </div>

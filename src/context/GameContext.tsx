@@ -41,7 +41,6 @@ export interface AuthUser {
   avatarConfig?: AvatarConfig;
   settings?: UserSettings;
   history?: string[];
-  bio?: string;
 }
 
 enum OperationType {
@@ -95,8 +94,6 @@ interface GameContextType {
   isFavorite: (gameId: string) => boolean;
   refreshGames: () => Promise<void>;
   updateAvatar: (config: AvatarConfig) => Promise<void>;
-  updateBio: (bio: string) => Promise<void>;
-  getPublicProfile: (username: string) => Promise<any>;
   login: (username: string, password?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   loading: boolean;
@@ -141,8 +138,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
               photoURL: data.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${savedUsername}`,
               avatarConfig: data.avatarConfig || { style: 'avataaars', seed: savedUsername },
               settings: data.settings || { compactMode: false, showChatPreview: true, soundsEnabled: true, privateProfile: false },
-              history: data.history || [],
-              bio: data.bio || ''
+              history: data.history || []
             });
             setFavorites(data.favoriteGameIds || []);
             if (data.history) {
@@ -213,8 +209,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         photoURL: (userSnap.exists() && userSnap.data().photoURL) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`,
         avatarConfig: (userSnap.exists() && userSnap.data().avatarConfig) || { style: 'avataaars', seed: cleanUsername },
         settings: userSnap.exists() ? userSnap.data().settings : { compactMode: false, showChatPreview: true, soundsEnabled: true, privateProfile: false },
-        history: userSnap.exists() ? userSnap.data().history : [],
-        bio: userSnap.exists() ? userSnap.data().bio : ''
+        history: userSnap.exists() ? userSnap.data().history : []
       };
 
       setUser(finalUser);
@@ -323,42 +318,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateBio = async (bio: string) => {
-    if (!user) return;
-    try {
-      const userRef = doc(db, 'users', user.username.toLowerCase());
-      await updateDoc(userRef, { bio });
-      setUser({ ...user, bio });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${user.username.toLowerCase()}/bio`);
-    }
-  };
-
-  const getPublicProfile = async (username: string) => {
-    try {
-      const userRef = doc(db, 'users', username.toLowerCase());
-      const snap = await getDoc(userRef);
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data.settings?.privateProfile) return null;
-        
-        return {
-          username: data.username,
-          photoURL: data.photoURL,
-          avatarConfig: data.avatarConfig,
-          favoriteGameIds: data.favoriteGameIds || [],
-          createdAt: data.createdAt,
-          isAdmin: data.isAdmin,
-          bio: data.bio || ''
-        };
-      }
-      return null;
-    } catch (error) {
-      console.error("Failed to fetch public profile", error);
-      return null;
-    }
-  };
-
   return (
     <GameContext.Provider value={{ 
       games, 
@@ -370,8 +329,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
       toggleFavorite, 
       updateSettings,
       updateAvatar,
-      updateBio,
-      getPublicProfile,
       addToHistory,
       isFavorite,
       refreshGames,
