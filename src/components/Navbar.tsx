@@ -17,17 +17,7 @@ export default function Navbar() {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simple logic: If Yeebs, check password
-    // Other users can just claim a name
-    if (username.toLowerCase() === 'yeebs') {
-      if (password !== '$#GS29gs1') {
-        alert('Invalid password for admin account.');
-        setIsSubmitting(false);
-        return;
-      }
-    }
-
-    const success = await login(username);
+    const success = await login(username, password);
     if (success) {
       setShowLoginModal(false);
       setUsername('');
@@ -175,29 +165,24 @@ export default function Navbar() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary focus:outline-hidden transition-all text-sm"
-                    placeholder="Enter unique name..."
+                    placeholder="ENTER NAME..."
                   />
                 </div>
 
-                {username.toLowerCase() === 'yeebs' && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-2"
-                  >
-                    <label className="text-[10px] font-bold uppercase text-gray-500 px-1 tracking-widest flex items-center gap-2">
-                      <Shield className="w-3 h-3 text-primary" /> Admin Key
-                    </label>
-                    <input 
-                      required
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-primary/50 focus:border-primary focus:outline-hidden transition-all text-sm"
-                      placeholder="Enter master password..."
-                    />
-                  </motion.div>
-                )}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-gray-500 px-1 tracking-widest flex items-center gap-2">
+                    {username.toLowerCase() === 'yeebs' && <Shield className="w-3 h-3 text-primary" />} 
+                    Password
+                  </label>
+                  <input 
+                    required
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={`w-full px-4 py-3 rounded-xl bg-white/5 border focus:outline-hidden transition-all text-sm ${username.toLowerCase() === 'yeebs' ? 'border-primary/50 focus:border-primary' : 'border-white/10 focus:border-primary'}`}
+                    placeholder="ENTER KEY..."
+                  />
+                </div>
 
                 <button 
                   disabled={isSubmitting}
@@ -208,7 +193,7 @@ export default function Navbar() {
                   ) : (
                     <>
                       <Zap className="w-4 h-4 fill-current" />
-                      INITIALIZE SESSION
+                      SYNC SESSION
                     </>
                   )}
                 </button>

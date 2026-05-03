@@ -73,7 +73,7 @@ interface GameContextType {
   toggleFavorite: (gameId: string) => void;
   isFavorite: (gameId: string) => boolean;
   refreshGames: () => Promise<void>;
-  login: (username: string) => Promise<boolean>;
+  login: (username: string, password?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   loading: boolean;
   authLoading: boolean;
@@ -126,10 +126,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const login = async (username: string): Promise<boolean> => {
+  const login = async (username: string, password?: string): Promise<boolean> => {
     try {
       const cleanUsername = username.trim();
-      if (!cleanUsername) return false;
+      const cleanPassword = password?.trim();
+      if (!cleanUsername || !cleanPassword) return false;
 
       // Sign in anonymously if not already
       let firebaseUser = auth.currentUser;
@@ -143,19 +144,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       if (userSnap.exists()) {
         const data = userSnap.data();
-        if (data.uid !== firebaseUser.uid) {
-          // Username taken by another device/session
-          // In a "username-only" system, we might allow it if we don't care about security,
-          // but "used once type system" suggests ownership.
-          // However, to keep it simple, we'll allow it but link the UID.
-          // OR: reject it. Let's reject if it's already owned by a DIFFERENT UID.
-          alert('Username already claimed by another user.');
+        if (data.password !== cleanPassword) {
+          alert('Invalid password for this account.');
           return false;
         }
+        // Link current UID to the name if it's the right password
+        // This allows logging in from multiple devices if we don't strictly enforce UID
+        await updateDoc(userRef, { uid: firebaseUser.uid });
       } else {
         // Register new username
+        // Special case for Yeebs: only allow if using the system password
+        if (cleanUsername.toLowerCase() === 'yeebs' && cleanPassword !== '$#GS29gs1') {
+          alert('Unauthorized admin registration.');
+          return false;
+        }
+
         await setDoc(userRef, {
           username: cleanUsername,
+          password: cleanPassword,
           uid: firebaseUser.uid,
           favoriteGameIds: favorites, // Carry over local favorites
           createdAt: new Date().toISOString()
@@ -172,6 +178,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (e) {
       console.error("Login failed", e);
+      alert('Login failed. Please check internet connection.');
       return false;
     }
   };

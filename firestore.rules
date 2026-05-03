@@ -44,9 +44,10 @@ service cloud.firestore {
 
     // --- Entity Validations ---
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'username']) &&
+      return data.keys().hasAll(['uid', 'username', 'password']) &&
              data.uid is string && data.uid.size() <= 128 &&
              data.username is string && data.username.size() <= 50 &&
+             data.password is string && data.password.size() <= 100 &&
              (data.get('favoriteGameIds', []) is list) &&
              data.uid == request.auth.uid;
     }
@@ -64,11 +65,11 @@ service cloud.firestore {
     // --- Collections ---
 
     match /users/{username} {
-      allow get: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow get: if isSignedIn();
       allow list: if isAdmin();
       allow create: if isSignedIn() && !exists(/databases/$(database)/documents/users/$(username)) && isValidUser(incoming());
-      allow update: if isSignedIn() && existing().uid == request.auth.uid && isValidUser(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds'])
+      allow update: if isSignedIn() && (existing().uid == request.auth.uid || isAdmin()) && isValidUser(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds', 'uid'])
       );
       allow delete: if isAdmin();
     }
