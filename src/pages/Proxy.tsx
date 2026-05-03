@@ -11,7 +11,7 @@ export default function Proxy() {
   useEffect(() => {
     // Register SW on mount
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/uv/uv.sw.js', {
+      navigator.serviceWorker.register('/uv/sw.js', {
         scope: '/uv/service/'
       }).then(() => {
         console.log('UV Service Worker registered');
@@ -24,6 +24,13 @@ export default function Proxy() {
   const handleGo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!url) return;
+
+    // Check if configuration is loaded
+    // @ts-ignore
+    if (typeof Ultraviolet === 'undefined' || !window.__uv$config) {
+      console.error('Ultraviolet is not loaded yet');
+      return;
+    }
 
     let targetUrl = url.trim();
     if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {

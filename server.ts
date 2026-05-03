@@ -23,20 +23,22 @@ if (!fs.existsSync(CUSTOM_GAMES_DIR)) {
 
 async function startServer() {
   const app = express();
-  const server = http.createServer(app);
   const bare = createBareServer('/bare/');
+  const server = http.createServer();
   const PORT = 3000;
 
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
 
+  // Specifically serve our custom uv.config.js from public
+  app.get('/uv/uv.config.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.join(process.cwd(), 'public', 'uv', 'uv.config.js'));
+  });
+
   // Serve Ultraviolet assets
   const uvPath = path.join(process.cwd(), 'node_modules', '@titaniumnetwork-dev', 'ultraviolet', 'dist');
   app.use('/uv/', express.static(uvPath));
-  // Specifically serve our custom uv.config.js from public
-  app.use('/uv/uv.config.js', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'public', 'uv', 'uv.config.js'));
-  });
 
   // API Routes
   app.get('/api/games', (req, res) => {
@@ -121,7 +123,7 @@ async function startServer() {
     if (bare.shouldRoute(req)) {
       bare.routeUpgrade(req, socket, head);
     } else {
-      socket.end();
+      // Allow other upgrades if needed (like HMR)
     }
   });
 
