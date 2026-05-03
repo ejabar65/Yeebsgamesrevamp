@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Bug, Search, Trophy, TrendingUp, Home, LogIn, LogOut, User as UserIcon, X, Shield, Zap, MessageSquare } from 'lucide-react';
+import { Bug, Search, Trophy, TrendingUp, Home, LogIn, LogOut, User as UserIcon, X, Shield, Zap, MessageSquare, ChevronDown, Monitor } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 
-import { MASCOT_URL } from '../constants';
+import { MASCOT_URL, CLOAK_OPTIONS } from '../constants';
+import { applyCloak, getSavedCloak } from '../cloakUtils';
 
 export default function Navbar() {
   const location = useLocation();
@@ -14,6 +15,14 @@ export default function Navbar() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState(''); // Only for Yeebs
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCloakOpen, setIsCloakOpen] = useState(false);
+  const [currentCloak, setCurrentCloak] = useState(getSavedCloak());
+
+  const handleCloakChange = (cloakName: string) => {
+    applyCloak(cloakName);
+    setCurrentCloak(cloakName);
+    setIsCloakOpen(false);
+  };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,6 +114,48 @@ export default function Navbar() {
             className="pl-10 pr-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm focus:outline-hidden focus:border-primary focus:ring-1 focus:ring-primary transition-all w-48 md:w-64"
           />
         </div>
+
+        {/* Cloak Selector */}
+        <div className="relative">
+          <button 
+            onClick={() => setIsCloakOpen(!isCloakOpen)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/10 transition-all uppercase tracking-widest whitespace-nowrap"
+          >
+            <Monitor className="w-3.5 h-3.5 text-primary" />
+            <span className="hidden lg:inline">{currentCloak.split(' ')[0]}</span>
+            <ChevronDown className={`w-3 h-3 transition-transform ${isCloakOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          <AnimatePresence>
+            {isCloakOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsCloakOpen(false)} />
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute right-0 mt-2 w-56 glass border border-white/10 rounded-2xl p-2 z-50 shadow-2xl"
+                >
+                  <div className="px-3 py-2 border-b border-white/5 mb-1">
+                    <p className="text-[9px] font-black uppercase text-gray-500 tracking-[0.2em]">Cloaking Engine</p>
+                  </div>
+                  {CLOAK_OPTIONS.map((option) => (
+                    <button
+                      key={option.name}
+                      onClick={() => handleCloakChange(option.name)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all hover:bg-white/10 text-left
+                        ${currentCloak === option.name ? 'text-primary' : 'text-gray-400'}`}
+                    >
+                      <img src={option.icon} alt="" className="w-4 h-4 object-contain rounded-xs" />
+                      {option.name}
+                    </button>
+                  ))}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+
         {user ? (
           <div className="flex items-center gap-2 pl-4 border-l border-white/10">
             <Link 

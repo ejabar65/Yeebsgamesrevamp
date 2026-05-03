@@ -12,8 +12,15 @@ import Admin from './pages/Admin';
 import Profile from './pages/Profile';
 import Chat from './pages/Chat';
 import { GameProvider } from './context/GameContext';
+import { useEffect } from 'react';
+import { applyCloak, getSavedCloak } from './cloakUtils';
 
 export default function App() {
+  useEffect(() => {
+    const saved = getSavedCloak();
+    applyCloak(saved);
+  }, []);
+
   return (
     <BrowserRouter>
       <GameProvider>

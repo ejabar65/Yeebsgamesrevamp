@@ -1,5 +1,15 @@
 export const MASCOT_URL = "https://lh3.googleusercontent.com/a/ACg8ocKFxTtfl9e-BoMuysn0FFqLOgXRtCrWfyP8NVm45njuz0onsUk=s288-c-no";
 
+export const CLOAK_OPTIONS = [
+  { name: 'None (Default)', title: 'YEEBS GAMES', icon: '/favicon.ico' },
+  { name: 'Google Classroom', title: 'Classes', icon: 'https://ssl.gstatic.com/classroom/favicon.png' },
+  { name: 'Google Drive', title: 'My Drive - Google Drive', icon: 'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png' },
+  { name: 'Khan Academy', title: 'Khan Academy | Free Online Courses', icon: 'https://www.khanacademy.org/favicon.ico' },
+  { name: 'Quizlet', title: 'Flashcards, Learning tools and Textbook solutions | Quizlet', icon: 'https://quizlet.com/favicon.ico' },
+  { name: 'Schoology', title: 'Home | Schoology', icon: 'https://asset-cdn.schoology.com/sites/all/themes/schoology_theme/favicon.ico' },
+  { name: 'Desmos', title: 'Desmos | Graphing Calculator', icon: 'https://www.desmos.com/favicon.ico' }
+];
+
 export const GAMES = [
   {
     id: 'little-runmo',
