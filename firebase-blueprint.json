@@ -30,12 +30,58 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "title", "url", "category"]
+    },
+    "GlobalMessage": {
+      "title": "Global Chat Message",
+      "description": "A message in the public chatroom",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "senderId", "senderName", "createdAt"]
+    },
+    "ChatSession": {
+      "title": "DM Session",
+      "description": "A private chat session between two users",
+      "type": "object",
+      "properties": {
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "lastMessage": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["participants", "updatedAt"]
+    },
+    "DirectMessage": {
+      "title": "Private Message",
+      "description": "A 1-on-1 private message",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "senderId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "senderId", "createdAt"]
     }
   },
   "firestore": {
     "/users/{username}": {
       "schema": "User",
       "description": "User profiles"
+    },
+    "/global_messages/{messageId}": {
+      "schema": "GlobalMessage",
+      "description": "Public messages"
+    },
+    "/chats/{chatId}": {
+      "schema": "ChatSession",
+      "description": "Private chat headers"
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": "DirectMessage",
+      "description": "Private message content"
     },
     "/games/{gameId}": {
       "schema": "Game",

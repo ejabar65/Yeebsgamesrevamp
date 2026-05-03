@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Bug, Search, Trophy, TrendingUp, Home, LogIn, LogOut, User as UserIcon, X, Shield, Zap } from 'lucide-react';
+import { Bug, Search, Trophy, TrendingUp, Home, LogIn, LogOut, User as UserIcon, X, Shield, Zap, MessageSquare } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
+
+import { MASCOT_URL } from '../constants';
 
 export default function Navbar() {
   const location = useLocation();
@@ -54,7 +56,7 @@ export default function Navbar() {
       <Link to="/" onClick={() => handleNavClick('/')} className="flex items-center gap-2 group">
         <div className="w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-all flex items-center justify-center p-1.5 border border-primary/20">
           <img 
-            src="https://lh3.googleusercontent.com/a/ACg8ocKFxTtfl9e-BoMuysn0FFqLOgXRtCrWfyP8NVm45njuz0onsUk=s288-c-no" 
+            src={MASCOT_URL} 
             alt="YEEBS Logo"
             className="w-full h-full object-contain rounded-sm brightness-110 group-hover:scale-110 transition-transform"
           />
@@ -70,12 +72,19 @@ export default function Navbar() {
       <div className="hidden md:flex items-center gap-8">
         {[
           { name: 'Home', icon: Home, path: '/', sort: 'newest' },
+          { name: 'Chat', icon: MessageSquare, path: '/chat' },
           { name: 'Trending', icon: TrendingUp, path: '/', sort: 'trending' },
           { name: 'Top Rated', icon: Trophy, path: '/', sort: 'top' },
         ].map((item) => (
           <button
             key={item.name}
-            onClick={() => handleNavClick(item.path, item.sort)}
+            onClick={() => {
+              if (item.path === '/chat') {
+                navigate('/chat');
+              } else {
+                handleNavClick(item.path, item.sort);
+              }
+            }}
             className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary
               ${location.pathname === item.path ? 'text-primary' : 'text-gray-400'}`}
           >

@@ -2,7 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, Maximize2, RotateCw, Flag, Share2, Star, Zap, Heart, Play } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useGames } from '../context/GameContext';
-import { db, doc, updateDoc, increment } from '../lib/firebase';
+import { db, doc, updateDoc, setDoc, increment } from '../lib/firebase';
 
 export default function GameView() {
   const { id } = useParams();
@@ -16,9 +16,15 @@ export default function GameView() {
       const incrementPlay = async () => {
         try {
           const gameRef = doc(db, 'games', id);
-          await updateDoc(gameRef, {
-            playCount: increment(1)
-          });
+          // Use setDoc with merge: true to create the document if it doesn't exist
+          await setDoc(gameRef, {
+            playCount: increment(1),
+            title: game.title,
+            category: game.category,
+            thumbnail: game.thumbnail,
+            url: game.url,
+            id: game.id // Ensure ID matching
+          }, { merge: true });
         } catch (error) {
           console.error("Error incrementing play count", error);
         }
@@ -59,9 +65,11 @@ export default function GameView() {
     if (!favorite) {
       try {
         const gameRef = doc(db, 'games', game.id);
-        await updateDoc(gameRef, {
-          rating: increment(0.1)
-        });
+        await setDoc(gameRef, {
+          rating: increment(0.1),
+          title: game.title,
+          id: game.id
+        }, { merge: true });
       } catch (e) {
         console.error(e);
       }

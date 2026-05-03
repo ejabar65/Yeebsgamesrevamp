@@ -1,54 +1,54 @@
-import { Game } from './types';
+export const MASCOT_URL = "https://lh3.googleusercontent.com/a/ACg8ocKFxTtfl9e-BoMuysn0FFqLOgXRtCrWfyP8NVm45njuz0onsUk=s288-c-no";
 
-export const GAMES: Game[] = [
+export const GAMES = [
   {
-    id: '1v1-lol',
-    title: '1v1.lol',
-    thumbnail: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=800',
-    url: '/games/1v1-lol.html',
+    id: 'little-runmo',
+    title: 'Little RunMo',
+    description: 'The legendary platformer adventure.',
     category: 'Action',
-    description: 'A third-person shooter and building simulator. Master your building skills and take down opponents in intense 1v1 battles.',
-    playCount: 1200,
-    rating: 4.8
-  },
-  {
-    id: 'baldis-basics',
-    title: "Baldi's Basics",
-    thumbnail: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800',
-    url: '/games/baldis-basics.html',
-    category: 'Horror',
-    description: 'A meta horror game that’s really weird, with no real educational value to be found.',
-    playCount: 850,
-    rating: 4.2
-  },
-  {
-    id: 'among-us',
-    title: 'Among Us',
-    thumbnail: 'https://images.unsplash.com/photo-1615468551061-0d3a7761007a?auto=format&fit=crop&q=80&w=800',
-    url: '/games/among-us.html',
-    category: 'Action',
-    description: 'Play with 4-15 players online or via local WiFi as you attempt to prepare your spaceship for departure.',
-    playCount: 3400,
+    thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&q=80&w=400',
+    url: '/games/custom/little-runmo.html',
+    playCount: 15420,
     rating: 4.9
   },
   {
+    id: '1v1-lol',
+    title: '1v1.LOL',
+    description: 'Build and shoot in this competitive battle royale.',
+    category: 'Shooter',
+    thumbnail: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=400',
+    url: '/games/1v1-lol.html',
+    playCount: 12400,
+    rating: 4.7
+  },
+  {
     id: 'agario',
-    title: 'Agario',
-    thumbnail: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?auto=format&fit=crop&q=80&w=800',
+    title: 'Agar.io',
+    description: 'Consume others and grow as a cell.',
+    category: 'IO Games',
+    thumbnail: 'https://images.unsplash.com/photo-1551103782-8ab07afd45c1?auto=format&fit=crop&q=80&w=400',
     url: '/games/agario.html',
-    category: 'IO',
-    description: 'Control your tiny cell and eat other players to grow larger! Avoid being eaten as much as possible.',
-    playCount: 2100,
+    playCount: 18200,
     rating: 4.5
   },
   {
     id: '2048',
     title: '2048',
-    thumbnail: 'https://images.unsplash.com/photo-1616469829581-73993eb86b02?auto=format&fit=crop&q=80&w=800',
-    url: '/games/2048.html',
+    description: 'The classic number puzzle game.',
     category: 'Puzzle',
-    description: 'Join the numbers and get to the 2048 tile!',
-    playCount: 1560,
-    rating: 4.7
+    thumbnail: 'https://images.unsplash.com/photo-1611996575749-79a3a250f948?auto=format&fit=crop&q=80&w=400',
+    url: '/games/2048.html',
+    playCount: 9500,
+    rating: 4.8
+  },
+  {
+    id: 'among-us',
+    title: 'Among Us',
+    description: 'Identify the imposter in space.',
+    category: 'Social',
+    thumbnail: 'https://images.unsplash.com/photo-1621259182978-fbf931210452?auto=format&fit=crop&q=80&w=400',
+    url: '/games/among-us.html',
+    playCount: 14200,
+    rating: 4.6
   }
 ];

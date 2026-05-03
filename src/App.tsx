@@ -10,6 +10,7 @@ import Home from './pages/Home';
 import GameView from './pages/GameView';
 import Admin from './pages/Admin';
 import Profile from './pages/Profile';
+import Chat from './pages/Chat';
 import { GameProvider } from './context/GameContext';
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/chat" element={<Chat />} />
           <Route path="/game/:id" element={<GameView />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/profile" element={<Profile />} />

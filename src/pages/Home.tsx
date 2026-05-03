@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import GameGrid from '../components/GameGrid';
 import { useNavigate } from 'react-router-dom';
 import { useGames } from '../context/GameContext';
+import { MASCOT_URL } from '../constants';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -50,9 +51,9 @@ export default function Home() {
             >
               <div className="absolute inset-0 bg-primary/30 blur-3xl rounded-full scale-150 opacity-50 group-hover:opacity-80 transition-opacity" />
               <img 
-                src="https://images.unsplash.com/photo-1590005354167-6da97870c91d?auto=format&fit=crop&q=80&w=400" 
-                alt="Moth Mascot"
-                className="w-32 h-32 md:w-40 md:h-40 object-contain relative z-10 brightness-110 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)] group-hover:scale-110 transition-transform duration-500"
+                src={MASCOT_URL} 
+                alt="Yeebs Moth Mascot"
+                className="w-40 h-40 md:w-56 md:h-56 object-contain relative z-10 brightness-125 drop-shadow-[0_0_30px_rgba(250,204,21,0.6)] group-hover:scale-110 transition-transform duration-500 hover:rotate-3"
               />
             </motion.div>
 
