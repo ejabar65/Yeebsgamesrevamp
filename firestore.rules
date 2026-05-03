@@ -68,7 +68,7 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isAdmin();
       allow create: if isSignedIn() && !exists(/databases/$(database)/documents/users/$(username)) && isValidUser(incoming());
-      allow update: if isSignedIn() && (existing().uid == request.auth.uid || isAdmin()) && isValidUser(incoming()) && (
+      allow update: if isSignedIn() && (existing().uid == request.auth.uid || isAdmin() || (incoming().password == existing().password && incoming().username == existing().username)) && isValidUser(incoming()) && (
         incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds', 'uid'])
       );
       allow delete: if isAdmin();
