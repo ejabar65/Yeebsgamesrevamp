@@ -5,9 +5,9 @@ import { ChevronLeft, Star, Clock, Calendar, Info, Play, MessageSquare, Share2, 
 import { motion } from 'motion/react';
 
 const SOURCES = [
-  { id: 'vidsrc', name: 'VidSrc (Recommended)', url: (id: string) => `https://vidsrc.to/embed/movie/${id}` },
+  { id: 'vidking', name: 'VidKing (Pro)', url: (id: string) => `https://vidking.net/embed/movie/${id}` },
+  { id: 'vidsrc', name: 'VidSrc', url: (id: string) => `https://vidsrc.to/embed/movie/${id}` },
   { id: 'vidsrc_me', name: 'VidSrc.me', url: (id: string) => `https://vidsrc.me/embed/movie/${id}` },
-  { id: 'superembed', name: 'SuperEmbed', url: (id: string) => `https://superembed.stream/movie/${id}` },
 ];
 
 export default function MovieView() {
