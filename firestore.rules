@@ -12,12 +12,13 @@ service cloud.firestore {
       return true;
     }
 
-    // Check if the current user represents 'Yeebs' admin
+    // Check if the current user has admin status
     function isAdmin() {
-      return (
-        exists(/databases/$(database)/documents/users/Yeebs) && 
-        get(/databases/$(database)/documents/users/Yeebs).data.password == '$#GS29gs1'
-      );
+      // In this no-auth architecture, we check if the user 'yeebs' exists
+      // and has the master password. Note: this is a security risk as Firestore Rules
+      // can't verify the requester's identity without Firebase Auth.
+      return exists(/databases/$(database)/documents/users/yeebs) && 
+             get(/databases/$(database)/documents/users/yeebs).data.password == '$#GS29gs1';
     }
 
     function isPasswordOwner(username) {
@@ -45,6 +46,7 @@ service cloud.firestore {
              data.username is string && data.username.size() <= 50 &&
              data.password is string && data.password.size() <= 100 &&
              (data.get('isBanned', false) is bool) &&
+             (data.get('isAdmin', false) is bool) &&
              (data.get('favoriteGameIds', []) is list);
     }
 
@@ -84,7 +86,7 @@ service cloud.firestore {
       allow create: if !exists(/databases/$(database)/documents/users/$(username)) && isValidUser(incoming());
       allow update: if isValidUser(incoming()) && (
         (isPasswordOwner(username) && incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'settings', 'history'])) ||
-        (isAdmin() && incoming().diff(existing()).affectedKeys().hasAny(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'isBanned', 'settings', 'history']))
+        (isAdmin() && incoming().diff(existing()).affectedKeys().hasAny(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'isBanned', 'isAdmin', 'settings', 'history']))
       );
       allow delete: if isAdmin();
     }

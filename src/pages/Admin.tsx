@@ -4,7 +4,7 @@ import { Shield, Plus, Tag, FileCode, Type, Image as ImageIcon, CheckCircle2, Al
 import { addGame, deleteGame, updateGame } from '../services/gameService';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGames } from '../context/GameContext';
-import { db, collection, getDocs, doc, updateDoc } from '../lib/firebase';
+import { db, collection, getDocs, doc, updateDoc, deleteDoc } from '../lib/firebase';
 
 export default function Admin() {
   const { games, refreshGames, user, authLoading, setSearchQuery, setSortBy } = useGames();
@@ -14,6 +14,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<'games' | 'users'>('games');
   const [users, setUsers] = useState<any[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
 
   useEffect(() => {
     if (activeTab === 'users' && user?.isAdmin) {
@@ -29,22 +30,56 @@ export default function Admin() {
       setUsers(usersList);
     } catch (error) {
       console.error("Error fetching users:", error);
+      setStatus({ type: 'error', message: "Failed to fetch users. Check permissions." });
     }
     setUsersLoading(false);
   };
 
-  const handleBanToggle = async (username: string, currentBanStatus: boolean) => {
+  const handleBanToggle = async (targetUserId: string, currentBanStatus: boolean) => {
+    if (!confirm(`Are you sure you want to ${currentBanStatus ? 'unban' : 'ban'} @${targetUserId}?`)) return;
+    
     try {
-      const userRef = doc(db, 'users', username);
+      const userRef = doc(db, 'users', targetUserId);
       await updateDoc(userRef, { isBanned: !currentBanStatus });
-      setUsers(prev => prev.map(u => u.username === username ? { ...u, isBanned: !currentBanStatus } : u));
-      setStatus({ type: 'success', message: `User ${username} ${!currentBanStatus ? 'banned' : 'unbanned'} successfully.` });
+      setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, isBanned: !currentBanStatus } : u));
+      setStatus({ type: 'success', message: `User ${targetUserId} ${!currentBanStatus ? 'banned' : 'unbanned'} successfully.` });
     } catch (error) {
       console.error("Error toggling ban:", error);
       setStatus({ type: 'error', message: "Failed to update ban status." });
     }
   };
 
+  const handleDeleteUser = async (targetUserId: string) => {
+    if (!confirm(`FATAL: Are you sure you want to PERMANENTLY DELETE @${targetUserId}? This cannot be undone.`)) return;
+
+    try {
+      const userRef = doc(db, 'users', targetUserId);
+      await deleteDoc(userRef);
+      setUsers(prev => prev.filter(u => u.id !== targetUserId));
+      setStatus({ type: 'success', message: `User @${targetUserId} deleted permanently.` });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      setStatus({ type: 'error', message: "Failed to delete user." });
+    }
+  };
+
+  const handleToggleAdmin = async (targetUserId: string, currentIsAdmin: boolean) => {
+    if (!confirm(`Are you sure you want to ${currentIsAdmin ? 'revoke' : 'grant'} admin privileges for @${targetUserId}?`)) return;
+    try {
+      const userRef = doc(db, 'users', targetUserId);
+      await updateDoc(userRef, { isAdmin: !currentIsAdmin });
+      setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, isAdmin: !currentIsAdmin } : u));
+      setStatus({ type: 'success', message: `Admin status for @${targetUserId} updated.` });
+    } catch (error) {
+      console.error("Error toggling admin:", error);
+      setStatus({ type: 'error', message: "Failed to update admin status." });
+    }
+  };
+
+  const filteredUsers = users.filter(u => 
+    u.username?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+    u.uid?.toLowerCase().includes(userSearchQuery.toLowerCase())
+  );
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -423,10 +458,22 @@ export default function Admin() {
     ) : (
           <div className="space-y-6">
             <div className="glass p-8 rounded-3xl border border-white/5">
-              <h2 className="text-2xl font-display font-bold mb-6 flex items-center gap-2">
-                <Users className="w-6 h-6 text-primary" />
-                User Management
-              </h2>
+              <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                <h2 className="text-2xl font-display font-bold flex items-center gap-2">
+                  <Users className="w-6 h-6 text-primary" />
+                  User Management
+                </h2>
+                <div className="relative flex-1 max-w-sm">
+                  <input
+                    type="text"
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    placeholder="Search users..."
+                    className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl focus:border-primary transition-all text-sm"
+                  />
+                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                </div>
+              </div>
               
               {usersLoading ? (
                 <div className="flex justify-center py-12">
@@ -434,39 +481,68 @@ export default function Admin() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {users.map(u => (
-                    <div key={u.id} className="glass p-4 rounded-2xl flex items-center justify-between border border-white/5 hover:border-white/10 transition-all">
+                  {filteredUsers.map(u => (
+                    <div key={u.id} className="glass p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between border border-white/5 hover:border-white/10 transition-all gap-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10">
+                        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 bg-dark-card flex-shrink-0">
                           <img src={u.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} alt="" className="w-full h-full object-cover" />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
-                             <h3 className="font-bold text-white">@{u.username}</h3>
-                             {u.username.toLowerCase() === 'yeebs' && <span className="bg-primary/20 text-primary text-[8px] font-black px-1.5 py-0.5 rounded uppercase italic">Admin</span>}
-                             {u.isBanned && <span className="bg-red-500/20 text-red-500 text-[8px] font-black px-1.5 py-0.5 rounded uppercase italic">Banned</span>}
+                          <div className="flex items-center gap-2 flex-wrap">
+                             <h3 className="font-bold text-white">@{u.id}</h3>
+                             {(u.id.toLowerCase() === 'yeebs' || u.isAdmin) && <span className="bg-primary/20 text-primary text-[8px] font-black px-1.5 py-0.5 rounded uppercase italic border border-primary/20">Admin</span>}
+                             {u.isBanned && <span className="bg-red-500/20 text-red-500 text-[8px] font-black px-1.5 py-0.5 rounded uppercase italic border border-red-500/20">Banned</span>}
                           </div>
-                          <p className="text-[10px] text-gray-500 uppercase tracking-widest">{u.uid}</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono line-clamp-1">{u.uid}</p>
+                          {u.createdAt && <p className="text-[8px] text-gray-600 uppercase mt-1">Joined {new Date(u.createdAt).toLocaleDateString()}</p>}
                         </div>
                       </div>
                       
-                      {u.username.toLowerCase() !== 'yeebs' && (
-                        <button
-                          onClick={() => handleBanToggle(u.username, u.isBanned)}
-                          className={`p-3 rounded-xl transition-all flex items-center gap-2 font-bold text-xs uppercase tracking-widest ${
-                            u.isBanned 
-                              ? 'bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white' 
-                              : 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white'
-                          }`}
-                        >
-                          {u.isBanned ? <UserCheck className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
-                          {u.isBanned ? 'Unban' : 'Ban'}
-                        </button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {u.id.toLowerCase() !== 'yeebs' && u.id !== user?.username && (
+                          <>
+                            <button
+                              onClick={() => handleToggleAdmin(u.id, !!u.isAdmin)}
+                              className={`p-2 rounded-lg transition-all flex items-center gap-2 font-bold text-[8px] uppercase tracking-widest border ${
+                                u.isAdmin 
+                                  ? 'bg-primary text-dark-surface border-primary' 
+                                  : 'bg-white/5 text-gray-400 border-white/5 hover:border-primary/30'
+                              }`}
+                              title={u.isAdmin ? "Revoke Admin" : "Grant Admin"}
+                            >
+                              <Shield className="w-3.5 h-3.5" />
+                              {u.isAdmin ? 'Admin' : 'Make Admin'}
+                            </button>
+                            <button
+                              onClick={() => handleBanToggle(u.id, !!u.isBanned)}
+                              className={`p-2 rounded-lg transition-all flex items-center gap-2 font-bold text-[8px] uppercase tracking-widest border ${
+                                u.isBanned 
+                                  ? 'bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500 hover:text-white' 
+                                  : 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500 hover:text-white'
+                              }`}
+                            >
+                              {u.isBanned ? <UserCheck className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
+                              {u.isBanned ? 'Unban' : 'Ban User'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(u.id)}
+                              className="p-2 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white transition-all"
+                              title="Delete User Permanently"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   ))}
-                  {users.length === 0 && (
-                    <p className="text-center text-gray-500 py-12 italic">No users found in database.</p>
+                  {filteredUsers.length === 0 && (
+                    <div className="text-center py-12">
+                      <div className="p-4 rounded-full bg-white/5 inline-block mb-4">
+                        <Users className="w-8 h-8 text-gray-600" />
+                      </div>
+                      <p className="text-gray-500 italic text-sm">No users matching search criteria.</p>
+                    </div>
                   )}
                 </div>
               )}
