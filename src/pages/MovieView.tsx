@@ -174,6 +174,8 @@ export default function MovieView() {
                   src={activeSource.url(id!)} 
                   className="w-full h-full"
                   allowFullScreen
+                  allow="autoplay; encrypted-media; picture-in-picture; clipboard-write"
+                  referrerPolicy="no-referrer"
                   title="Movie Player"
                 />
               </div>
