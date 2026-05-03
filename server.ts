@@ -4,6 +4,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import cors from 'cors';
+import { createBareServer } from '@tomphttp/bare-server-node';
+import http from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,10 +23,20 @@ if (!fs.existsSync(CUSTOM_GAMES_DIR)) {
 
 async function startServer() {
   const app = express();
+  const server = http.createServer(app);
+  const bare = createBareServer('/bare/');
   const PORT = 3000;
 
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
+
+  // Serve Ultraviolet assets
+  const uvPath = path.join(process.cwd(), 'node_modules', '@titaniumnetwork-dev', 'ultraviolet', 'dist');
+  app.use('/uv/', express.static(uvPath));
+  // Specifically serve our custom uv.config.js from public
+  app.use('/uv/uv.config.js', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'public', 'uv', 'uv.config.js'));
+  });
 
   // API Routes
   app.get('/api/games', (req, res) => {
@@ -103,7 +115,25 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  // Removed app.listen because we use server.listen for Bare+Express
+
+  server.on('upgrade', (req, socket, head) => {
+    if (bare.shouldRoute(req)) {
+      bare.routeUpgrade(req, socket, head);
+    } else {
+      socket.end();
+    }
+  });
+
+  server.on('request', (req, res) => {
+    if (bare.shouldRoute(req)) {
+      bare.routeRequest(req, res);
+    } else {
+      app(req, res);
+    }
+  });
+
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://localhost:${PORT}`);
   });
 }

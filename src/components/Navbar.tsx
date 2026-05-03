@@ -82,14 +82,15 @@ export default function Navbar() {
         {[
           { name: 'Home', icon: Home, path: '/', sort: 'newest' },
           { name: 'Chat', icon: MessageSquare, path: '/chat' },
+          { name: 'Proxy', icon: Shield, path: '/proxy' },
           { name: 'Trending', icon: TrendingUp, path: '/', sort: 'trending' },
           { name: 'Top Rated', icon: Trophy, path: '/', sort: 'top' },
         ].map((item) => (
           <button
             key={item.name}
             onClick={() => {
-              if (item.path === '/chat') {
-                navigate('/chat');
+              if (item.path === '/chat' || item.path === '/proxy') {
+                navigate(item.path);
               } else {
                 handleNavClick(item.path, item.sort);
               }

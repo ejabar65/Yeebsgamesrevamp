@@ -66,15 +66,6 @@ export default function Home() {
               YEEBS<span className="text-gradient">GAMES</span>
             </motion.h1>
             
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="text-gray-300 text-lg md:text-xl mb-10 max-w-2xl mx-auto font-medium"
-            >
-              The most legendary collection of unblocked web games.
-            </motion.p>
-
             <div className="flex flex-wrap items-center justify-center gap-4">
               <motion.button
                 initial={{ opacity: 0, x: -20 }}
@@ -87,6 +78,15 @@ export default function Home() {
                 PLAY NOW
               </motion.button>
             </div>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-gray-300 text-lg md:text-xl mb-10 max-w-2xl mx-auto font-medium"
+            >
+              The most legendary collection of unblocked web games.
+            </motion.p>
           </div>
         </div>
       </section>

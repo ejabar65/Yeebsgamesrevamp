@@ -11,6 +11,7 @@ import GameView from './pages/GameView';
 import Admin from './pages/Admin';
 import Profile from './pages/Profile';
 import Chat from './pages/Chat';
+import Proxy from './pages/Proxy';
 import { GameProvider } from './context/GameContext';
 import { useEffect } from 'react';
 import { applyCloak, getSavedCloak } from './cloakUtils';
@@ -29,6 +30,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/chat" element={<Chat />} />
+          <Route path="/proxy" element={<Proxy />} />
           <Route path="/game/:id" element={<GameView />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/profile" element={<Profile />} />
