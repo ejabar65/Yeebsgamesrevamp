@@ -5,7 +5,7 @@ import { ChevronLeft, Star, Clock, Calendar, Info, Play, MessageSquare, Share2, 
 import { motion } from 'motion/react';
 
 const SOURCES = [
-  { id: 'vidking', name: 'VidKing (Pro)', url: (id: string) => `https://vidking.net/embed/movie/${id}` },
+  { id: 'vidking', name: 'VidKing (Pro)', url: (id: string) => `https://vidking.net/embed/movie/${id}?color=facc15&autoPlay=true&episodeSelector=true` },
   { id: 'vidsrc', name: 'VidSrc', url: (id: string) => `https://vidsrc.to/embed/movie/${id}` },
   { id: 'vidsrc_me', name: 'VidSrc.me', url: (id: string) => `https://vidsrc.me/embed/movie/${id}` },
 ];
@@ -175,6 +175,7 @@ export default function MovieView() {
                   className="w-full h-full"
                   allowFullScreen
                   allow="autoplay; encrypted-media; picture-in-picture; clipboard-write"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   referrerPolicy="no-referrer"
                   title="Movie Player"
                 />
