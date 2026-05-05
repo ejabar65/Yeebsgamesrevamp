@@ -249,28 +249,30 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
                 </div>
               )}
 
-              <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black border border-white/5 relative group">
+              <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black border border-white/5 relative group shadow-2xl">
                 <iframe 
                   src={playerUrl} 
                   className="w-full h-full"
                   allowFullScreen
-                  allow="autoplay; encrypted-media"
+                  allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope; clipboard-write"
                   referrerPolicy="no-referrer"
                   title="Player"
                 />
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-6 pt-6">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/5 border border-red-500/10">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-[9px] font-bold text-red-500/80 uppercase tracking-widest">Sandbox Detected?</span>
+                </div>
                 
-                {!media.isCustom && (
-                  <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-center p-8 pointer-events-none group-active:pointer-events-auto">
-                      <h3 className="text-xl font-bold uppercase tracking-[0.2em] mb-3">Signal Interference?</h3>
-                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-10">Attempt bypass via external gateway.</p>
-                      <button 
-                        onClick={openInNewTab}
-                        className="pointer-events-auto px-10 py-3 bg-white text-black rounded-lg font-bold text-[9px] uppercase tracking-widest hover:bg-gray-200"
-                      >
-                        Bypass Protocol
-                      </button>
-                  </div>
-                )}
+                <button
+                  onClick={openInNewTab}
+                  className="flex items-center gap-3 px-8 py-4 bg-white text-black rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all group shadow-xl"
+                >
+                  <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  Bypass Protocol (New Tab)
+                </button>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-16 pt-12">
@@ -284,14 +286,6 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
                 </div>
                 
                 <div className="space-y-8">
-                   <button 
-                     onClick={openInNewTab}
-                     className="w-full py-5 rounded-xl border border-white/5 text-gray-500 font-bold text-[9px] uppercase tracking-widest hover:text-white hover:border-white/20 transition-all flex items-center justify-center gap-3"
-                   >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      External Frequency
-                   </button>
-                   
                    <div className="space-y-6 pt-8 border-t border-white/5">
                       <div className="flex justify-between items-center">
                          <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Released</span>

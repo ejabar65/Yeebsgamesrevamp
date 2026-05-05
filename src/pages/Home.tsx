@@ -5,11 +5,25 @@ import { useNavigate } from 'react-router-dom';
 import { useGames } from '../context/GameContext';
 import { Film, MessageSquare, Users, Shield, Globe, ExternalLink } from 'lucide-react';
 import { launchAboutBlank } from '../cloakUtils';
+import { MASCOT_URL } from '../constants';
 
 export default function Home() {
   const navigate = useNavigate();
   const { games } = useGames();
   const [recentIds, setRecentIds] = React.useState<string[]>([]);
+  const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 });
+  const [isHovering, setIsHovering] = React.useState(false);
+  const mascotRef = React.useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (mascotRef.current) {
+      const rect = mascotRef.current.getBoundingClientRect();
+      setMousePos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    }
+  };
 
   React.useEffect(() => {
     const history = JSON.parse(localStorage.getItem('yeebsgames_recent') || '[]');
@@ -23,14 +37,55 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-16 font-sans">
       {/* Header */}
-      <div className="max-w-2xl">
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-white mb-6">
-          The Hub.
-        </h1>
-        <p className="text-gray-500 text-lg font-medium leading-relaxed">
-          High-performance web applications and gaming experiences. 
-          Universal connectivity in a clean, understated environment.
-        </p>
+      <div className="flex flex-col md:flex-row gap-12 items-start md:items-center">
+        <motion.div 
+          ref={mascotRef}
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileHover={{ scale: 1.02 }}
+          animate={{ opacity: 1, scale: 1 }}
+          onMouseMove={handleMouseMove}
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+          className="relative w-32 h-32 md:w-64 md:h-64 rounded-[2rem] overflow-hidden shrink-0 border border-white/10 shadow-2xl shadow-blue-500/20 group cursor-none"
+        >
+          {/* Grayscale Base */}
+          <img 
+            src={MASCOT_URL} 
+            alt="Mascot" 
+            className="w-full h-full object-cover grayscale opacity-30 transition-opacity duration-500 group-hover:opacity-50" 
+          />
+          
+          {/* Color Reveal Layer */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            animate={{
+              clipPath: isHovering 
+                ? `circle(80px at ${mousePos.x}px ${mousePos.y}px)` 
+                : `circle(0px at ${mousePos.x}px ${mousePos.y}px)`
+            }}
+            transition={{ type: 'tween', ease: "backOut", duration: 0.2 }}
+          >
+            <img 
+              src={MASCOT_URL} 
+              alt="Mascot" 
+              className="w-full h-full object-cover animate-pulse-slow" 
+            />
+          </motion.div>
+
+          <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+            <span className="text-[10px] font-bold text-white uppercase tracking-[0.2em]">Active Link</span>
+          </div>
+        </motion.div>
+        
+        <div className="max-w-xl">
+          <h1 className="text-5xl md:text-8xl font-bold tracking-tighter text-white mb-6">
+            Yeebs.
+          </h1>
+          <p className="text-gray-500 text-lg font-medium leading-relaxed">
+            High-performance web applications and gaming experiences. 
+            Universal connectivity in a clean, understated environment.
+          </p>
+        </div>
       </div>
       
       {/* Quick Launch */}

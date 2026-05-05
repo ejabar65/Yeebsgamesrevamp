@@ -109,8 +109,8 @@ export default function Navbar() {
       </AnimatePresence>
 
       <Link to="/" onClick={() => handleNavClick('/')} className="flex items-center gap-3 group">
-        <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center transition-transform group-hover:scale-105 active:scale-95">
-          <Zap className="w-4 h-4 text-white fill-current" />
+        <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105 active:scale-95 border border-white/10">
+          <img src={MASCOT_URL} alt="Mascot" className="w-full h-full object-cover" />
         </div>
         <span className="font-bold text-sm tracking-tight text-white uppercase tracking-widest">
           Yeebs<span className="text-blue-500 opacity-80">Games</span>
