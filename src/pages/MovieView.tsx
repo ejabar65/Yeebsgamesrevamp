@@ -2,76 +2,41 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { movieService, MediaContent } from '../services/movieService';
 import { motion, AnimatePresence } from 'motion/react';
-import { useGames } from '../context/GameContext';
-import { Zap, Play, History, Star, Clock, Info, ExternalLink } from 'lucide-react';
 
 const SOURCES = [
   { 
-    id: 'vidking', 
-    name: 'Vidking (Recommended)', 
-    movieUrl: (id: string) => `https://vidking.net/embed/movie/${id}?autoPlay=true&color=facc15`,
-    tvUrl: (id: string, s: number, e: number) => `https://vidking.net/embed/tv/${id}/${s}/${e}?autoPlay=true&color=facc15&nextEpisode=true&episodeSelector=true`
-  },
-  { 
-    id: 'vidsrc-xyz', 
-    name: 'Unblocked Server 1', 
-    movieUrl: (id: string) => `https://vidsrc.xyz/embed/movie/${id}`,
-    tvUrl: (id: string, s: number, e: number) => `https://vidsrc.xyz/embed/tv/${id}/${s}/${e}`
-  },
-  { 
     id: 'vidsrc-to', 
-    name: 'Unblocked Server 2', 
+    name: 'Server 1', 
     movieUrl: (id: string) => `https://vidsrc.to/embed/movie/${id}`,
     tvUrl: (id: string, s: number, e: number) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}`
   },
   { 
-    id: 'vidsrc-in', 
-    name: 'Unblocked Server 3', 
-    movieUrl: (id: string) => `https://vidsrc.in/embed/movie/${id}`,
-    tvUrl: (id: string, s: number, e: number) => `https://vidsrc.in/embed/tv/${id}/${s}/${e}`
-  },
-  { 
-    id: 'vidsrc-pm', 
-    name: 'Unblocked Server 4', 
-    movieUrl: (id: string) => `https://vidsrc.pm/embed/movie/${id}`,
-    tvUrl: (id: string, s: number, e: number) => `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`
-  },
-  { 
-    id: 'autoembed-to', 
-    name: 'Fast Server', 
-    movieUrl: (id: string) => `https://autoembed.to/movie/tmdb/${id}`,
-    tvUrl: (id: string, s: number, e: number) => `https://autoembed.to/tv/tmdb/${id}/${s}/${e}`
-  },
-  { 
-    id: 'multiembed-mov', 
-    name: 'Multi-Server', 
-    movieUrl: (id: string) => `https://multiembed.mov/directstream.php?video_id=${id}`,
-    tvUrl: (id: string, s: number, e: number) => `https://multiembed.mov/directstream.php?video_id=${id}&s=${s}&e=${e}`
-  },
-  { 
     id: 'vidsrc-me', 
-    name: 'Legacy Server 1', 
+    name: 'Server 2', 
     movieUrl: (id: string) => `https://vidsrc.me/embed/movie?tmdb=${id}`,
     tvUrl: (id: string, s: number, e: number) => `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`
   },
   { 
     id: 'vidsrc-pro', 
-    name: 'Legacy Server 2', 
+    name: 'Server 3', 
     movieUrl: (id: string) => `https://vidsrc.pro/embed/movie/${id}`,
     tvUrl: (id: string, s: number, e: number) => `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`
-  }
+  },
+  { 
+    id: 'embed-su', 
+    name: 'Server 4', 
+    movieUrl: (id: string) => `https://embed.su/embed/movie/${id}`,
+    tvUrl: (id: string, s: number, e: number) => `https://embed.su/embed/tv/${id}/${s}/${e}`
+  },
 ];
 
 export default function MovieView() {
-  const { user, addToHistory } = useGames();
   const { id, type } = useParams();
   const navigate = useNavigate();
   const [media, setMedia] = useState<MediaContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSource, setActiveSource] = useState(SOURCES[0]);
   const [showPlayer, setShowPlayer] = useState(false);
-  const [watchProgress, setWatchProgress] = useState<number>(0);
-  const [resumeTime, setResumeTime] = useState<number | null>(null);
   
   // TV specific state
   const [season, setSeason] = useState(1);
@@ -79,37 +44,6 @@ export default function MovieView() {
   const [episodes, setEpisodes] = useState<any[]>([]);
   const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
   const [showEpisodeDropdown, setShowEpisodeDropdown] = useState(false);
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      try {
-        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-        if (data.type === 'PLAYER_EVENT') {
-          const { event: playerEvent, progress, currentTime } = data.data;
-          
-          if (playerEvent === 'timeupdate') {
-            setWatchProgress(progress);
-            // Save progress to local storage for resume feature
-            const progressKey = `yeebsgames_resume_${id}_${type}${type === 'tv' ? `_s${season}e${episode}` : ''}`;
-            localStorage.setItem(progressKey, currentTime.toString());
-
-            // Update history with progress
-            const history = JSON.parse(localStorage.getItem('yeebsgames_movie_history') || '[]');
-            const entryIndex = history.findIndex((h: any) => h.id === id);
-            if (entryIndex !== -1) {
-              history[entryIndex].progress = progress;
-              localStorage.setItem('yeebsgames_movie_history', JSON.stringify(history));
-            }
-          }
-        }
-      } catch (e) {
-        // Not a player event or invalid JSON
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [id, type, season, episode]);
 
   useEffect(() => {
     const loadMedia = async () => {
@@ -123,34 +57,11 @@ export default function MovieView() {
             setEpisodes(seasonData.episodes);
          }
       }
-
-      // Check for saved progress
-      const progressKey = `yeebsgames_resume_${id}_${type}${type === 'tv' ? `_s${season}e${episode}` : ''}`;
-      const savedTime = localStorage.getItem(progressKey);
-      if (savedTime) {
-        setResumeTime(parseFloat(savedTime));
-      } else {
-        setResumeTime(null);
-      }
-
       setLoading(false);
     };
     loadMedia();
     window.scrollTo(0, 0);
   }, [id, type]);
-
-  const handleStartWatching = () => {
-    setShowPlayer(true);
-    if (id) {
-       // addToHistory expects a gameId, but we can reuse it for movies/shows if we format it
-       // Actually, addToHistory in GameContext is specifically for games/history array
-       // Let's just track it in localStorage for now to avoid breaking game-specific logic
-       const history = JSON.parse(localStorage.getItem('yeebsgames_movie_history') || '[]');
-       const entry = { id, type, title: media?.title || media?.name, timestamp: Date.now(), poster: media?.poster_path };
-       const newHistory = [entry, ...history.filter((h: any) => h.id !== id)].slice(0, 20);
-       localStorage.setItem('yeebsgames_movie_history', JSON.stringify(newHistory));
-    }
-  };
 
   const handleSeasonChange = async (s: number) => {
     setSeason(s);
@@ -188,16 +99,9 @@ export default function MovieView() {
 
   const title = media.title || media.name;
   const date = media.release_date || media.first_air_date;
-  
-  let rawUrl = '';
-  if (activeSource.id === 'vidking') {
-    const baseUrl = type === 'movie' ? activeSource.movieUrl(id!) : activeSource.tvUrl(id!, season, episode);
-    rawUrl = resumeTime ? `${baseUrl}&progress=${Math.floor(resumeTime)}` : baseUrl;
-  } else {
-    rawUrl = type === 'movie' 
-      ? activeSource.movieUrl(id!) 
-      : activeSource.tvUrl(id!, season, episode);
-  }
+  const rawUrl = type === 'movie' 
+    ? activeSource.movieUrl(id!) 
+    : activeSource.tvUrl(id!, season, episode);
 
   // Ultraviolet Proxy Helper
   const getProxyUrl = (url: string) => {
@@ -246,22 +150,12 @@ export default function MovieView() {
             </div>
 
             {!showPlayer && (
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button 
-                  onClick={handleStartWatching}
-                  className="px-12 py-5 rounded-2xl bg-primary text-black font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
-                >
-                  Watch Now
-                </button>
-                {resumeTime && resumeTime > 10 && (
-                   <button 
-                     onClick={() => setShowPlayer(true)}
-                     className="px-12 py-5 rounded-2xl bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3"
-                   >
-                     Resume at {Math.floor(resumeTime / 60)}:{(Math.floor(resumeTime % 60)).toString().padStart(2, '0')}
-                   </button>
-                )}
-              </div>
+              <button 
+                onClick={() => setShowPlayer(true)}
+                className="px-12 py-5 rounded-2xl bg-primary text-black font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+              >
+                Watch Now
+              </button>
             )}
           </div>
         </div>
@@ -277,31 +171,25 @@ export default function MovieView() {
               animate={{ opacity: 1 }}
               className="space-y-8"
             >
-              <div className="glass p-6 rounded-[32px] border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6">
-                <div className="w-full sm:w-auto">
-                   <div className="flex items-center gap-3 mb-3">
-                      <Zap className="w-3 h-3 text-primary" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Select Server</span>
-                   </div>
-                   <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide max-w-full">
-                    {SOURCES.map(source => (
-                      <button
-                        key={source.id}
-                        onClick={() => setActiveSource(source)}
-                        className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap border shrink-0 ${
-                          activeSource.id === source.id 
-                            ? 'bg-primary text-black border-primary shadow-[0_0_20px_rgba(250,204,21,0.3)]' 
-                            : 'bg-white/5 text-gray-500 border-white/10 hover:border-white/20 hover:text-white'
-                        }`}
-                      >
-                        {source.name}
-                      </button>
-                    ))}
-                  </div>
+              <div className="glass p-6 rounded-[32px] border border-white/5 flex flex-wrap items-center justify-between gap-6">
+                <div className="flex gap-2">
+                  {SOURCES.map(source => (
+                    <button
+                      key={source.id}
+                      onClick={() => setActiveSource(source)}
+                      className={`px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                        activeSource.id === source.id 
+                          ? 'bg-primary text-black' 
+                          : 'bg-white/5 text-gray-500 hover:text-white'
+                      }`}
+                    >
+                      {source.name}
+                    </button>
+                  ))}
                 </div>
 
                 {type === 'tv' && media.seasons && (
-                  <div className="flex gap-3 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                  <div className="flex gap-2">
                     <div className="relative">
                       <button 
                         onClick={() => { setShowSeasonDropdown(!showSeasonDropdown); setShowEpisodeDropdown(false); }}
@@ -359,8 +247,8 @@ export default function MovieView() {
                   src={playerUrl} 
                   className="w-full h-full"
                   allowFullScreen
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  referrerPolicy="strict-origin-when-cross-origin"
+                  allow="autoplay; encrypted-media"
+                  referrerPolicy="no-referrer"
                   title="Player"
                 />
                 

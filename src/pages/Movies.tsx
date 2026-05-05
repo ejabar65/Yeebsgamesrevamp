@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { movieService, MediaContent } from '../services/movieService';
 import { useNavigate } from 'react-router-dom';
-import { Film, Monitor, Search, Play, Star, TrendingUp, History } from 'lucide-react';
+import { Film, Monitor, Search, Play, Star, TrendingUp } from 'lucide-react';
 
 function MediaCard({ item, index, type, onClick }: { item: MediaContent, index: number, type: 'movie' | 'tv', onClick: () => void, key?: any }) {
   const title = item.title || item.name;
@@ -57,7 +57,6 @@ function MediaCard({ item, index, type, onClick }: { item: MediaContent, index: 
 export default function Movies() {
   const [activeTab, setActiveTab] = useState<'movie' | 'tv'>('movie');
   const [popular, setPopular] = useState<MediaContent[]>([]);
-  const [recentHistory, setRecentHistory] = useState<any[]>([]);
   const [activeGenre, setActiveGenre] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MediaContent[]>([]);
@@ -75,10 +74,6 @@ export default function Movies() {
         const data = await movieService.getPopular(activeTab);
         setPopular(data);
       }
-      
-      const history = JSON.parse(localStorage.getItem('yeebsgames_movie_history') || '[]');
-      setRecentHistory(history);
-      
       setLoading(false);
     };
     loadData();
@@ -170,46 +165,6 @@ export default function Movies() {
       </section>
 
       <div className="space-y-12">
-        {!isSearching && recentHistory.length > 0 && !activeGenre && (
-           <section>
-              <div className="flex items-center gap-3 mb-10 pb-6 border-b border-white/5">
-                <History className="w-4 h-4 text-primary" />
-                <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Continue Watching</h2>
-              </div>
-              <div className="flex gap-8 overflow-x-auto pb-8 snap-x scrollbar-hide">
-                 {recentHistory.map((item, i) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      onClick={() => navigate(`/media/${item.type}/${item.id}`)}
-                      className="min-w-[200px] group cursor-pointer snap-start"
-                    >
-                       <div className="aspect-[2/3] rounded-2xl overflow-hidden border border-white/5 bg-[#111] relative mb-4">
-                          <img 
-                            src={movieService.getPosterUrl(item.poster)} 
-                            alt={item.title}
-                            className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all group-hover:scale-110"
-                          />
-                          <div className="absolute inset-0 bg-linear-to-t from-black/80 to-transparent" />
-                          <div className="absolute bottom-4 left-4 right-4">
-                             <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden">
-                                <div className="h-full bg-primary" style={{ width: `${item.progress || 0}%` }} />
-                             </div>
-                          </div>
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100">
-                             <Play className="w-10 h-10 text-primary fill-current" />
-                          </div>
-                       </div>
-                       <h3 className="text-[10px] font-black uppercase tracking-widest text-white truncate mb-1 group-hover:text-primary transition-colors">{item.title}</h3>
-                       <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">{item.type}</p>
-                    </motion.div>
-                 ))}
-              </div>
-           </section>
-        )}
-
         {isSearching ? (
           <div>
             <div className="flex items-center justify-between mb-10 border-b border-white/5 pb-6">
