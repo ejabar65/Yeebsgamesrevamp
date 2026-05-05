@@ -29,40 +29,64 @@ async function startServer() {
   // API Routes
   app.get('/api/movie-proxy/*', async (req, res) => {
     const TMDB_API_KEY = '15e241bab4affc62f00422929d7efd8a';
-    let pathValue = req.params[0];
-    if (pathValue.startsWith('/')) pathValue = pathValue.substring(1);
+    const rawPath = req.params[0];
+    const pathValue = rawPath.startsWith('/') ? rawPath.substring(1) : rawPath;
     
-    const queryParams = new URLSearchParams(req.query as any);
+    // Construct the TMDB URL
+    const queryParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(req.query)) {
+      if (key !== 'api_key') {
+        queryParams.append(key, String(value));
+      }
+    }
     queryParams.set('api_key', TMDB_API_KEY);
     
     const url = `https://api.themoviedb.org/3/${pathValue}?${queryParams.toString()}`;
 
-    console.log(`[Proxy] Fetching: ${url}`);
+    console.log(`[Cinema-Proxy] Establishing connection to: ${url}`);
 
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'YeebsCinema/1.0'
+        }
+      });
+
       const contentType = response.headers.get('content-type');
       
       if (contentType && contentType.includes('application/json')) {
         const data = await response.json();
         if (!response.ok) {
-          console.error(`[Proxy] TMDB Error (${response.status}):`, data);
-          return res.status(response.status).json(data);
+          console.error(`[Cinema-Proxy] TMDB rejection (${response.status}):`, data);
+          return res.status(response.status).json({ 
+            error: 'TMDB reported an issue', 
+            status: response.status,
+            details: data 
+          });
         }
-        res.json(data);
+        return res.json(data);
       } else {
         const text = await response.text();
-        console.error(`[Proxy] Non-JSON Response from TMDB (${response.status}):`, text.substring(0, 500));
-        res.status(500).json({ 
-          error: 'TMDB returned an invalid response (HTML instead of JSON)', 
+        console.error(`[Cinema-Proxy] Protocol violation: Received non-JSON response (${response.status}) from ${url}`);
+        console.error(`[Cinema-Proxy] Snapshot: ${text.substring(0, 200)}...`);
+        return res.status(502).json({ 
+          error: 'The downstream provider returned an invalid format (HTML)', 
           status: response.status,
           preview: text.substring(0, 100)
         });
       }
     } catch (error) {
-      console.error(`[Proxy] Fetch failed for ${url}:`, error);
-      res.status(500).json({ error: 'Proxy fetch failed', details: error instanceof Error ? error.message : String(error) });
+      console.error(`[Cinema-Proxy] Failed to establish link to ${url}:`, error);
+      return res.status(503).json({ 
+        error: 'Cinema proxy link failure', 
+        details: error instanceof Error ? error.message : String(error) 
+      });
     }
+  });
+
+  app.get('/api/cinema-health', (req, res) => {
+    res.json({ status: 'Online', system: 'Cinema Proxy v2.0' });
   });
 
   app.get('/api/games', (req, res) => {
