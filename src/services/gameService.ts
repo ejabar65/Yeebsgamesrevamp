@@ -6,6 +6,16 @@ const GAMES_COLLECTION = 'games';
 
 export async function getGames(): Promise<Game[]> {
   try {
+    // Try to get from local storage first to save quota
+    const cached = localStorage.getItem('yeebsgames_cache_games');
+    const cacheTime = localStorage.getItem('yeebsgames_cache_games_time');
+    
+    // Cache for 30 minutes
+    if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 30 * 60 * 1000) {
+      console.log('Serving games from local cache');
+      return JSON.parse(cached);
+    }
+
     const querySnapshot = await getDocs(collection(db, GAMES_COLLECTION));
     const firestoreGames = querySnapshot.docs.map(doc => doc.data() as Game);
     
@@ -13,9 +23,21 @@ export async function getGames(): Promise<Game[]> {
     const combined = [...STATIC_GAMES, ...firestoreGames];
     const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
     
+    // Update cache
+    localStorage.setItem('yeebsgames_cache_games', JSON.stringify(unique));
+    localStorage.setItem('yeebsgames_cache_games_time', Date.now().toString());
+    
     return unique;
   } catch (error) {
     console.error('Error fetching games from Firestore:', error);
+    
+    // On quota error, try to use stale cache
+    const stale = localStorage.getItem('yeebsgames_cache_games');
+    if (stale) {
+      console.warn('Firestore error, using stale cache');
+      return JSON.parse(stale);
+    }
+    
     return STATIC_GAMES;
   }
 }

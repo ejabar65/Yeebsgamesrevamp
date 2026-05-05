@@ -121,7 +121,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
     
     const initialize = async () => {
       if (savedUsername && savedPassword) {
-        // Verify credentials
+        // Try to used cached user data first
+        const cachedUser = localStorage.getItem('yeebsgames_user_cache');
+        if (cachedUser) {
+          try {
+            const parsed = JSON.parse(cachedUser);
+            // Even if cached, we'll verify asynchronously or just trust it for now to save quota
+            // But we check time. Cache for 1 hour.
+            const cacheTime = localStorage.getItem('yeebsgames_user_cache_time');
+            if (cacheTime && Date.now() - parseInt(cacheTime) < 60 * 60 * 1000) {
+              setUser(parsed);
+              setFavorites(parsed.settings?.favoriteGameIds || []);
+              setAuthLoading(false);
+              return;
+            }
+          } catch (e) {}
+        }
+
+        // Verify credentials if no cache or expired
         try {
           const userRef = doc(db, 'users', savedUsername.toLowerCase());
           const userSnap = await getDoc(userRef);
@@ -131,10 +148,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
             if (data.isBanned) {
               localStorage.removeItem('yeebsgames_username');
               localStorage.removeItem('yeebsgames_password');
+              localStorage.removeItem('yeebsgames_user_cache');
               setAuthLoading(false);
               return;
             }
-            setUser({
+            const authUser: AuthUser = {
               uid: data.uid,
               username: savedUsername,
               isAdmin: savedUsername.toLowerCase() === 'yeebs' || data.isAdmin,
@@ -143,8 +161,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
               settings: data.settings || { compactMode: false, showChatPreview: true, soundsEnabled: true, privateProfile: false },
               history: data.history || [],
               bio: data.bio || ''
-            });
+            };
+            setUser(authUser);
             setFavorites(data.favoriteGameIds || []);
+            
+            // Update cache
+            localStorage.setItem('yeebsgames_user_cache', JSON.stringify(authUser));
+            localStorage.setItem('yeebsgames_user_cache_time', Date.now().toString());
+
             if (data.history) {
               localStorage.setItem('yeebsgames_recent', JSON.stringify(data.history));
             }
@@ -152,9 +176,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
             // Invalid session
             localStorage.removeItem('yeebsgames_username');
             localStorage.removeItem('yeebsgames_password');
+            localStorage.removeItem('yeebsgames_user_cache');
           }
         } catch (e) {
           console.error("Session restoration failed", e);
+          // If Firestore fails (quota), try to use the cache regardless of age
+          const staleUser = localStorage.getItem('yeebsgames_user_cache');
+          if (staleUser) {
+             setUser(JSON.parse(staleUser));
+          }
         }
       } else {
         // Guest mode

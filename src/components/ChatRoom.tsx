@@ -10,14 +10,13 @@ import {
   serverTimestamp,
   doc,
   updateDoc,
-  getDoc,
   deleteDoc
 } from 'firebase/firestore';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, User, MessageSquare, Zap, Shield, Loader2, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
+import { Send, Trash2, MessageSquare, Shield, User, Zap } from 'lucide-react';
 
 const filter = new Filter();
 
@@ -44,7 +43,6 @@ export const ChatRoom: React.FC = () => {
       setMessages(msgs);
       setLoading(false);
       
-      // Auto scroll to bottom
       setTimeout(() => {
         if (scrollRef.current) {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -64,24 +62,9 @@ export const ChatRoom: React.FC = () => {
     if (!newMessage.trim() || spamCooldown) return;
 
     setSpamCooldown(true);
-    setTimeout(() => setSpamCooldown(false), 2000); // 2 second cooldown
+    setTimeout(() => setSpamCooldown(false), 2000);
 
     try {
-      const lowerUsername = user.username.toLowerCase();
-      // Spam prevention check in user profile
-      const userRef = doc(db, 'users', lowerUsername);
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        const lastMsg = userSnap.data().lastMessageAt;
-        if (lastMsg) {
-          const lastTime = lastMsg.toMillis ? lastMsg.toMillis() : new Date(lastMsg).getTime();
-          if (Date.now() - lastTime < 1500) {
-            alert('Slow down! Spam prevention active.');
-            return;
-          }
-        }
-      }
-
       const censoredText = filter.isProfane(newMessage) ? filter.clean(newMessage) : newMessage;
 
       await addDoc(collection(db, 'global_messages'), {
@@ -91,7 +74,8 @@ export const ChatRoom: React.FC = () => {
         createdAt: serverTimestamp()
       });
 
-      // Update last message timestamp
+      const lowerUsername = user.username.toLowerCase();
+      const userRef = doc(db, 'users', lowerUsername);
       await updateDoc(userRef, { lastMessageAt: serverTimestamp() });
       
       setNewMessage('');
@@ -102,87 +86,83 @@ export const ChatRoom: React.FC = () => {
 
   const handleDeleteMessage = async (msgId: string) => {
     if (!user?.isAdmin) return;
-    if (!confirm('Are you sure you want to delete this message?')) return;
+    if (!confirm('Delete this message?')) return;
     
     try {
       await deleteDoc(doc(db, 'global_messages', msgId));
     } catch (error) {
       console.error("Error deleting message:", error);
-      alert("Failed to delete message.");
     }
   };
 
   return (
-    <div className="flex flex-col h-[600px] bg-white/5 rounded-2xl border border-white/10 overflow-hidden backdrop-blur-sm">
-      <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-primary" />
-          <h2 className="font-bold tracking-tight">GLOBAL CHAT</h2>
+    <div className="flex flex-col h-[700px] bg-[#111] rounded-[32px] border border-white/5 overflow-hidden shadow-2xl">
+      <div className="p-6 border-b border-white/5 flex items-center justify-between bg-linear-to-r from-primary/10 via-transparent to-transparent">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+            <MessageSquare className="w-5 h-5 text-black" />
+          </div>
+          <div>
+            <h2 className="font-black text-xs uppercase tracking-widest text-white">Global Frequency</h2>
+            <p className="text-[8px] font-black uppercase tracking-widest text-gray-500">Node Cluster: Alpha-7</p>
+          </div>
         </div>
-        <div className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
-          LIVE
+        <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
+          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-[10px] text-green-500 font-black tracking-widest uppercase">UPSETIVE</span>
         </div>
       </div>
 
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
+        className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-hide bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-95"
       >
         {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <Zap className="w-8 h-8 text-primary animate-bounce" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-600">Initializing link...</p>
           </div>
         ) : messages.length === 0 ? (
-          <div className="text-center text-gray-500 py-10">
-            <p className="text-sm">No transmissions yet. Start the conversation!</p>
+          <div className="text-center text-gray-600 py-10 flex flex-col items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-dashed border-white/10">
+              <MessageSquare className="w-6 h-6 opacity-20" />
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-widest">No signals received yet</p>
           </div>
         ) : (
           messages.map((msg, i) => (
             <motion.div 
-              initial={{ opacity: 0, x: -10 }}
+              initial={{ opacity: 0, x: msg.senderName === user?.username ? 20 : -20 }}
               animate={{ opacity: 1, x: 0 }}
               key={`${msg.id}-${i}`} 
               className={`flex flex-col ${msg.senderName === user?.username ? 'items-end' : 'items-start'}`}
             >
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-3 mb-2">
+                {msg.senderName !== user?.username && (
+                   <div className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center">
+                      <User className="w-3 h-3 text-gray-500" />
+                   </div>
+                )}
                 <Link 
                   to={`/profile/${msg.senderName.toLowerCase()}`}
-                  className={`text-[10px] font-black uppercase hover:text-primary transition-colors cursor-pointer ${msg.senderName.toLowerCase() === 'yeebs' ? 'text-primary' : 'text-gray-400'}`}
+                  className={`text-[10px] font-black uppercase tracking-widest hover:text-primary transition-colors cursor-pointer ${msg.senderName.toLowerCase() === 'yeebs' ? 'text-primary' : 'text-gray-500'}`}
                 >
                   {msg.senderName}
                 </Link>
-                {(msg.senderName.toLowerCase() === 'yeebs' || msg.isAdmin) && <Shield className="w-2.5 h-2.5 text-primary" />}
                 {user?.isAdmin && (
                   <button 
                     onClick={() => handleDeleteMessage(msg.id)}
-                    className="p-1 rounded bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all ml-1"
-                    title="Delete Message"
+                    className="p-1 rounded-md bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all ml-1"
                   >
-                    <Trash2 className="w-2.5 h-2.5" />
-                  </button>
-                )}
-                {user && msg.senderName !== user.username && (
-                  <button 
-                    onClick={() => {
-                      // Navigate to DM with this user
-                      // We can pass state to the Chat page or just let them switch and search
-                      // But for better UX, I'll add a way to trigger it.
-                      // Actually, let's just alert them to use the DM tab for now
-                      // OR better: I'll use a custom event or shared state if I had more time.
-                      // For now, I'll just explain.
-                      alert(`Switch to DIRECT MESSAGES and search for "${msg.senderName}" to start a chat!`);
-                    }}
-                    className="text-[10px] text-primary/50 hover:text-primary transition-colors font-bold uppercase tracking-widest"
-                  >
-                    [DM]
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 )}
               </div>
               <div 
-                className={`max-w-[80%] px-4 py-2 rounded-2xl text-sm ${
+                className={`max-w-[85%] px-6 py-4 rounded-3xl text-sm leading-relaxed shadow-lg ${
                   msg.senderName === user?.username 
-                    ? 'bg-primary text-black font-medium' 
-                    : 'bg-white/10 text-white'
+                    ? 'bg-linear-to-br from-primary to-yellow-600 text-black font-bold rounded-tr-none' 
+                    : 'bg-white/5 text-white border border-white/10 rounded-tl-none backdrop-blur-md'
                 }`}
               >
                 {msg.text}
@@ -192,27 +172,31 @@ export const ChatRoom: React.FC = () => {
         )}
       </div>
 
-      <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 bg-black/20">
+      <form onSubmit={handleSendMessage} className="p-6 border-t border-white/5 bg-[#1a1a1a]">
         {!user ? (
-          <div className="text-center py-2 bg-white/5 rounded-xl border border-dashed border-white/20">
-            <p className="text-xs text-gray-400">LOG IN TO TRANSMIT MESSAGES</p>
+          <div className="text-center py-2">
+            <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest">Identification required to broadcast</p>
           </div>
         ) : (
-          <div className="relative">
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+              <Zap className={`w-4 h-4 ${newMessage ? 'text-primary' : 'text-gray-600'} transition-colors`} />
+            </div>
             <input 
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-12 focus:outline-hidden focus:border-primary transition-all text-sm"
+              placeholder="Transmit data..."
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-5 focus:outline-hidden focus:border-primary/50 focus:bg-white/[0.08] transition-all text-sm font-medium placeholder:text-gray-700"
               maxLength={200}
             />
             <button 
               type="submit"
               disabled={!newMessage.trim() || spamCooldown}
-              className="absolute right-2 top-1.5 bottom-1.5 px-3 bg-primary text-black rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="absolute right-3 top-2.5 bottom-2.5 px-6 bg-primary text-black rounded-xl hover:bg-white transition-all disabled:opacity-50 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-lg active:scale-95"
             >
-              {spamCooldown ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              <Send className="w-4 h-4" />
+              {spamCooldown ? 'WAIT' : 'SEND'}
             </button>
           </div>
         )}

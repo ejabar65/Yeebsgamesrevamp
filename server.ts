@@ -27,6 +27,21 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
 
   // API Routes
+  app.get('/api/movie-proxy/*', async (req, res) => {
+    const TMDB_API_KEY = process.env.VITE_TMDB_API_KEY || '15e241bab4affc62f00422929d7efd8a';
+    const path = req.params[0];
+    const query = new URLSearchParams(req.query as any).toString();
+    const url = `https://api.themoviedb.org/3/${path}?api_key=${TMDB_API_KEY}&${query}`;
+
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: 'Proxy request failed' });
+    }
+  });
+
   app.get('/api/games', (req, res) => {
     try {
       const data = fs.readFileSync(GAMES_FILE, 'utf-8');

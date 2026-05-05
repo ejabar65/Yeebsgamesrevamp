@@ -1,8 +1,8 @@
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, Maximize2, RotateCw, Flag, Share2, Star, Zap, Heart, Play } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useGames } from '../context/GameContext';
-import { db, doc, updateDoc, setDoc, increment } from '../lib/firebase';
+import { db, doc, setDoc, increment } from '../lib/firebase';
+import { ArrowLeft, RotateCw, Maximize2, Heart, Share2, Flag, Play, Info } from 'lucide-react';
 
 export default function GameView() {
   const { id } = useParams();
@@ -12,24 +12,20 @@ export default function GameView() {
 
   useEffect(() => {
     if (game && id) {
-      // Increment play count in Firestore
       const incrementPlay = async () => {
         try {
           const gameRef = doc(db, 'games', id);
-          // Use setDoc with merge: true to create the document if it doesn't exist
           await setDoc(gameRef, {
             playCount: increment(1),
             title: game.title,
             category: game.category,
             thumbnail: game.thumbnail,
             url: game.url,
-            id: game.id // Ensure ID matching
+            id: game.id
           }, { merge: true });
-
-          // Add to history (handles both local and cloud)
           await addToHistory(id);
         } catch (error) {
-          console.error("Error incrementing play count", error);
+          console.error("Error updating statistics", error);
         }
       };
       incrementPlay();
@@ -38,17 +34,17 @@ export default function GameView() {
 
   if (loading) {
     return (
-      <div className="pt-32 flex justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!game) {
     return (
-      <div className="pt-32 text-center">
-        <h1 className="text-4xl font-display font-black">Game not found</h1>
-        <Link to="/" className="text-primary underline mt-4 inline-block">Go Home</Link>
+      <div className="p-20 text-center">
+        <h1 className="text-2xl font-black uppercase tracking-widest text-gray-700">Not Found</h1>
+        <Link to="/" className="text-xs font-black text-primary uppercase tracking-widest mt-8 inline-block hover:underline">Return</Link>
       </div>
     );
   }
@@ -56,183 +52,136 @@ export default function GameView() {
   const toggleFullScreen = () => {
     const elem = document.getElementById('game-frame');
     if (!elem) return;
-    
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen();
-    }
+    if (elem.requestFullscreen) elem.requestFullscreen();
   };
 
   const handleLike = async () => {
     await toggleFavorite(game.id);
-    // Extra: Slightly boost rating on like
-    if (!favorite) {
-      try {
-        const gameRef = doc(db, 'games', game.id);
-        await setDoc(gameRef, {
-          rating: increment(0.1),
-          title: game.title,
-          id: game.id
-        }, { merge: true });
-      } catch (e) {
-        console.error(e);
-      }
-    }
   };
 
   const shareGame = () => {
     if (navigator.share) {
-      navigator.share({
-        title: `Playing ${game.title} on YEEBSGAMES`,
-        url: window.location.href
-      });
+      navigator.share({ title: game.title, url: window.location.href });
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
+      alert('Link copied.');
     }
   };
 
   return (
-    <main className="pt-24 pb-12 px-4 md:px-8">
-      <div className="max-w-6xl mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6">
-          <ChevronLeft className="w-4 h-4" />
-          Back to Games
-        </Link>
+    <main className="p-6 md:p-12 max-w-[1600px] mx-auto min-h-screen">
+      <Link to="/" className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 hover:text-white transition-all mb-12 group">
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+        Return to Root
+      </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Game Player Area */}
-          <div className="lg:col-span-2">
-            <div className="rounded-2xl overflow-hidden bg-black border border-white/10 aspect-video relative group" id="game-container">
-              {game.htmlBlock ? (
-                <iframe
-                  id="game-frame"
-                  srcDoc={game.htmlBlock}
-                  className="w-full h-full border-0"
-                  allowFullScreen
-                  title={game.title}
-                />
-              ) : (
-                <iframe
-                  id="game-frame"
-                  src={game.url || null}
-                  className="w-full h-full border-0"
-                  allowFullScreen
-                  title={game.title}
-                />
-              )}
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
+        <div className="lg:col-span-3 space-y-12">
+          <div className="rounded-[40px] overflow-hidden bg-black border border-white/5 aspect-video relative shadow-2xl group" id="game-container">
+            <iframe
+              id="game-frame"
+              srcDoc={game.htmlBlock}
+              src={!game.htmlBlock ? (game.url || undefined) : undefined}
+              className="w-full h-full border-0"
+              allowFullScreen
+              title={game.title}
+            />
+          </div>
 
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 p-4 glass rounded-2xl">
-              <div className="flex items-center gap-4">
-                <button onClick={() => window.location.reload()} className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition-colors" title="Reload Game">
-                  <RotateCw className="w-5 h-5" />
-                </button>
-                <button onClick={toggleFullScreen} className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition-colors" title="Fullscreen">
-                  <Maximize2 className="w-5 h-5" />
-                </button>
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20">
-                  <Play className="w-3 h-3 fill-current" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">{(game.playCount || 0).toLocaleString()} Plays</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={handleLike}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
-                    favorite 
-                      ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]' 
-                      : 'bg-white/5 hover:bg-white/10 text-gray-300'
-                  }`}
-                >
-                  <Heart className={`w-4 h-4 ${favorite ? 'fill-current' : ''}`} />
-                  <span className="text-sm font-bold uppercase tracking-wider">{favorite ? 'Liked' : 'Like'}</span>
-                </button>
-                <button 
-                  onClick={shareGame}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition-colors"
-                >
-                  <Share2 className="w-4 h-4" />
-                  <span className="text-sm font-bold uppercase tracking-wider">Share</span>
-                </button>
-                <button 
-                  onClick={() => alert('Issue reported! Our moths are investigating.')}
-                  className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors" 
-                  title="Report Issue"
-                >
-                  <Flag className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-8">
-              <h1 className="text-3xl font-display font-black mb-4 uppercase tracking-tight">
-                {game.title} <span className="text-primary italic">.exe</span>
-              </h1>
-              <div className="prose prose-invert max-w-none">
-                <p className="text-gray-300 leading-relaxed font-medium">
-                  {game.description}
-                </p>
-                <div className="mt-6 p-4 rounded-xl bg-primary/5 border border-primary/10">
-                  <p className="text-primary text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                    <Zap className="w-4 h-4 fill-current" />
-                    How to Play
-                  </p>
-                  <p className="text-gray-400 mt-2 text-sm leading-relaxed">
-                    Use your keyboard and mouse to navigate and play. Master the mechanics and get that high score!
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-8 flex items-center gap-4">
+          <div className="p-8 rounded-[40px] bg-[#111] border border-white/5 flex flex-wrap items-center justify-between gap-8 shadow-xl">
+            <div className="flex items-center gap-4">
               <button 
-                onClick={() => window.location.reload()}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 text-xs font-bold uppercase tracking-wider transition-all"
+                onClick={() => window.location.reload()} 
+                className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all"
+                title="Reload"
               >
-                <RotateCw className="w-3 h-3" />
-                Reload Game
+                <RotateCw className="w-4 h-4" />
+                Reload
+              </button>
+              <button 
+                onClick={toggleFullScreen} 
+                className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all"
+                title="Fullscreen"
+              >
+                <Maximize2 className="w-4 h-4" />
+                Scale
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={handleLike}
+                className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${favorite ? 'bg-red-500 text-white shadow-lg shadow-red-500/40' : 'bg-white/5 text-gray-400 hover:text-white'}`}
+              >
+                <Heart className={`w-4 h-4 ${favorite ? 'fill-current' : ''}`} />
+                {favorite ? 'Liked' : 'Like'}
+              </button>
+              <button 
+                onClick={shareGame}
+                className="flex items-center gap-2 px-6 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all"
+              >
+                <Share2 className="w-4 h-4" />
+                Share
+              </button>
+              <button 
+                onClick={() => alert('Reported.')}
+                className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-all" 
+              >
+                <Flag className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <div className="glass p-6 rounded-2xl">
-              <h3 className="font-display font-bold text-lg mb-4">Recommended</h3>
-              <div className="space-y-4">
-                {games.filter(g => g.id !== id).slice(0, 4).map(suggested => (
-                  <Link 
-                    key={suggested.id} 
-                    to={`/game/${suggested.id}`}
-                    className="flex gap-3 group"
-                  >
-                      <div className="w-20 aspect-square rounded-lg overflow-hidden flex-shrink-0 bg-dark-card border border-white/5">
-                        {suggested.thumbnail ? (
-                          <img src={suggested.thumbnail} alt={suggested.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-                        ) : (
-                          <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                            <Play className="w-6 h-6 text-white/10" />
-                          </div>
-                        )}
-                      </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{suggested.title}</h4>
-                      <span className="text-[10px] text-primary font-bold uppercase tracking-wider">{suggested.category}</span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary text-[8px] font-black uppercase tracking-widest">
+                {game.category}
+              </span>
+              <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-500 text-[8px] font-black uppercase tracking-widest">
+                v2.1 Stable
+              </span>
             </div>
+            <h1 className="text-6xl font-black uppercase tracking-tighter leading-none italic">
+              {game.title}<span className="text-primary">.exe</span>
+            </h1>
+            <p className="text-gray-400 text-lg max-w-3xl font-medium leading-relaxed">
+              {game.description}
+            </p>
 
-            <div className="glass p-6 rounded-2xl">
-              <h3 className="font-display font-bold text-lg mb-4">How to Play</h3>
-              <ul className="text-sm text-gray-400 space-y-2">
-                <li>• Arrow Keys/WASD for movement</li>
-                <li>• Space for primary action</li>
-                <li>• Esc to pause/exit</li>
-                <li>• P for settings</li>
-              </ul>
+            <div className="mt-8 p-8 rounded-[40px] bg-white/[0.01] border border-white/5">
+              <div className="flex items-center gap-3 mb-4">
+                <Info className="w-4 h-4 text-primary" />
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-white">How to Play</h3>
+              </div>
+              <p className="text-sm text-gray-500 leading-relaxed max-w-2xl">
+                Use standard desktop controls. Most applications respond to WASD, Arrow Keys, and Mouse input. System efficiency is prioritized for smooth rendering.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-12">
+          <div className="p-10 rounded-[40px] border border-white/5 bg-[#111] shadow-2xl">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-10 flex items-center gap-2">
+              <Play className="w-3 h-3" />
+              Recommended
+            </h3>
+            <div className="space-y-8">
+              {games.filter(g => g.id !== id).slice(0, 5).map(suggested => (
+                <Link 
+                  key={suggested.id} 
+                  to={`/game/${suggested.id}`}
+                  className="flex gap-4 group"
+                >
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/5 border border-white/5 shrink-0 shadow-lg group-hover:shadow-primary/20 transition-all">
+                    <img src={suggested.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-all" />
+                  </div>
+                  <div className="flex-1 min-w-0 pt-1">
+                    <h4 className="font-black text-xs uppercase tracking-widest truncate group-hover:text-primary transition-colors">{suggested.title}</h4>
+                    <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mt-1 block">{suggested.category}</span>
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
         </div>

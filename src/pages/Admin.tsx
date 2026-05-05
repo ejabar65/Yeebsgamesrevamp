@@ -4,7 +4,7 @@ import { Shield, Plus, Tag, FileCode, Type, Image as ImageIcon, CheckCircle2, Al
 import { addGame, deleteGame, updateGame } from '../services/gameService';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGames } from '../context/GameContext';
-import { db, collection, getDocs, doc, updateDoc, deleteDoc } from '../lib/firebase';
+import { db, collection, getDocs, doc, updateDoc, deleteDoc, query, limit } from '../lib/firebase';
 
 export default function Admin() {
   const { games, refreshGames, user, authLoading, setSearchQuery, setSortBy } = useGames();
@@ -25,7 +25,9 @@ export default function Admin() {
   const fetchUsers = async () => {
     setUsersLoading(true);
     try {
-      const querySnapshot = await getDocs(collection(db, 'users'));
+      // Limit fetching to 50 users to save quota
+      const q = query(collection(db, 'users'), limit(50));
+      const querySnapshot = await getDocs(q);
       const usersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUsers(usersList);
     } catch (error) {
@@ -220,78 +222,42 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen pt-32 px-4 md:px-8 pb-12">
+    <div className="min-h-full px-4 md:px-8 py-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
           <div>
-            <h1 className="text-4xl font-display font-black tracking-tight uppercase">
-              {editingId ? 'Edit' : 'Add New'} <span className="text-primary">Game</span>
+            <h1 className="text-3xl font-display font-black tracking-tighter uppercase italic">
+              System <span className="text-primary italic">Admin</span>
             </h1>
-            <p className="text-gray-400">{editingId ? `Modifying ${formData.title}` : 'Expand the YEEBSGAMES catalog'}</p>
+            <p className="text-[10px] uppercase font-black tracking-widest text-gray-500">Privileged Session • {editingId ? 'Edit Mode' : 'Expansion Mode'}</p>
           </div>
           <div className="flex items-center gap-4">
             {user && (
               <div className="hidden md:flex flex-col items-end">
-                <span className="text-xs font-bold text-white">@{user.username}</span>
-                <span className="text-[10px] uppercase font-black tracking-tighter text-primary">Master Controller</span>
+                <span className="text-xs font-bold text-white tracking-tighter uppercase italic">@{user.username}</span>
+                <span className="text-[8px] uppercase font-black tracking-widest text-primary italic">Clearance Level: OMEGA</span>
               </div>
             )}
-            <div className={`p-3 rounded-xl border transition-all ${editingId ? 'bg-orange-500/10 border-orange-500/20 text-orange-500' : 'bg-primary/10 border-primary/20 text-primary'}`}>
-              {editingId ? <Edit2 className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${editingId ? 'bg-orange-500/10 border-orange-500/20 text-orange-500' : 'bg-primary/10 border-primary/20 text-primary'}`}>
+              {editingId ? <Edit2 className="w-5 h-5 shadow-[0_0_10px_rgba(249,115,22,0.3)]" /> : <Shield className="w-5 h-5 shadow-[0_0_10px_rgba(250,204,21,0.3)]" />}
             </div>
           </div>
         </div>
 
-        <AnimatePresence>
-          {status && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
-                status.type === 'success' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
-              }`}
-            >
-              {status.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-              <span className="font-medium">{status.message}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {!user?.isAdmin && (
-          <div className="mb-6 p-6 rounded-3xl bg-red-500/10 border border-red-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-6 h-6 text-red-500" />
-              <div>
-                <p className="font-bold text-red-500 uppercase text-xs tracking-widest">Unauthorized Access</p>
-                <p className="text-[10px] text-red-500/70 uppercase font-bold">You are attempting to modify the library without admin privileges.</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-2 mb-8">
           <button
             onClick={() => setActiveTab('games')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-display font-bold uppercase tracking-wider transition-all border ${
-              activeTab === 'games' 
-                ? 'bg-primary text-dark-surface border-primary shadow-[0_0_20px_rgba(250,204,21,0.2)]' 
-                : 'glass text-gray-400 border-white/5 hover:bg-white/5'
-            }`}
+            className={`os-btn flex-1 py-3 justify-center ${activeTab === 'games' ? 'os-btn-primary' : ''}`}
           >
             <Gamepad2 className="w-4 h-4" />
-            Games
+            Resources
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-display font-bold uppercase tracking-wider transition-all border ${
-              activeTab === 'users' 
-                ? 'bg-primary text-dark-surface border-primary shadow-[0_0_20px_rgba(250,204,21,0.2)]' 
-                : 'glass text-gray-400 border-white/5 hover:bg-white/5'
-            }`}
+            className={`os-btn flex-1 py-3 justify-center ${activeTab === 'users' ? 'os-btn-primary' : ''}`}
           >
             <Users className="w-4 h-4" />
-            Users
+            Entities
           </button>
         </div>
 

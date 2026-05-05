@@ -4,18 +4,16 @@ import {
   collection, 
   query, 
   where, 
-  orderBy, 
   onSnapshot, 
   addDoc, 
   serverTimestamp,
   doc,
-  getDocs,
+  getDoc,
   setDoc,
   updateDoc
 } from 'firebase/firestore';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, User, Search, MessageCircle, ArrowLeft, Loader2, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
 
@@ -31,43 +29,49 @@ export const DirectMessages: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Load user's chat sessions
   useEffect(() => {
     if (!user) return;
 
     const q = query(
       collection(db, 'chats'),
-      where('participants', 'array-contains', user.username),
-      orderBy('updatedAt', 'desc')
+      where('participants', 'array-contains', user.username.toLowerCase())
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setChats(snapshot.docs.map(doc => ({
+      const chatData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })));
+      }));
+      setChats(chatData.sort((a: any, b: any) => {
+        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : 0);
+        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt?.seconds ? b.updatedAt.seconds * 1000 : 0);
+        return timeB - timeA;
+      }));
     });
 
     return () => unsubscribe();
   }, [user]);
 
-  // Load messages for active chat
   useEffect(() => {
     if (!activeChat) {
       setMessages([]);
       return;
     }
 
-    const q = query(
-      collection(db, 'chats', activeChat.id, 'messages'),
-      orderBy('createdAt', 'asc')
+    const messagesQuery = query(
+      collection(db, 'chats', activeChat.id, 'messages')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setMessages(snapshot.docs.map(doc => ({
+    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })));
+      })).sort((a: any, b: any) => {
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+        return timeA - timeB;
+      });
+      setMessages(msgs);
       
       setTimeout(() => {
         if (scrollRef.current) {
@@ -83,33 +87,31 @@ export const DirectMessages: React.FC = () => {
     e.preventDefault();
     if (!user || !searchName.trim()) return;
 
-    const targetName = searchName.trim();
-    if (targetName === user.username) {
-      alert("You can't chat with yourself!");
+    const targetName = searchName.trim().toLowerCase();
+    if (targetName === user.username.toLowerCase()) {
+      alert("You cannot chat with yourself.");
       return;
     }
 
     setIsSearching(true);
     try {
-      // Check if user exists
       const userRef = doc(db, 'users', targetName);
-      const userSnap = await getDocs(query(collection(db, 'users'), where('username', '==', targetName)));
+      const userSnap = await getDoc(userRef);
       
-      if (userSnap.empty && targetName !== 'Yeebs') { // Yeebs might not be in 'users' yet if it's a fresh DB
+      if (!userSnap.exists()) {
         alert("User not found.");
         setIsSearching(false);
         return;
       }
 
-      // Chat ID is alphabetical combination
-      const participants = [user.username, targetName].sort();
+      const participants = [user.username.toLowerCase(), targetName].sort();
       const chatId = participants.join('_');
 
       const chatRef = doc(db, 'chats', chatId);
       await setDoc(chatRef, {
         participants,
         updatedAt: serverTimestamp(),
-        lastMessage: 'Conversation started'
+        lastMessage: 'Started'
       }, { merge: true });
 
       setActiveChat({ id: chatId, participants });
@@ -128,7 +130,7 @@ export const DirectMessages: React.FC = () => {
     const text = filter.isProfane(newMessage) ? filter.clean(newMessage) : newMessage;
     const msgData = {
       text,
-      senderId: user.username,
+      senderId: user.username.toLowerCase(),
       createdAt: serverTimestamp()
     };
 
@@ -146,105 +148,96 @@ export const DirectMessages: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center h-[600px] bg-white/5 rounded-2xl border border-white/10 p-8 text-center">
-        <User className="w-12 h-12 text-gray-600 mb-4" />
-        <h3 className="text-xl font-bold mb-2">INITIALIZATION REQUIRED</h3>
-        <p className="text-gray-400 text-sm max-w-xs">Log in to establish secure peer-to-peer communication channels.</p>
+      <div className="flex flex-col items-center justify-center h-[600px] bg-[#0f0f0f] rounded-2xl border border-white/5 p-8 text-center text-[10px] font-black uppercase tracking-widest text-gray-600">
+        Login required for messages
       </div>
     );
   }
 
   return (
-    <div className="flex h-[600px] bg-white/5 rounded-2xl border border-white/10 overflow-hidden backdrop-blur-sm">
-      {/* Sidebar */}
-      <div className={`w-full md:w-80 border-r border-white/10 flex flex-col ${activeChat ? 'hidden md:flex' : 'flex'}`}>
-        <div className="p-4 border-b border-white/10 bg-white/5">
+    <div className="flex h-[600px] bg-[#0f0f0f] rounded-2xl border border-white/5 overflow-hidden">
+      <div className={`w-full md:w-80 border-r border-white/5 flex flex-col ${activeChat ? 'hidden md:flex' : 'flex'}`}>
+        <div className="p-4 border-b border-white/5 bg-white/[0.02]">
           <form onSubmit={handleStartChat} className="relative">
             <input 
               type="text"
               value={searchName}
               onChange={(e) => setSearchName(e.target.value)}
-              placeholder="Start chat with..."
-              className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-hidden focus:border-primary transition-all pr-12"
+              placeholder="Enter username..."
+              className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest focus:outline-hidden focus:border-primary/50 transition-all pr-20"
             />
             <button 
               type="submit" 
               disabled={isSearching}
-              className="absolute right-2 top-1.5 bottom-1.5 px-2 bg-primary text-black rounded text-[10px] font-bold"
+              className="absolute right-2 top-1.5 bottom-1.5 px-3 bg-primary text-black rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all"
             >
-              {isSearching ? <Loader2 className="w-3 h-3 animate-spin" /> : <UserPlus className="w-3 h-3" />}
+              {isSearching ? '...' : 'Start'}
             </button>
           </form>
         </div>
         
         <div className="flex-1 overflow-y-auto scrollbar-hide">
           {chats.map((chat, i) => {
-            const recipient = chat.participants.find((p: string) => p !== user.username);
+            const recipient = chat.participants.find((p: string) => p !== user.username.toLowerCase());
             return (
               <button
                 key={`${chat.id}-${i}`}
-                className={`w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors border-b border-white/5 text-left ${activeChat?.id === chat.id ? 'bg-white/10' : ''}`}
+                onClick={() => setActiveChat(chat)}
+                className={`w-full p-6 flex items-center gap-4 hover:bg-white/5 transition-colors border-b border-white/[0.02] text-left ${activeChat?.id === chat.id ? 'bg-white/5' : ''}`}
               >
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                  {recipient?.[0].toUpperCase()}
+                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-primary font-black text-xs">
+                  {recipient?.[0]?.toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-bold text-sm truncate uppercase tracking-tighter">{recipient}</span>
+                    <span className="font-black text-xs uppercase tracking-widest truncate">{recipient}</span>
                   </div>
-                  <p className="text-xs text-gray-500 truncate">{chat.lastMessage}</p>
+                  <p className="text-[10px] text-gray-600 truncate font-bold uppercase tracking-tight">{chat.lastMessage}</p>
                 </div>
               </button>
             );
           })}
           {chats.length === 0 && (
-            <div className="p-8 text-center text-gray-500 text-xs">
-              NO ACTIVE SESSIONS
+            <div className="p-12 text-center text-gray-700 text-[10px] font-black uppercase tracking-widest">
+              Empty
             </div>
           )}
         </div>
       </div>
 
-      {/* Main Chat Area */}
-      <div className={`flex-1 flex flex-col bg-black/20 ${!activeChat ? 'hidden md:flex items-center justify-center p-8' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col bg-black/40 ${!activeChat ? 'hidden md:flex items-center justify-center p-8' : 'flex'}`}>
         {activeChat ? (
           <>
-            <div className="p-4 border-b border-white/10 flex items-center gap-4 bg-white/5">
-              <button onClick={() => setActiveChat(null)} className="md:hidden">
-                <ArrowLeft className="w-5 h-5" />
+            <div className="p-4 border-b border-white/5 flex items-center gap-4 bg-white/[0.02]">
+              <button onClick={() => setActiveChat(null)} className="md:hidden text-[10px] font-black uppercase tracking-widest text-gray-500">
+                ← Back
               </button>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
-                  {activeChat.participants.find((p: string) => p !== user.username)?.[0].toUpperCase()}
+                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-primary text-[10px] font-black">
+                  {activeChat.participants.find((p: string) => p !== user.username.toLowerCase())?.[0]?.toUpperCase()}
                 </div>
-                <div>
-                  <Link 
-                    to={`/profile/${activeChat.participants.find((p: string) => p !== user.username).toLowerCase()}`}
-                    className="font-bold text-sm tracking-tighter uppercase hover:text-primary transition-colors"
-                  >
-                    {activeChat.participants.find((p: string) => p !== user.username)}
-                  </Link>
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    <span className="text-[10px] text-gray-500 font-bold">SECURE CHANNEL</span>
-                  </div>
-                </div>
+                <Link 
+                  to={`/profile/${activeChat.participants.find((p: string) => p !== user.username.toLowerCase())}`}
+                  className="font-black text-xs uppercase tracking-widest hover:text-primary transition-colors"
+                >
+                  {activeChat.participants.find((p: string) => p !== user.username.toLowerCase())}
+                </Link>
               </div>
             </div>
 
             <div 
               ref={scrollRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
+              className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide"
             >
               <AnimatePresence>
                 {messages.map((msg, i) => (
                   <motion.div 
                     key={`${msg.id}-${i}`}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex ${msg.senderId === user.username ? 'justify-end' : 'justify-start'}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className={`flex ${msg.senderId === user.username.toLowerCase() ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className={`max-w-[80%] px-4 py-2 rounded-2xl text-sm ${msg.senderId === user.username ? 'bg-primary text-black font-medium' : 'bg-white/10 text-white'}`}>
+                    <div className={`max-w-[85%] px-5 py-3 rounded-2xl text-[13px] ${msg.senderId === user.username.toLowerCase() ? 'bg-primary text-black font-bold' : 'bg-white/5 text-white'}`}>
                       {msg.text}
                     </div>
                   </motion.div>
@@ -252,30 +245,28 @@ export const DirectMessages: React.FC = () => {
               </AnimatePresence>
             </div>
 
-            <form onSubmit={handleSendMessage} className="p-4 bg-black/40">
+            <form onSubmit={handleSendMessage} className="p-4 bg-white/[0.01] border-t border-white/5">
               <div className="relative">
                 <input 
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Transmit message..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-12 focus:outline-hidden focus:border-primary transition-all text-sm"
+                  placeholder="Type a message..."
+                  className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-4 pr-20 focus:outline-hidden focus:border-primary/50 transition-all text-sm font-medium"
                 />
                 <button 
                   type="submit"
                   disabled={!newMessage.trim()}
-                  className="absolute right-2 top-1.5 bottom-1.5 px-3 bg-primary text-black rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  className="absolute right-2 top-2 bottom-2 px-5 bg-primary text-black rounded-lg hover:bg-white transition-all disabled:opacity-50 font-black text-[10px] uppercase tracking-widest"
                 >
-                  <Send className="w-4 h-4" />
+                  Send
                 </button>
               </div>
             </form>
           </>
         ) : (
           <div className="text-center">
-            <MessageCircle className="w-12 h-12 text-gray-700 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-gray-500 uppercase tracking-widest">Select a Transmission</h3>
-            <p className="text-xs text-gray-600 mt-2">CHOOSE A PEER TO BEGIN SECURE EXCHANGE</p>
+            <h3 className="text-[10px] font-black text-gray-700 uppercase tracking-[0.2em]">Select Conversation</h3>
           </div>
         )}
       </div>

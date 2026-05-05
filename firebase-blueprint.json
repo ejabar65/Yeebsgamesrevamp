@@ -1,112 +1,79 @@
 {
   "entities": {
     "User": {
-      "title": "User Profile",
-      "description": "User profile information and settings",
+      "title": "User",
+      "description": "User profile data",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
         "username": { "type": "string" },
         "password": { "type": "string" },
-        "photoURL": { "type": "string" },
-        "avatarConfig": {
-          "type": "object",
-          "properties": {
-            "style": { "type": "string" },
-            "seed": { "type": "string" }
-          }
-        },
-        "isBanned": { "type": "boolean" },
         "isAdmin": { "type": "boolean" },
-        "settings": {
-          "type": "object",
-          "properties": {
-            "compactMode": { "type": "boolean" },
-            "showChatPreview": { "type": "boolean" },
-            "customTheme": { "type": "string" },
-            "soundsEnabled": { "type": "boolean" },
-            "privateProfile": { "type": "boolean" }
-          }
-        },
-        "history": { "type": "array", "items": { "type": "string" } },
+        "photoURL": { "type": "string" },
         "bio": { "type": "string" },
+        "favoriteGameIds": { "type": "array" },
+        "history": { "type": "array" },
         "createdAt": { "type": "string", "format": "date-time" },
-        "favoriteGameIds": { "type": "array", "items": { "type": "string" } }
+        "isBanned": { "type": "boolean" },
+        "avatarConfig": { "type": "object" },
+        "settings": { "type": "object" }
       },
       "required": ["uid", "username", "password"]
     },
-    "Game": {
-      "title": "Game Meta",
-      "description": "Metadata for unblocked games",
+    "Chat": {
+      "title": "Chat",
+      "description": "DM Chat session",
+      "type": "object",
+      "properties": {
+        "participants": { "type": "array" },
+        "lastMessage": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Chat message",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CommunityPost": {
+      "title": "Community Post",
+      "description": "A public post in the community",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "title": { "type": "string" },
-        "thumbnail": { "type": "string" },
-        "url": { "type": "string" },
-        "category": { "type": "string" },
-        "description": { "type": "string" },
-        "playCount": { "type": "number" },
-        "rating": { "type": "number" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "title", "url", "category"]
-    },
-    "GlobalMessage": {
-      "title": "Global Chat Message",
-      "description": "A message in the public chatroom",
-      "type": "object",
-      "properties": {
-        "text": { "type": "string" },
-        "senderId": { "type": "string" },
-        "senderName": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["text", "senderId", "senderName", "createdAt"]
-    },
-    "ChatSession": {
-      "title": "DM Session",
-      "description": "A private chat session between two users",
-      "type": "object",
-      "properties": {
-        "participants": { "type": "array", "items": { "type": "string" } },
-        "lastMessage": { "type": "string" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["participants", "updatedAt"]
-    },
-    "DirectMessage": {
-      "title": "Private Message",
-      "description": "A 1-on-1 private message",
-      "type": "object",
-      "properties": {
-        "text": { "type": "string" },
-        "senderId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["text", "senderId", "createdAt"]
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorAvatar": { "type": "string" },
+        "content": { "type": "string" },
+        "gameId": { "type": "string" },
+        "gameTitle": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "likes": { "type": "array" },
+        "replies": { "type": "array" }
+      }
     }
   },
   "firestore": {
-    "/users/{username}": {
+    "users/{username}": {
       "schema": "User",
-      "description": "User profiles"
+      "description": "User profiles indexed by lowercase username"
     },
-    "/global_messages/{messageId}": {
-      "schema": "GlobalMessage",
-      "description": "Public messages"
+    "chats/{chatId}": {
+      "schema": "Chat",
+      "description": "DM sessions"
     },
-    "/chats/{chatId}": {
-      "schema": "ChatSession",
-      "description": "Private chat headers"
+    "chats/{chatId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages within a chat"
     },
-    "/chats/{chatId}/messages/{messageId}": {
-      "schema": "DirectMessage",
-      "description": "Private message content"
-    },
-    "/games/{gameId}": {
-      "schema": "Game",
-      "description": "Games metadata"
+    "posts/{postId}": {
+      "schema": "CommunityPost",
+      "description": "Public community posts"
     }
   }
 }

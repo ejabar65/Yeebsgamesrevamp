@@ -1,5 +1,4 @@
-const TMDB_API_KEY = (import.meta as any).env.VITE_TMDB_API_KEY || '15e241bab4affc62f00422929d7efd8a';
-const BASE_URL = 'https://api.themoviedb.org/3';
+const BASE_URL = '/api/movie-proxy';
 
 export interface MediaContent {
   id: number;
@@ -23,7 +22,7 @@ export interface MediaContent {
 export const movieService = {
   getTrending: async (type: 'movie' | 'tv' = 'movie'): Promise<MediaContent[]> => {
     try {
-      const response = await fetch(`${BASE_URL}/trending/${type}/week?api_key=${TMDB_API_KEY}`);
+      const response = await fetch(`${BASE_URL}/trending/${type}/week`);
       const data = await response.json();
       return data.results || [];
     } catch (error) {
@@ -34,7 +33,7 @@ export const movieService = {
 
   getPopular: async (type: 'movie' | 'tv' = 'movie'): Promise<MediaContent[]> => {
     try {
-      const response = await fetch(`${BASE_URL}/${type}/popular?api_key=${TMDB_API_KEY}`);
+      const response = await fetch(`${BASE_URL}/${type}/popular`);
       const data = await response.json();
       return data.results || [];
     } catch (error) {
@@ -46,7 +45,7 @@ export const movieService = {
   searchMedia: async (query: string, type: 'movie' | 'tv' = 'movie'): Promise<MediaContent[]> => {
     if (!query) return [];
     try {
-      const response = await fetch(`${BASE_URL}/search/${type}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`);
+      const response = await fetch(`${BASE_URL}/search/${type}?query=${encodeURIComponent(query)}`);
       const data = await response.json();
       return data.results || [];
     } catch (error) {
@@ -57,7 +56,7 @@ export const movieService = {
 
   getDetails: async (id: string, type: 'movie' | 'tv' = 'movie'): Promise<MediaContent | null> => {
     try {
-      const response = await fetch(`${BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}`);
+      const response = await fetch(`${BASE_URL}/${type}/${id}`);
       const data = await response.json();
       return data;
     } catch (error) {
@@ -68,7 +67,7 @@ export const movieService = {
 
   getSeasonDetails: async (tvId: string, seasonNumber: number) => {
     try {
-      const response = await fetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}`);
+      const response = await fetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}`);
       return await response.json();
     } catch (error) {
       console.error('Error fetching season details:', error);
