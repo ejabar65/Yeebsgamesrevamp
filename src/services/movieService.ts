@@ -75,6 +75,17 @@ export const movieService = {
     }
   },
 
+  getByGenre: async (genreId: number, type: 'movie' | 'tv' = 'movie'): Promise<MediaContent[]> => {
+    try {
+      const response = await fetch(`${BASE_URL}/discover/${type}?with_genres=${genreId}`);
+      const data = await response.json();
+      return data.results || [];
+    } catch (error) {
+      console.error(`Error fetching ${type} by genre:`, error);
+      return [];
+    }
+  },
+
   getPosterUrl: (path: string, size: 'small' | 'medium' | 'large' | 'original' = 'medium') => {
     if (!path) return '';
     const sizes = {
