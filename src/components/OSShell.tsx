@@ -218,7 +218,7 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
                          <div className="p-2 space-y-1">
                             {[
                               { name: 'Profile', path: '/profile', icon: Users },
-                              { name: 'Settings', path: '/profile', icon: Lock },
+                              { name: 'Settings', path: '/profile?tab=settings', icon: Lock },
                               { name: 'Chat', path: '/chat', icon: MessageSquare },
                               { name: 'Movies', path: '/movies', icon: Film },
                               { name: 'Social', path: '/community', icon: Users }

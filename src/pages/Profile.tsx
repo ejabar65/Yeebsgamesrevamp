@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, LogOut, Package, Heart, History, Trash2, Settings as SettingsIcon, Layout, MessageCircle, Palette, Save, CheckCircle2, Zap, Shield, Globe, ExternalLink } from 'lucide-react';
 import { auth, signOut } from '../lib/firebase';
-import { useNavigate, Link, useParams } from 'react-router-dom';
+import { useNavigate, Link, useParams, useLocation } from 'react-router-dom';
 import GameCard from '../components/GameCard';
 import Login from '../components/Login';
 import { CLOAK_OPTIONS } from '../constants';
@@ -11,10 +11,20 @@ import { applyCloak, getSavedCloak, launchAboutBlank } from '../cloakUtils';
 
 export default function Profile() {
   const { username: profileUsername } = useParams();
+  const location = useLocation();
   const { user: currentUser, games, favorites: currentFavorites, authLoading, toggleFavorite, logout, updateSettings, updateAvatar, updateBio, getPublicProfile } = useGames();
   const navigate = useNavigate();
   
   const [activeTab, setActiveTab] = useState<'inventory' | 'settings' | 'avatar'>('inventory');
+
+  // Handle tab from query param
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab === 'settings') setActiveTab('settings');
+    if (tab === 'avatar') setActiveTab('avatar');
+    if (tab === 'inventory') setActiveTab('inventory');
+  }, [location.search]);
   const [saveStatus, setSaveStatus] = useState(false);
   const [publicUser, setPublicUser] = useState<any>(null);
   const [loadingPublic, setLoadingPublic] = useState(false);
