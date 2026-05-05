@@ -5,28 +5,16 @@ import { motion, AnimatePresence } from 'motion/react';
 
 const SOURCES = [
   { 
-    id: 'vidsrc-to', 
-    name: 'Server 1', 
+    id: 'vidking', 
+    name: 'Player 1', 
+    movieUrl: (id: string) => `https://vidking.net/embed/movie/${id}?autoPlay=true`,
+    tvUrl: (id: string, s: number, e: number) => `https://vidking.net/embed/tv/${id}/${s}/${e}?autoPlay=true`
+  },
+  { 
+    id: 'vidsrc', 
+    name: 'Player 2', 
     movieUrl: (id: string) => `https://vidsrc.to/embed/movie/${id}`,
     tvUrl: (id: string, s: number, e: number) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}`
-  },
-  { 
-    id: 'vidsrc-me', 
-    name: 'Server 2', 
-    movieUrl: (id: string) => `https://vidsrc.me/embed/movie?tmdb=${id}`,
-    tvUrl: (id: string, s: number, e: number) => `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`
-  },
-  { 
-    id: 'vidsrc-pro', 
-    name: 'Server 3', 
-    movieUrl: (id: string) => `https://vidsrc.pro/embed/movie/${id}`,
-    tvUrl: (id: string, s: number, e: number) => `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`
-  },
-  { 
-    id: 'embed-su', 
-    name: 'Server 4', 
-    movieUrl: (id: string) => `https://embed.su/embed/movie/${id}`,
-    tvUrl: (id: string, s: number, e: number) => `https://embed.su/embed/tv/${id}/${s}/${e}`
   },
 ];
 
@@ -41,9 +29,7 @@ export default function MovieView() {
   // TV specific state
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
-  const [episodes, setEpisodes] = useState<any[]>([]);
   const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
-  const [showEpisodeDropdown, setShowEpisodeDropdown] = useState(false);
 
   useEffect(() => {
     const loadMedia = async () => {
@@ -51,28 +37,11 @@ export default function MovieView() {
       setLoading(true);
       const data = await movieService.getDetails(id, type as 'movie' | 'tv');
       setMedia(data);
-      if (type === 'tv' && data) {
-         const seasonData = await movieService.getSeasonDetails(id, 1);
-         if (seasonData && seasonData.episodes) {
-            setEpisodes(seasonData.episodes);
-         }
-      }
       setLoading(false);
     };
     loadMedia();
     window.scrollTo(0, 0);
   }, [id, type]);
-
-  const handleSeasonChange = async (s: number) => {
-    setSeason(s);
-    setEpisode(1);
-    setShowSeasonDropdown(false);
-    if (!id) return;
-    const seasonData = await movieService.getSeasonDetails(id, s);
-    if (seasonData && seasonData.episodes) {
-       setEpisodes(seasonData.episodes);
-    }
-  };
 
   if (loading) {
     return (
@@ -189,21 +158,25 @@ export default function MovieView() {
                 </div>
 
                 {type === 'tv' && media.seasons && (
-                  <div className="flex gap-2">
+                  <div className="flex gap-4">
                     <div className="relative">
                       <button 
-                        onClick={() => { setShowSeasonDropdown(!showSeasonDropdown); setShowEpisodeDropdown(false); }}
-                        className="px-4 h-10 bg-white/5 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-white/10 hover:border-primary/50 transition-colors"
+                        onClick={() => setShowSeasonDropdown(!showSeasonDropdown)}
+                        className="px-4 py-2 bg-white/5 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-white/10"
                       >
-                        S{season.toString().padStart(2, '0')} ↓
+                        Season {season} ↓
                       </button>
                       {showSeasonDropdown && (
-                        <div className="absolute top-full mt-2 left-0 w-32 bg-[#0f0f0f] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50 max-h-64 overflow-y-auto">
+                        <div className="absolute top-full mt-2 left-0 w-32 bg-[#0f0f0f] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50 max-h-48 overflow-y-auto">
                           {media.seasons.filter(s => s.season_number > 0).map(s => (
                             <button
                               key={s.season_number}
-                              onClick={() => handleSeasonChange(s.season_number)}
-                              className={`w-full px-4 py-3 text-left text-[10px] font-bold uppercase transition-colors ${season === s.season_number ? 'bg-primary text-black' : 'hover:bg-white/5 text-white'}`}
+                              onClick={() => {
+                                setSeason(s.season_number);
+                                setEpisode(1);
+                                setShowSeasonDropdown(false);
+                              }}
+                              className="w-full px-4 py-2 text-left text-[10px] font-bold uppercase hover:bg-primary hover:text-black transition-colors"
                             >
                               Season {s.season_number}
                             </button>
@@ -211,32 +184,15 @@ export default function MovieView() {
                         </div>
                       )}
                     </div>
-                    
-                    <div className="relative">
-                      <button 
-                        onClick={() => { setShowEpisodeDropdown(!showEpisodeDropdown); setShowSeasonDropdown(false); }}
-                        className="px-4 h-10 bg-white/5 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-white/10 hover:border-primary/50 transition-colors"
-                      >
-                        E{episode.toString().padStart(2, '0')} ↓
-                      </button>
-                      {showEpisodeDropdown && (
-                        <div className="absolute top-full mt-2 left-0 w-48 bg-[#0f0f0f] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50 max-h-64 overflow-y-auto">
-                           {episodes.length > 0 ? episodes.map(ep => (
-                             <button
-                               key={ep.episode_number}
-                               onClick={() => {
-                                 setEpisode(ep.episode_number);
-                                 setShowEpisodeDropdown(false);
-                               }}
-                               className={`w-full px-4 py-3 text-left text-[10px] font-bold uppercase transition-colors ${episode === ep.episode_number ? 'bg-primary text-black' : 'hover:bg-white/5 text-white'}`}
-                             >
-                               Ep {ep.episode_number}: <span className="opacity-60">{ep.name}</span>
-                             </button>
-                           )) : (
-                             <div className="px-4 py-3 text-[8px] uppercase font-bold text-gray-500">Loading episodes...</div>
-                           )}
-                        </div>
-                      )}
+                    <div className="flex items-center gap-2 bg-white/5 px-4 rounded-xl border border-white/10">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase">EP</span>
+                      <input 
+                        type="number" 
+                        min="1"
+                        value={episode}
+                        onChange={(e) => setEpisode(parseInt(e.target.value) || 1)}
+                        className="w-10 bg-transparent text-white font-bold text-center"
+                      />
                     </div>
                   </div>
                 )}

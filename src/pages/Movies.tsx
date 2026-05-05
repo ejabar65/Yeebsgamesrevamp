@@ -57,7 +57,6 @@ function MediaCard({ item, index, type, onClick }: { item: MediaContent, index: 
 export default function Movies() {
   const [activeTab, setActiveTab] = useState<'movie' | 'tv'>('movie');
   const [popular, setPopular] = useState<MediaContent[]>([]);
-  const [activeGenre, setActiveGenre] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MediaContent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,34 +66,12 @@ export default function Movies() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      if (activeGenre) {
-        const data = await movieService.getByGenre(activeGenre, activeTab);
-        setPopular(data);
-      } else {
-        const data = await movieService.getPopular(activeTab);
-        setPopular(data);
-      }
+      const data = await movieService.getPopular(activeTab);
+      setPopular(data);
       setLoading(false);
     };
     loadData();
-  }, [activeTab, activeGenre]);
-
-  const genres = activeTab === 'movie' ? [
-    { id: 28, name: 'Action' },
-    { id: 12, name: 'Adventure' },
-    { id: 35, name: 'Comedy' },
-    { id: 18, name: 'Drama' },
-    { id: 27, name: 'Horror' },
-    { id: 878, name: 'Sci-Fi' },
-    { id: 53, name: 'Thriller' }
-  ] : [
-    { id: 10759, name: 'Action & Adventure' },
-    { id: 16, name: 'Animation' },
-    { id: 35, name: 'Comedy' },
-    { id: 80, name: 'Crime' },
-    { id: 10765, name: 'Sci-Fi & Fantasy' },
-    { id: 10764, name: 'Reality' }
-  ];
+  }, [activeTab]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,28 +174,10 @@ export default function Movies() {
           </div>
         ) : (
           <div>
-            <div className="mb-10 pb-6 border-b border-white/5 space-y-6">
+            <div className="mb-10 pb-6 border-b border-white/5">
               <div className="flex items-center gap-3">
                 <TrendingUp className="w-4 h-4 text-primary" />
                 <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Popular {activeTab === 'movie' ? 'Films' : 'Shows'}</h2>
-              </div>
-              
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2">
-                <button
-                  onClick={() => setActiveGenre(null)}
-                  className={`px-6 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap border ${!activeGenre ? 'bg-primary text-black border-primary' : 'bg-white/5 text-gray-500 border-white/5 hover:border-white/10'}`}
-                >
-                  All
-                </button>
-                {genres.map(genre => (
-                  <button
-                    key={genre.id}
-                    onClick={() => setActiveGenre(genre.id)}
-                    className={`px-6 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap border ${activeGenre === genre.id ? 'bg-primary text-black border-primary' : 'bg-white/5 text-gray-500 border-white/5 hover:border-white/10'}`}
-                  >
-                    {genre.name}
-                  </button>
-                ))}
               </div>
             </div>
             
