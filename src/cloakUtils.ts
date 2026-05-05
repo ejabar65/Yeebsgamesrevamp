@@ -23,3 +23,27 @@ export const applyCloak = (cloakName: string) => {
 export const getSavedCloak = () => {
   return localStorage.getItem('yeebsgames_cloak') || 'None (Default)';
 };
+
+export const launchAboutBlank = () => {
+  const url = window.location.href;
+  const win = window.open();
+  if (!win) {
+    alert('Pop-up blocked! Please allow pop-ups to use About:Blank cloaking.');
+    return;
+  }
+  
+  win.document.body.style.margin = '0';
+  win.document.body.style.height = '100vh';
+  
+  const iframe = win.document.createElement('iframe');
+  iframe.style.border = 'none';
+  iframe.style.width = '100%';
+  iframe.style.height = '100%';
+  iframe.style.margin = '0';
+  iframe.src = url;
+  
+  win.document.body.appendChild(iframe);
+  
+  // Redirect original tab to a safe site
+  window.location.replace('https://google.com');
+};

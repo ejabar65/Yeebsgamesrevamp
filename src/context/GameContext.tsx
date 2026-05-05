@@ -42,6 +42,7 @@ export interface AuthUser {
   settings?: UserSettings;
   history?: string[];
   bio?: string;
+  tabs?: { id: string; title: string; path: string; }[];
 }
 
 enum OperationType {
@@ -99,6 +100,7 @@ interface GameContextType {
   getPublicProfile: (username: string) => Promise<any>;
   login: (username: string, password?: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  syncTabs: (tabs: { id: string; title: string; path: string; }[]) => Promise<void>;
   loading: boolean;
   authLoading: boolean;
 }
@@ -160,7 +162,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
               avatarConfig: data.avatarConfig || { style: 'avataaars', seed: savedUsername },
               settings: data.settings || { compactMode: false, showChatPreview: true, soundsEnabled: true, privateProfile: false },
               history: data.history || [],
-              bio: data.bio || ''
+              bio: data.bio || '',
+              tabs: data.tabs || []
             };
             setUser(authUser);
             setFavorites(data.favoriteGameIds || []);
@@ -244,7 +247,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         avatarConfig: (userSnap.exists() && userSnap.data().avatarConfig) || { style: 'avataaars', seed: cleanUsername },
         settings: userSnap.exists() ? userSnap.data().settings : { compactMode: false, showChatPreview: true, soundsEnabled: true, privateProfile: false },
         history: userSnap.exists() ? userSnap.data().history : [],
-        bio: userSnap.exists() ? userSnap.data().bio : ''
+        bio: userSnap.exists() ? userSnap.data().bio : '',
+        tabs: userSnap.exists() ? (userSnap.data().tabs || []) : []
       };
 
       setUser(finalUser);
@@ -389,6 +393,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const syncTabs = async (tabs: { id: string; title: string; path: string; }[]) => {
+    if (!user) return;
+    try {
+      const userRef = doc(db, 'users', user.username.toLowerCase());
+      await updateDoc(userRef, { tabs });
+      // We don't update local state here to avoid loops, OSShell handles its own state
+    } catch (error) {
+      console.error("Failed to sync tabs to cloud", error);
+    }
+  };
+
   return (
     <GameContext.Provider value={{ 
       games, 
@@ -403,6 +418,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       updateBio,
       getPublicProfile,
       addToHistory,
+      syncTabs,
       isFavorite,
       refreshGames,
       login,

@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, LogOut, Package, Heart, History, Trash2, Settings as SettingsIcon, Layout, MessageCircle, Palette, Save, CheckCircle2, Zap, Shield } from 'lucide-react';
+import { User, LogOut, Package, Heart, History, Trash2, Settings as SettingsIcon, Layout, MessageCircle, Palette, Save, CheckCircle2, Zap, Shield, Globe, ExternalLink } from 'lucide-react';
 import { auth, signOut } from '../lib/firebase';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import GameCard from '../components/GameCard';
+import Login from '../components/Login';
+import { CLOAK_OPTIONS } from '../constants';
+import { applyCloak, getSavedCloak, launchAboutBlank } from '../cloakUtils';
 
 export default function Profile() {
   const { username: profileUsername } = useParams();
@@ -44,8 +47,23 @@ export default function Profile() {
     showChatPreview: currentUser?.settings?.showChatPreview ?? true,
     customTheme: currentUser?.settings?.customTheme || 'default',
     soundsEnabled: currentUser?.settings?.soundsEnabled ?? true,
-    privateProfile: currentUser?.settings?.privateProfile ?? false
+    privateProfile: currentUser?.settings?.privateProfile ?? false,
+    panicKey: localStorage.getItem('yeebsgames_panic_key') || '`',
+    panicUrl: localStorage.getItem('yeebsgames_panic_url') || 'https://classroom.google.com',
+    cloak: getSavedCloak()
   });
+
+  const handleCloakChange = (cloakName: string) => {
+    setSettingsForm({ ...settingsForm, cloak: cloakName });
+    applyCloak(cloakName);
+  };
+
+  const handlePanicSave = () => {
+    localStorage.setItem('yeebsgames_panic_key', settingsForm.panicKey);
+    localStorage.setItem('yeebsgames_panic_url', settingsForm.panicUrl);
+    setSaveStatus(true);
+    setTimeout(() => setSaveStatus(false), 2000);
+  };
 
   const [avatarForm, setAvatarForm] = useState({
     style: currentUser?.avatarConfig?.style || 'avataaars',
@@ -65,22 +83,33 @@ export default function Profile() {
   if (!profileData) {
     return (
       <div className="min-h-screen pt-32 px-4 flex flex-col items-center justify-center text-center">
-        <div className="p-6 rounded-full bg-primary/10 mb-6">
-          <User className="w-12 h-12 text-primary" />
-        </div>
-        <h1 className="text-3xl font-display font-black uppercase mb-4">{profileUsername ? 'User Not Found' : 'Access Denied'}</h1>
-        <p className="text-gray-400 mb-8 max-w-sm">
-          {profileUsername 
-            ? "This user doesn't exist or has set their profile to private."
-            : "Please login through the system portal to view your custom inventory."
-          }
-        </p>
-        <button 
-          onClick={() => navigate('/')}
-          className="px-8 py-3 rounded-xl bg-primary text-dark-surface font-black uppercase tracking-widest hover:bg-white transition-all shadow-[0_0_20px_rgba(250,204,21,0.2)]"
-        >
-          Go Back Home
-        </button>
+        {!profileUsername ? (
+          <div className="max-w-md w-full flex flex-col items-center">
+             <Login inline />
+             <button 
+               onClick={() => navigate('/')}
+               className="mt-6 text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
+             >
+               ← Back to Home
+             </button>
+          </div>
+        ) : (
+          <>
+            <div className="p-6 rounded-full bg-primary/10 mb-6">
+              <User className="w-12 h-12 text-primary" />
+            </div>
+            <h1 className="text-3xl font-display font-black uppercase mb-4">User Not Found</h1>
+            <p className="text-gray-400 mb-8 max-w-sm">
+              This user doesn't exist or has set their profile to private.
+            </p>
+            <button 
+              onClick={() => navigate('/')}
+              className="px-8 py-3 rounded-xl bg-primary text-dark-surface font-black uppercase tracking-widest hover:bg-white transition-all shadow-[0_0_20px_rgba(250,204,21,0.2)]"
+            >
+              Go Back Home
+            </button>
+          </>
+        )}
       </div>
     );
   }
@@ -482,6 +511,91 @@ export default function Profile() {
                        >
                           <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-all ${settingsForm.privateProfile ? 'translate-x-6' : ''}`} />
                        </button>
+                    </div>
+
+                    {/* Tab Cloaking */}
+                    <div className="space-y-6 pt-4 border-t border-white/5">
+                       <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                             <div className="p-3 rounded-xl bg-rose-500/10">
+                                <Globe className="w-5 h-5 text-rose-500" />
+                             </div>
+                             <div>
+                                <h4 className="font-bold text-sm text-white">Tab Masking</h4>
+                                <p className="text-[10px] text-gray-500 uppercase tracking-widest">Disguise this tab as another site</p>
+                             </div>
+                          </div>
+                       </div>
+
+                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {CLOAK_OPTIONS.map(option => (
+                            <button
+                              key={option.name}
+                              onClick={() => handleCloakChange(option.name)}
+                              className={`flex flex-col items-center gap-3 p-4 rounded-2xl border transition-all ${settingsForm.cloak === option.name ? 'bg-primary/20 border-primary' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'}`}
+                            >
+                               <img src={option.icon} alt="" className="w-6 h-6 rounded-sm" />
+                               <span className="text-[9px] font-black uppercase tracking-widest text-center">{option.name}</span>
+                            </button>
+                          ))}
+                       </div>
+
+                       <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-4">
+                          <div className="flex items-center justify-between">
+                             <div>
+                                <h4 className="font-bold text-sm text-white">Advanced: About:Blank Cloak</h4>
+                                <p className="text-[10px] text-gray-500 uppercase tracking-widest">Launches the portal in a stealth tab</p>
+                             </div>
+                             <button 
+                               onClick={() => launchAboutBlank()}
+                               className="px-4 py-2 rounded-xl bg-white text-dark-surface hover:bg-primary transition-all font-black text-[10px] uppercase tracking-widest flex items-center gap-2"
+                             >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Launch Now
+                             </button>
+                          </div>
+                          <p className="text-[9px] text-gray-500 leading-relaxed font-medium">
+                             This method opens an <code className="text-white">about:blank</code> page and embeds the app inside.
+                             It hides your browsing history and is harder for most filters to detect. 
+                             The current tab will automatically redirect to Google.
+                          </p>
+                       </div>
+
+                       <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-6">
+                            <div>
+                               <h4 className="font-bold text-sm text-white">Panic Button</h4>
+                               <p className="text-[10px] text-gray-500 uppercase tracking-widest italic">Instant escape mechanism</p>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Activation Key</label>
+                                    <input 
+                                        type="text"
+                                        maxLength={1}
+                                        value={settingsForm.panicKey}
+                                        onChange={(e) => setSettingsForm({ ...settingsForm, panicKey: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-red-500 transition-all font-mono"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Redirect URL</label>
+                                    <input 
+                                        type="text"
+                                        value={settingsForm.panicUrl}
+                                        onChange={(e) => setSettingsForm({ ...settingsForm, panicUrl: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-red-500 transition-all font-mono"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <button 
+                                onClick={handlePanicSave}
+                                className="w-full py-3 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 font-black text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg"
+                            >
+                                Update Emergency Protocol
+                            </button>
+                       </div>
                     </div>
                  </div>
 

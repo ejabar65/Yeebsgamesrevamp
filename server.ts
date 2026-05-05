@@ -4,8 +4,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import cors from 'cors';
-import { createServer } from 'node:http';
-import { createBareServer } from '@tomphttp/bare-server-node';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,8 +21,6 @@ if (!fs.existsSync(CUSTOM_GAMES_DIR)) {
 
 async function startServer() {
   const app = express();
-  const server = createServer();
-  const bare = createBareServer('/bare/');
   const PORT = 3000;
 
   app.use(cors());
@@ -122,25 +118,8 @@ async function startServer() {
     });
   }
 
-  server.on('request', (req, res) => {
-    if (bare.shouldRoute(req)) {
-      bare.routeRequest(req, res);
-    } else {
-      app(req, res);
-    }
-  });
-
-  server.on('upgrade', (req, socket, head) => {
-    if (bare.shouldRoute(req)) {
-      bare.routeUpgrade(req, socket, head);
-    } else {
-      socket.end();
-    }
-  });
-
-  server.listen({
-    port: PORT,
-    host: '0.0.0.0',
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 

@@ -15,10 +15,11 @@ import {
   Film, 
   MessageSquare, 
   Users, 
-  Globe,
   Home as HomeIcon,
   Zap
 } from 'lucide-react';
+
+import Login from './Login';
 
 interface Tab {
   id: string;
@@ -29,8 +30,10 @@ interface Tab {
 export default function OSShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useGames();
+  const { user, login, logout, syncTabs } = useGames();
   const [time, setTime] = useState(new Date());
+  const [showLogin, setShowLogin] = useState(false);
+  const [showMenuDropdown, setShowMenuDropdown] = useState(false);
   
   // Tab State
   const [tabs, setTabs] = useState<Tab[]>([
@@ -38,6 +41,32 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
   ]);
   const [activeTabId, setActiveTabId] = useState('1');
   const [isTaskbarHovered, setIsTaskbarHovered] = useState(false);
+
+  // Sync tabs from user on login
+  useEffect(() => {
+    if (user?.tabs && user.tabs.length > 0) {
+      setTabs(user.tabs);
+      // Optional: set active tab to last synced one or first
+      setActiveTabId(user.tabs[0].id);
+      navigate(user.tabs[0].path);
+    }
+  }, [user?.uid]);
+
+  // Sync state to cloud on change
+  useEffect(() => {
+    if (user) {
+      const timeout = setTimeout(() => {
+        syncTabs(tabs);
+      }, 2000); // Debounce sync
+      return () => clearTimeout(timeout);
+    }
+  }, [tabs, user?.uid, syncTabs]);
+
+  useEffect(() => {
+    const handleOpenLogin = () => setShowLogin(true);
+    window.addEventListener('open-login', handleOpenLogin);
+    return () => window.removeEventListener('open-login', handleOpenLogin);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -60,7 +89,6 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
     if (path.includes('/chat')) return 'Chat';
     if (path.includes('/community')) return 'Social';
     if (path.includes('/profile')) return 'Identity';
-    if (path.includes('/browser')) return 'Web';
     const parts = path.split('/').filter(Boolean);
     return parts[parts.length - 1] || 'New Tab';
   };
@@ -152,14 +180,67 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
-             <div className="hidden lg:flex items-center gap-2 pr-3 border-r border-white/10">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
-                <span className="text-[8px] font-black text-primary tracking-widest uppercase">Signal Opt</span>
+          <div className="flex items-center gap-4 relative">
+             {!user ? (
+               <button 
+                 onClick={() => setShowLogin(true)}
+                 className="px-4 py-1.5 bg-primary text-black hover:bg-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
+               >
+                 Log In
+               </button>
+             ) : (
+               <div className="hidden lg:flex items-center gap-2 pr-3 border-r border-white/10">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
+                  <span className="text-[8px] font-black text-primary tracking-widest uppercase">Signal Opt</span>
+               </div>
+             )}
+             <div className="relative">
+                <button 
+                  onClick={() => setShowMenuDropdown(!showMenuDropdown)}
+                  className={`p-1.5 rounded-lg transition-all ${showMenuDropdown ? 'bg-primary text-black' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                >
+                   <Menu className="w-4 h-4" />
+                </button>
+
+                <AnimatePresence>
+                  {showMenuDropdown && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-40" 
+                        onClick={() => setShowMenuDropdown(false)}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute top-full right-0 mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                      >
+                         <div className="p-2 space-y-1">
+                            {[
+                              { name: 'Profile', path: '/profile', icon: Users },
+                              { name: 'Settings', path: '/profile', icon: Lock },
+                              { name: 'Chat', path: '/chat', icon: MessageSquare },
+                              { name: 'Movies', path: '/movies', icon: Film },
+                              { name: 'Social', path: '/community', icon: Users }
+                            ].map((item) => (
+                              <button
+                                key={item.name}
+                                onClick={() => {
+                                  navigate(item.path);
+                                  setShowMenuDropdown(false);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-all group"
+                              >
+                                 <item.icon className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors" />
+                                 <span className="text-[10px] font-black uppercase tracking-widest text-gray-300 group-hover:text-white">{item.name}</span>
+                              </button>
+                            ))}
+                         </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
              </div>
-             <button className="p-1.5 text-gray-500 hover:text-white transition-all">
-                <Menu className="w-4 h-4" />
-             </button>
           </div>
         </div>
       </div>
@@ -212,9 +293,6 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
                 <Link to="/movies" title="Cinema" className={`group relative p-2 ${location.pathname === '/movies' ? 'text-primary' : 'text-gray-400'} hover:text-white`}>
                    <Film className="w-5 h-5 transition-transform group-hover:scale-110" />
                 </Link>
-                <Link to="/browser" title="Browser" className={`group relative p-2 ${location.pathname === '/browser' ? 'text-primary' : 'text-gray-400'} hover:text-white`}>
-                   <Globe className="w-5 h-5 transition-transform group-hover:scale-110" />
-                </Link>
                 <Link to="/chat" title="Chat" className={`group relative p-2 ${location.pathname === '/chat' ? 'text-primary' : 'text-gray-400'} hover:text-white`}>
                    <MessageSquare className="w-5 h-5 transition-transform group-hover:scale-110" />
                 </Link>
@@ -232,11 +310,32 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
                  <img src={user.photoURL || undefined} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                </Link>
              ) : (
-               <button onClick={addTab} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 font-bold text-gray-500 hover:text-white hover:border-primary/50 transition-all shadow-md">+</button>
+               <button onClick={() => setShowLogin(true)} className="px-5 h-9 rounded-xl bg-primary text-black font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all shadow-lg active:scale-95">Log In</button>
              )}
           </div>
         </motion.div>
       </div>
+
+      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </div>
+  );
+}
+
+function LoginModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+          />
+          <Login onSuccess={onClose} />
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

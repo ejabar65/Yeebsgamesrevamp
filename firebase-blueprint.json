@@ -16,7 +16,8 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "isBanned": { "type": "boolean" },
         "avatarConfig": { "type": "object" },
-        "settings": { "type": "object" }
+        "settings": { "type": "object" },
+        "tabs": { "type": "array" }
       },
       "required": ["uid", "username", "password"]
     },
