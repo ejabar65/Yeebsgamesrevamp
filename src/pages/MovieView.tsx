@@ -7,6 +7,18 @@ import { Play, RotateCcw, Monitor, Info, Star, ChevronRight, X, ExternalLink, Ca
 
 const SOURCES = [
   { 
+    id: 'yeebsweb', 
+    name: 'YeebsWeb', 
+    movieUrl: (id: string) => `https://yeebsweb.com/embed/movie/${id}`,
+    tvUrl: (id: string, s: number, e: number) => `https://yeebsweb.com/embed/tv/${id}/${s}/${e}`
+  },
+  { 
+    id: 'stream-yeebs', 
+    name: 'StreamYeebs', 
+    movieUrl: (id: string) => `https://stream-yeebs.com/embed/movie/${id}`,
+    tvUrl: (id: string, s: number, e: number) => `https://stream-yeebs.com/embed/tv/${id}/${s}/${e}`
+  },
+  { 
     id: 'vidking', 
     name: 'VidKing', 
     movieUrl: (id: string) => `https://vidking.net/embed/movie/${id}?autoPlay=true`,
@@ -57,6 +69,17 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
   const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
+
+  useEffect(() => {
+    const host = window.location.hostname;
+    if (host.includes('yeebsweb.com')) {
+      const src = SOURCES.find(s => s.id === 'yeebsweb');
+      if (src) setActiveSource(src);
+    } else if (host.includes('stream-yeebs.com')) {
+      const src = SOURCES.find(s => s.id === 'stream-yeebs');
+      if (src) setActiveSource(src);
+    }
+  }, []);
 
   useEffect(() => {
     const loadMedia = async () => {
@@ -192,7 +215,7 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
               {!media.isCustom && (
                 <div className="flex flex-wrap items-center justify-between gap-6 pb-6 border-b border-white/5">
                   <div className="flex flex-wrap gap-1.5">
-                    {SOURCES.map(source => (
+                    {SOURCES.filter(s => s.id !== 'yeebsweb' && s.id !== 'stream-yeebs').map(source => (
                       <button
                         key={source.id}
                         onClick={() => setActiveSource(source)}
@@ -254,7 +277,8 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
                   src={playerUrl} 
                   className="w-full h-full"
                   allowFullScreen
-                  allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope; clipboard-write"
+                  allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope; clipboard-write; payment; geolocation"
+                  sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-downloads"
                   referrerPolicy="no-referrer"
                   title="Player"
                 />

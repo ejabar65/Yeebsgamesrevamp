@@ -30,16 +30,24 @@ async function startServer() {
   app.get('/api/movie-proxy/*', async (req, res) => {
     // Hardcoded key as requested ("in the code not as a secret")
     const TMDB_API_KEY = '15e241bab4affc62f00422929d7efd8a';
-    const path = req.params[0];
+    const pathValue = req.params[0];
     const query = new URLSearchParams(req.query as any).toString();
-    const url = `https://api.themoviedb.org/3/${path}?api_key=${TMDB_API_KEY}&${query}`;
+    const url = `https://api.themoviedb.org/3/${pathValue}?api_key=${TMDB_API_KEY}&${query}`;
+
+    console.log(`[Proxy] Fetching: ${url}`);
 
     try {
       const response = await fetch(url);
       const data = await response.json();
+      
+      if (!response.ok) {
+        console.error(`[Proxy] TMDB Error (${response.status}):`, data);
+      }
+      
       res.json(data);
     } catch (error) {
-      res.status(500).json({ error: 'Proxy request failed' });
+      console.error(`[Proxy] Request failed for ${url}:`, error);
+      res.status(500).json({ error: 'Proxy request failed', details: error instanceof Error ? error.message : String(error) });
     }
   });
 

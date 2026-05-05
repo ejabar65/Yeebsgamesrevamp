@@ -41,18 +41,18 @@ export default function Home() {
         <motion.div 
           ref={mascotRef}
           initial={{ opacity: 0, scale: 0.9 }}
-          whileHover={{ scale: 1.02 }}
+          whileHover={{ scale: 1.05 }}
           animate={{ opacity: 1, scale: 1 }}
           onMouseMove={handleMouseMove}
           onMouseEnter={() => setIsHovering(true)}
           onMouseLeave={() => setIsHovering(false)}
-          className="relative w-32 h-32 md:w-64 md:h-64 rounded-[2rem] overflow-hidden shrink-0 border border-white/10 shadow-2xl shadow-blue-500/20 group cursor-none"
+          className="relative w-32 h-32 md:w-64 md:h-64 rounded-[3rem] overflow-hidden shrink-0 border border-white/5 shadow-2xl shadow-blue-500/20 group cursor-none"
         >
           {/* Grayscale Base */}
           <img 
             src={MASCOT_URL} 
             alt="Mascot" 
-            className="w-full h-full object-cover grayscale opacity-30 transition-opacity duration-500 group-hover:opacity-50" 
+            className="w-full h-full object-cover grayscale opacity-20 transition-opacity duration-700" 
           />
           
           {/* Color Reveal Layer */}
@@ -60,26 +60,27 @@ export default function Home() {
             className="absolute inset-0 pointer-events-none"
             animate={{
               clipPath: isHovering 
-                ? `circle(80px at ${mousePos.x}px ${mousePos.y}px)` 
+                ? `circle(100px at ${mousePos.x}px ${mousePos.y}px)` 
                 : `circle(0px at ${mousePos.x}px ${mousePos.y}px)`
             }}
-            transition={{ type: 'tween', ease: "backOut", duration: 0.2 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
           >
             <img 
               src={MASCOT_URL} 
               alt="Mascot" 
-              className="w-full h-full object-cover animate-pulse-slow" 
+              className="w-full h-full object-cover" 
             />
           </motion.div>
 
-          <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-            <span className="text-[10px] font-bold text-white uppercase tracking-[0.2em]">Active Link</span>
-          </div>
+          {/* Glint Effect */}
+          <div 
+            className="absolute inset-0 pointer-events-none bg-linear-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"
+          />
         </motion.div>
         
         <div className="max-w-xl">
           <h1 className="text-5xl md:text-8xl font-bold tracking-tighter text-white mb-6">
-            Yeebs.
+            Yeebs
           </h1>
           <p className="text-gray-500 text-lg font-medium leading-relaxed">
             High-performance web applications and gaming experiences. 
