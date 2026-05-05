@@ -28,10 +28,23 @@ const SOURCES = [
     movieUrl: (id: string) => `https://embed.so/embed/movie/${id}`,
     tvUrl: (id: string, s: number, e: number) => `https://embed.so/embed/tv/${id}/${s}/${e}`
   },
+  { 
+    id: 'vidsrc-me', 
+    name: 'Vidsrc ME', 
+    movieUrl: (id: string) => `https://vidsrc.me/embed/movie?tmdb=${id}`,
+    tvUrl: (id: string, s: number, e: number) => `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`
+  },
+  { 
+    id: 'superembed', 
+    name: 'SuperEmbed', 
+    movieUrl: (id: string) => `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1`,
+    tvUrl: (id: string, s: number, e: number) => `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${s}&e=${e}`
+  },
 ];
 
-export default function MovieView() {
-  const { id, type } = useParams();
+export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | 'tv' }) {
+  const { id, type: pathType } = useParams();
+  const type = typeOverride || pathType;
   const navigate = useNavigate();
   const [media, setMedia] = useState<MediaContent | null>(null);
   const [loading, setLoading] = useState(true);

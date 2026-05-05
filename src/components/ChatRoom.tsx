@@ -93,8 +93,8 @@ export const ChatRoom: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 1024 * 1024) { // 1MB Limit
-      alert('Image too large. Limit is 1MB for database synchronization.');
+    if (file.size > 10000 * 10000) { // 10MB Limit
+      alert('Image too large. Limit is 10MB for database synchronization.');
       return;
     }
 

@@ -72,6 +72,8 @@ export default function App() {
               <Route path="/chat" element={<Chat />} />
               <Route path="/movies" element={<Movies />} />
               <Route path="/media/:type/:id" element={<MovieView />} />
+              <Route path="/movie/:id" element={<MovieView typeOverride="movie" />} />
+              <Route path="/tv/:id" element={<MovieView typeOverride="tv" />} />
               <Route path="/community" element={<Community />} />
               <Route path="/game/:id" element={<GameView />} />
               <Route path="/admin" element={<Admin />} />
