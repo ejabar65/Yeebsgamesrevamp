@@ -93,11 +93,21 @@ service cloud.firestore {
              (data.get('rating', 0) is number);
     }
 
+    function isValidCustomMovie(data) {
+      return data.keys().hasAll(['id', 'title', 'url', 'type']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.url is string && data.url.size() <= 1000 &&
+             data.type in ['movie', 'tv', 'outside'] &&
+             (data.get('description', '') is string) &&
+             (data.get('thumbnail', '') is string);
+    }
+
     // --- Collections ---
 
     match /users/{username} {
       allow get: if true; 
-      allow list: if true; // Relaxed for admin panel functionality since we don't use Auth
+      allow list: if true; 
       allow create: if !exists(/databases/$(database)/documents/users/$(username)) && isValidUserCreate(incoming());
       allow update: if isValidUserUpdate(incoming()) && (
         (isPasswordOwner(username) && incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'settings', 'history', 'isAdmin', 'bio', 'avatarConfig', 'tabs'])) ||
@@ -110,6 +120,12 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isValidGlobalMessage(incoming());
       allow update, delete: if isAdmin();
+    }
+
+    match /custom_movies/{movieId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidCustomMovie(incoming());
+      allow delete: if isAdmin();
     }
 
     match /chats/{chatId} {

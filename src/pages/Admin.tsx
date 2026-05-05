@@ -5,6 +5,7 @@ import { addGame, deleteGame, updateGame } from '../services/gameService';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGames } from '../context/GameContext';
 import { db, collection, getDocs, doc, updateDoc, deleteDoc, query, limit, setDoc } from '../lib/firebase';
+import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 
 export default function Admin() {
   const { games, refreshGames, user, authLoading, setSearchQuery, setSortBy } = useGames();
@@ -42,7 +43,7 @@ export default function Admin() {
       const moviesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setMovies(moviesList);
     } catch (error) {
-      console.error("Error fetching movies:", error);
+      handleFirestoreError(error, OperationType.LIST, 'custom_movies');
     }
     setMoviesLoading(false);
   };
@@ -67,7 +68,7 @@ export default function Admin() {
       setMovieFormData({ title: '', description: '', url: '', thumbnail: '', type: 'movie' });
       fetchMovies();
     } catch (error) {
-       console.error(error);
+       handleFirestoreError(error, OperationType.WRITE, 'custom_movies');
        setStatus({ type: 'error', message: 'Link protocol failed.' });
     }
     setLoading(false);
@@ -80,6 +81,7 @@ export default function Admin() {
       setMovies(prev => prev.filter(m => m.id !== id));
       setStatus({ type: 'success', message: 'Movie removed.' });
     } catch (error) {
+       handleFirestoreError(error, OperationType.DELETE, `custom_movies/${id}`);
        setStatus({ type: 'error', message: 'Deletion failed.' });
     }
   };
@@ -93,7 +95,7 @@ export default function Admin() {
       const usersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUsers(usersList);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      handleFirestoreError(error, OperationType.LIST, 'users');
       setStatus({ type: 'error', message: "Failed to fetch users. Check permissions." });
     }
     setUsersLoading(false);
@@ -108,7 +110,7 @@ export default function Admin() {
       setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, isBanned: !currentBanStatus } : u));
       setStatus({ type: 'success', message: `User ${targetUserId} ${!currentBanStatus ? 'banned' : 'unbanned'} successfully.` });
     } catch (error) {
-      console.error("Error toggling ban:", error);
+      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
       setStatus({ type: 'error', message: "Failed to update ban status." });
     }
   };
@@ -122,7 +124,7 @@ export default function Admin() {
       setUsers(prev => prev.filter(u => u.id !== targetUserId));
       setStatus({ type: 'success', message: `User @${targetUserId} deleted permanently.` });
     } catch (error) {
-      console.error("Error deleting user:", error);
+      handleFirestoreError(error, OperationType.DELETE, `users/${targetUserId}`);
       setStatus({ type: 'error', message: "Failed to delete user." });
     }
   };
@@ -135,7 +137,7 @@ export default function Admin() {
       setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, isAdmin: !currentIsAdmin } : u));
       setStatus({ type: 'success', message: `Admin status for @${targetUserId} updated.` });
     } catch (error) {
-      console.error("Error toggling admin:", error);
+      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
       setStatus({ type: 'error', message: "Failed to update admin status." });
     }
   };

@@ -5,8 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import { Film, Monitor, Search, Play, Star, TrendingUp } from 'lucide-react';
 
 import { db, collection, getDocs } from '../lib/firebase';
+import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 
-function MediaCard({ item, index, type, onClick, isCustom }: { item: any, index: number, type: string, onClick: () => void, isCustom?: boolean }) {
+const MediaCard: React.FC<{ item: any, index: number, type: string, onClick: () => void | Promise<void>, isCustom?: boolean }> = ({ item, index, type, onClick, isCustom }) => {
   const title = item.title || item.name;
   const date = item.release_date || item.first_air_date || item.createdAt;
   const posterPath = isCustom ? item.thumbnail : movieService.getPosterUrl(item.poster_path);
@@ -76,7 +77,7 @@ export default function Movies() {
           const snapshot = await getDocs(collection(db, 'custom_movies'));
           setCustomMovies(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         } catch (error) {
-          console.error(error);
+          handleFirestoreError(error, OperationType.LIST, 'custom_movies');
         }
       } else {
         const data = await movieService.getPopular(activeTab);

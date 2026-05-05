@@ -1,4 +1,26 @@
 {
+  "firestore": {
+    "users/{username}": {
+      "schema": "User",
+      "description": "User profiles indexed by lowercase username"
+    },
+    "chats/{chatId}": {
+      "schema": "Chat",
+      "description": "DM sessions"
+    },
+    "chats/{chatId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages within a chat"
+    },
+    "posts/{postId}": {
+      "schema": "CommunityPost",
+      "description": "Public community posts"
+    },
+    "custom_movies/{movieId}": {
+      "schema": "CustomMovie",
+      "description": "Custom cinema registry entries"
+    }
+  },
   "entities": {
     "User": {
       "title": "User",
@@ -57,24 +79,21 @@
         "likes": { "type": "array" },
         "replies": { "type": "array" }
       }
-    }
-  },
-  "firestore": {
-    "users/{username}": {
-      "schema": "User",
-      "description": "User profiles indexed by lowercase username"
     },
-    "chats/{chatId}": {
-      "schema": "Chat",
-      "description": "DM sessions"
-    },
-    "chats/{chatId}/messages/{messageId}": {
-      "schema": "Message",
-      "description": "Messages within a chat"
-    },
-    "posts/{postId}": {
-      "schema": "CommunityPost",
-      "description": "Public community posts"
+    "CustomMovie": {
+      "title": "Custom Movie",
+      "description": "Manually linked cinema entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "url": { "type": "string" },
+        "thumbnail": { "type": "string" },
+        "type": { "type": "string", "enum": ["movie", "tv", "outside"] },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "url"]
     }
   }
 }

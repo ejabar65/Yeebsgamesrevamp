@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../lib/firebase';
+import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 import { 
   collection, 
   query, 
@@ -51,6 +52,8 @@ export const ChatRoom: React.FC = () => {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
       }, 100);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'global_messages');
     });
 
     return () => unsubscribe();
@@ -85,7 +88,7 @@ export const ChatRoom: React.FC = () => {
       setNewMessage('');
       setSelectedImage(null);
     } catch (error) {
-      console.error("Error sending message:", error);
+       handleFirestoreError(error, OperationType.WRITE, 'global_messages');
     }
   };
 
@@ -114,7 +117,7 @@ export const ChatRoom: React.FC = () => {
     try {
       await deleteDoc(doc(db, 'global_messages', msgId));
     } catch (error) {
-      console.error("Error deleting message:", error);
+       handleFirestoreError(error, OperationType.DELETE, `global_messages/${msgId}`);
     }
   };
 

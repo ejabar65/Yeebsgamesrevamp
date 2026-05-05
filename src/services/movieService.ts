@@ -84,5 +84,16 @@ export const movieService = {
       original: 'original'
     };
     return `https://image.tmdb.org/t/p/${sizes[size]}${path}`;
+  },
+
+  getBackdropUrl: (path: string, size: 'small' | 'medium' | 'large' | 'original' = 'large') => {
+    if (!path) return '';
+    const sizes = {
+      small: 'w300',
+      medium: 'w780',
+      large: 'w1280',
+      original: 'original'
+    };
+    return `https://image.tmdb.org/t/p/${sizes[size]}${path}`;
   }
 };

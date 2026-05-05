@@ -1,6 +1,7 @@
 import { GAMES as STATIC_GAMES } from '../constants';
 import { Game } from '../types';
 import { db, collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from '../lib/firebase';
+import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 
 const GAMES_COLLECTION = 'games';
 
@@ -29,7 +30,7 @@ export async function getGames(): Promise<Game[]> {
     
     return unique;
   } catch (error) {
-    console.error('Error fetching games from Firestore:', error);
+    handleFirestoreError(error, OperationType.LIST, GAMES_COLLECTION);
     
     // On quota error, try to use stale cache
     const stale = localStorage.getItem('yeebsgames_cache_games');
@@ -53,7 +54,7 @@ export async function addGame(game: Game): Promise<boolean> {
     });
     return true;
   } catch (error) {
-    console.error('Error adding game to Firestore:', error);
+    handleFirestoreError(error, OperationType.WRITE, GAMES_COLLECTION);
     return false;
   }
 }
@@ -64,7 +65,7 @@ export async function updateGame(game: Game): Promise<boolean> {
     await updateDoc(docRef, { ...game });
     return true;
   } catch (error) {
-    console.error('Error updating game in Firestore:', error);
+    handleFirestoreError(error, OperationType.UPDATE, `${GAMES_COLLECTION}/${game.id}`);
     return false;
   }
 }
@@ -75,7 +76,7 @@ export async function deleteGame(gameId: string): Promise<boolean> {
     await deleteDoc(docRef);
     return true;
   } catch (error) {
-    console.error('Error deleting game from Firestore:', error);
+    handleFirestoreError(error, OperationType.DELETE, `${GAMES_COLLECTION}/${gameId}`);
     return false;
   }
 }
