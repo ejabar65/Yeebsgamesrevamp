@@ -28,7 +28,10 @@ async function startServer() {
 
   // API Routes
   app.get('/api/movie-proxy/*', async (req, res) => {
-    const TMDB_API_KEY = process.env.VITE_TMDB_API_KEY || '15e241bab4affc62f00422929d7efd8a';
+    const TMDB_API_KEY = process.env.TMDB_API_KEY;
+    if (!TMDB_API_KEY) {
+      return res.status(500).json({ error: 'TMDB_API_KEY environment variable is not set' });
+    }
     const path = req.params[0];
     const query = new URLSearchParams(req.query as any).toString();
     const url = `https://api.themoviedb.org/3/${path}?api_key=${TMDB_API_KEY}&${query}`;
@@ -111,7 +114,7 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(__dirname, 'dist');
+    const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
