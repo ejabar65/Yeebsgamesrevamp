@@ -16,6 +16,7 @@ import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
+import { Image as ImageIcon, Send, X, User } from 'lucide-react';
 
 const filter = new Filter();
 
@@ -25,9 +26,12 @@ export const DirectMessages: React.FC = () => {
   const [activeChat, setActiveChat] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [searchName, setSearchName] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -125,11 +129,12 @@ export const DirectMessages: React.FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !activeChat || !newMessage.trim()) return;
+    if (!user || !activeChat || (!newMessage.trim() && !selectedImage)) return;
 
     const text = filter.isProfane(newMessage) ? filter.clean(newMessage) : newMessage;
     const msgData = {
       text,
+      image: selectedImage,
       senderId: user.username.toLowerCase(),
       createdAt: serverTimestamp()
     };
@@ -137,13 +142,32 @@ export const DirectMessages: React.FC = () => {
     try {
       await addDoc(collection(db, 'chats', activeChat.id, 'messages'), msgData);
       await updateDoc(doc(db, 'chats', activeChat.id), {
-        lastMessage: text,
+        lastMessage: selectedImage ? '📷 Image' : text,
         updatedAt: serverTimestamp()
       });
       setNewMessage('');
+      setSelectedImage(null);
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 1024 * 1024) {
+      alert('Image too large. Limit is 1MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSelectedImage(reader.result as string);
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   if (!user) {
@@ -238,6 +262,11 @@ export const DirectMessages: React.FC = () => {
                     className={`flex ${msg.senderId === user.username.toLowerCase() ? 'justify-end' : 'justify-start'}`}
                   >
                     <div className={`max-w-[85%] px-5 py-3 rounded-2xl text-[13px] ${msg.senderId === user.username.toLowerCase() ? 'bg-primary text-black font-bold' : 'bg-white/5 text-white'}`}>
+                      {msg.image && (
+                         <div className="mb-2 rounded-lg overflow-hidden border border-black/10">
+                            <img src={msg.image} alt="Upload" className="max-w-full h-auto" />
+                         </div>
+                      )}
                       {msg.text}
                     </div>
                   </motion.div>
@@ -246,21 +275,61 @@ export const DirectMessages: React.FC = () => {
             </div>
 
             <form onSubmit={handleSendMessage} className="p-4 bg-white/[0.01] border-t border-white/5">
-              <div className="relative">
-                <input 
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message..."
-                  className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-4 pr-20 focus:outline-hidden focus:border-primary/50 transition-all text-sm font-medium"
-                />
-                <button 
-                  type="submit"
-                  disabled={!newMessage.trim()}
-                  className="absolute right-2 top-2 bottom-2 px-5 bg-primary text-black rounded-lg hover:bg-white transition-all disabled:opacity-50 font-black text-[10px] uppercase tracking-widest"
-                >
-                  Send
-                </button>
+              <input 
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+              />
+
+              <AnimatePresence>
+                {selectedImage && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="relative inline-block mb-4 p-1 bg-white/5 rounded-xl border border-white/10"
+                  >
+                    <img src={selectedImage} alt="Selected" className="w-20 h-20 object-cover rounded-lg" />
+                    <button 
+                      type="button"
+                      onClick={() => setSelectedImage(null)}
+                      className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full shadow-lg"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="relative flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input 
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder={selectedImage ? "Add a caption..." : "Type a message..."}
+                    className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-4 pr-24 focus:outline-hidden focus:border-primary/50 transition-all text-sm font-medium"
+                  />
+                  <div className="absolute right-2 top-2 bottom-2 flex items-center gap-2">
+                    <button 
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`p-2 rounded-lg transition-all ${selectedImage ? 'bg-primary/20 text-primary' : 'text-gray-500 hover:text-white'}`}
+                      disabled={isUploading}
+                    >
+                      <ImageIcon className="w-5 h-5" />
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={(!newMessage.trim() && !selectedImage) || isUploading}
+                      className="px-4 h-full bg-primary text-black rounded-lg hover:bg-white transition-all disabled:opacity-50 font-black text-[10px] uppercase tracking-widest"
+                    >
+                      Send
+                    </button>
+                  </div>
+                </div>
               </div>
             </form>
           </>

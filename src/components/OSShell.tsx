@@ -16,7 +16,8 @@ import {
   MessageSquare, 
   Users, 
   Home as HomeIcon,
-  Zap
+  Zap,
+  Shield
 } from 'lucide-react';
 
 import Login from './Login';
@@ -221,7 +222,8 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
                               { name: 'Settings', path: '/profile?tab=settings', icon: Lock },
                               { name: 'Chat', path: '/chat', icon: MessageSquare },
                               { name: 'Movies', path: '/movies', icon: Film },
-                              { name: 'Social', path: '/community', icon: Users }
+                              { name: 'Social', path: '/community', icon: Users },
+                              ...(user?.isAdmin ? [{ name: 'Admin', path: '/admin', icon: Shield }] : [])
                             ].map((item) => (
                               <button
                                 key={item.name}

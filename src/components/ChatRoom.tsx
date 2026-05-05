@@ -16,7 +16,7 @@ import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
-import { Send, Trash2, MessageSquare, Shield, User, Zap } from 'lucide-react';
+import { Send, Trash2, MessageSquare, Shield, User, Zap, Image as ImageIcon, X } from 'lucide-react';
 
 const filter = new Filter();
 
@@ -24,9 +24,12 @@ export const ChatRoom: React.FC = () => {
   const { user } = useGames();
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [spamCooldown, setSpamCooldown] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const q = query(
@@ -59,7 +62,7 @@ export const ChatRoom: React.FC = () => {
       alert('Please log in to chat.');
       return;
     }
-    if (!newMessage.trim() || spamCooldown) return;
+    if ((!newMessage.trim() && !selectedImage) || spamCooldown) return;
 
     setSpamCooldown(true);
     setTimeout(() => setSpamCooldown(false), 2000);
@@ -69,6 +72,7 @@ export const ChatRoom: React.FC = () => {
 
       await addDoc(collection(db, 'global_messages'), {
         text: censoredText,
+        image: selectedImage,
         senderId: user.uid,
         senderName: user.username,
         createdAt: serverTimestamp()
@@ -79,9 +83,28 @@ export const ChatRoom: React.FC = () => {
       await updateDoc(userRef, { lastMessageAt: serverTimestamp() });
       
       setNewMessage('');
+      setSelectedImage(null);
     } catch (error) {
       console.error("Error sending message:", error);
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 1024 * 1024) { // 1MB Limit
+      alert('Image too large. Limit is 1MB for database synchronization.');
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSelectedImage(reader.result as string);
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleDeleteMessage = async (msgId: string) => {
@@ -165,6 +188,11 @@ export const ChatRoom: React.FC = () => {
                     : 'bg-white/5 text-white border border-white/10 rounded-tl-none backdrop-blur-md'
                 }`}
               >
+                {msg.image && (
+                  <div className="mb-3 rounded-xl overflow-hidden border border-black/10">
+                    <img src={msg.image} alt="Upload" className="max-w-full h-auto" />
+                  </div>
+                )}
                 {msg.text}
               </div>
             </motion.div>
@@ -178,26 +206,67 @@ export const ChatRoom: React.FC = () => {
             <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest">Identification required to broadcast</p>
           </div>
         ) : (
-          <div className="relative group">
-            <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-              <Zap className={`w-4 h-4 ${newMessage ? 'text-primary' : 'text-gray-600'} transition-colors`} />
+          <div className="space-y-4">
+            <AnimatePresence>
+              {selectedImage && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="relative inline-block"
+                >
+                  <img src={selectedImage} alt="Selected" className="w-24 h-24 object-cover rounded-xl border-2 border-primary" />
+                  <button 
+                    onClick={() => setSelectedImage(null)}
+                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full shadow-lg"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="relative group flex items-center gap-2">
+              <input 
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+              />
+              
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                  <Zap className={`w-4 h-4 ${newMessage || selectedImage ? 'text-primary' : 'text-gray-600'} transition-colors`} />
+                </div>
+                <input 
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder={selectedImage ? "Add a caption..." : "Transmit data..."}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-5 focus:outline-hidden focus:border-primary/50 focus:bg-white/[0.08] transition-all text-sm font-medium placeholder:text-gray-700"
+                  maxLength={200}
+                />
+                <div className="absolute right-3 top-2.5 bottom-2.5 flex items-center gap-2">
+                  <button 
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`p-2.5 rounded-xl transition-all ${selectedImage ? 'bg-primary/20 text-primary' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                    disabled={isUploading}
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={(!newMessage.trim() && !selectedImage) || spamCooldown || isUploading}
+                    className="px-6 h-full bg-primary text-black rounded-xl hover:bg-white transition-all disabled:opacity-50 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-lg active:scale-95"
+                  >
+                    <Send className="w-4 h-4" />
+                    {spamCooldown ? 'WAIT' : 'SEND'}
+                  </button>
+                </div>
+              </div>
             </div>
-            <input 
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Transmit data..."
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-5 focus:outline-hidden focus:border-primary/50 focus:bg-white/[0.08] transition-all text-sm font-medium placeholder:text-gray-700"
-              maxLength={200}
-            />
-            <button 
-              type="submit"
-              disabled={!newMessage.trim() || spamCooldown}
-              className="absolute right-3 top-2.5 bottom-2.5 px-6 bg-primary text-black rounded-xl hover:bg-white transition-all disabled:opacity-50 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-lg active:scale-95"
-            >
-              <Send className="w-4 h-4" />
-              {spamCooldown ? 'WAIT' : 'SEND'}
-            </button>
           </div>
         )}
       </form>

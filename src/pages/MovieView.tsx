@@ -6,15 +6,27 @@ import { motion, AnimatePresence } from 'motion/react';
 const SOURCES = [
   { 
     id: 'vidking', 
-    name: 'Player 1', 
+    name: 'VidKing', 
     movieUrl: (id: string) => `https://vidking.net/embed/movie/${id}?autoPlay=true`,
     tvUrl: (id: string, s: number, e: number) => `https://vidking.net/embed/tv/${id}/${s}/${e}?autoPlay=true`
   },
   { 
-    id: 'vidsrc', 
-    name: 'Player 2', 
+    id: 'vidsrc-xyz', 
+    name: 'Vidsrc XYZ', 
+    movieUrl: (id: string) => `https://vidsrc.xyz/embed/movie/${id}`,
+    tvUrl: (id: string, s: number, e: number) => `https://vidsrc.xyz/embed/tv/${id}/${s}/${e}`
+  },
+  { 
+    id: 'vidsrc-to', 
+    name: 'Vidsrc TO', 
     movieUrl: (id: string) => `https://vidsrc.to/embed/movie/${id}`,
     tvUrl: (id: string, s: number, e: number) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}`
+  },
+  { 
+    id: 'embedso', 
+    name: 'EmbedSO', 
+    movieUrl: (id: string) => `https://embed.so/embed/movie/${id}`,
+    tvUrl: (id: string, s: number, e: number) => `https://embed.so/embed/tv/${id}/${s}/${e}`
   },
 ];
 
