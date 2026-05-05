@@ -2,38 +2,64 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { movieService, MediaContent } from '../services/movieService';
 import { motion, AnimatePresence } from 'motion/react';
+import { useGames } from '../context/GameContext';
+import { Zap, Play, History, Star, Clock, Info, ExternalLink } from 'lucide-react';
 
 const SOURCES = [
   { 
     id: 'vidking', 
-    name: 'Vidking', 
+    name: 'Vidking (Recommended)', 
     movieUrl: (id: string) => `https://vidking.net/embed/movie/${id}?autoPlay=true&color=facc15`,
     tvUrl: (id: string, s: number, e: number) => `https://vidking.net/embed/tv/${id}/${s}/${e}?autoPlay=true&color=facc15&nextEpisode=true&episodeSelector=true`
   },
   { 
+    id: 'vidsrc-xyz', 
+    name: 'Unblocked Server 1', 
+    movieUrl: (id: string) => `https://vidsrc.xyz/embed/movie/${id}`,
+    tvUrl: (id: string, s: number, e: number) => `https://vidsrc.xyz/embed/tv/${id}/${s}/${e}`
+  },
+  { 
     id: 'vidsrc-to', 
-    name: 'Server 1', 
+    name: 'Unblocked Server 2', 
     movieUrl: (id: string) => `https://vidsrc.to/embed/movie/${id}`,
     tvUrl: (id: string, s: number, e: number) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}`
   },
   { 
+    id: 'vidsrc-in', 
+    name: 'Unblocked Server 3', 
+    movieUrl: (id: string) => `https://vidsrc.in/embed/movie/${id}`,
+    tvUrl: (id: string, s: number, e: number) => `https://vidsrc.in/embed/tv/${id}/${s}/${e}`
+  },
+  { 
+    id: 'vidsrc-pm', 
+    name: 'Unblocked Server 4', 
+    movieUrl: (id: string) => `https://vidsrc.pm/embed/movie/${id}`,
+    tvUrl: (id: string, s: number, e: number) => `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`
+  },
+  { 
+    id: 'autoembed-to', 
+    name: 'Fast Server', 
+    movieUrl: (id: string) => `https://autoembed.to/movie/tmdb/${id}`,
+    tvUrl: (id: string, s: number, e: number) => `https://autoembed.to/tv/tmdb/${id}/${s}/${e}`
+  },
+  { 
+    id: 'multiembed-mov', 
+    name: 'Multi-Server', 
+    movieUrl: (id: string) => `https://multiembed.mov/directstream.php?video_id=${id}`,
+    tvUrl: (id: string, s: number, e: number) => `https://multiembed.mov/directstream.php?video_id=${id}&s=${s}&e=${e}`
+  },
+  { 
     id: 'vidsrc-me', 
-    name: 'Server 2', 
+    name: 'Legacy Server 1', 
     movieUrl: (id: string) => `https://vidsrc.me/embed/movie?tmdb=${id}`,
     tvUrl: (id: string, s: number, e: number) => `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`
   },
   { 
     id: 'vidsrc-pro', 
-    name: 'Server 3', 
+    name: 'Legacy Server 2', 
     movieUrl: (id: string) => `https://vidsrc.pro/embed/movie/${id}`,
     tvUrl: (id: string, s: number, e: number) => `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`
-  },
-  { 
-    id: 'embed-su', 
-    name: 'Server 4', 
-    movieUrl: (id: string) => `https://embed.su/embed/movie/${id}`,
-    tvUrl: (id: string, s: number, e: number) => `https://embed.su/embed/tv/${id}/${s}/${e}`
-  },
+  }
 ];
 
 export default function MovieView() {
@@ -251,25 +277,31 @@ export default function MovieView() {
               animate={{ opacity: 1 }}
               className="space-y-8"
             >
-              <div className="glass p-6 rounded-[32px] border border-white/5 flex flex-wrap items-center justify-between gap-6">
-                <div className="flex gap-2">
-                  {SOURCES.map(source => (
-                    <button
-                      key={source.id}
-                      onClick={() => setActiveSource(source)}
-                      className={`px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
-                        activeSource.id === source.id 
-                          ? 'bg-primary text-black' 
-                          : 'bg-white/5 text-gray-500 hover:text-white'
-                      }`}
-                    >
-                      {source.name}
-                    </button>
-                  ))}
+              <div className="glass p-6 rounded-[32px] border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div className="w-full sm:w-auto">
+                   <div className="flex items-center gap-3 mb-3">
+                      <Zap className="w-3 h-3 text-primary" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Select Server</span>
+                   </div>
+                   <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide max-w-full">
+                    {SOURCES.map(source => (
+                      <button
+                        key={source.id}
+                        onClick={() => setActiveSource(source)}
+                        className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap border shrink-0 ${
+                          activeSource.id === source.id 
+                            ? 'bg-primary text-black border-primary shadow-[0_0_20px_rgba(250,204,21,0.3)]' 
+                            : 'bg-white/5 text-gray-500 border-white/10 hover:border-white/20 hover:text-white'
+                        }`}
+                      >
+                        {source.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {type === 'tv' && media.seasons && (
-                  <div className="flex gap-2">
+                  <div className="flex gap-3 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-white/5">
                     <div className="relative">
                       <button 
                         onClick={() => { setShowSeasonDropdown(!showSeasonDropdown); setShowEpisodeDropdown(false); }}
@@ -327,8 +359,8 @@ export default function MovieView() {
                   src={playerUrl} 
                   className="w-full h-full"
                   allowFullScreen
-                  allow="autoplay; encrypted-media"
-                  referrerPolicy="no-referrer"
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  referrerPolicy="strict-origin-when-cross-origin"
                   title="Player"
                 />
                 
