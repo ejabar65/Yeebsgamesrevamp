@@ -4,6 +4,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import cors from 'cors';
+import { createServer } from 'node:http';
+import { createBareServer } from '@tomphttp/bare-server-node';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,6 +23,8 @@ if (!fs.existsSync(CUSTOM_GAMES_DIR)) {
 
 async function startServer() {
   const app = express();
+  const server = createServer();
+  const bare = createBareServer('/bare/');
   const PORT = 3000;
 
   app.use(cors());
@@ -111,15 +115,32 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(__dirname, 'build');
+    const distPath = path.join(__dirname, 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+  server.on('request', (req, res) => {
+    if (bare.shouldRoute(req)) {
+      bare.routeRequest(req, res);
+    } else {
+      app(req, res);
+    }
+  });
+
+  server.on('upgrade', (req, socket, head) => {
+    if (bare.shouldRoute(req)) {
+      bare.routeUpgrade(req, socket, head);
+    } else {
+      socket.end();
+    }
+  });
+
+  server.listen({
+    port: PORT,
+    host: '0.0.0.0',
   });
 }
 

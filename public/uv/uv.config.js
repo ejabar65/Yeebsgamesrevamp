@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 self.__uv$config = {
     prefix: '/uv/service/',
-    bare: 'https://bare.benroberts.com/', // Cloudflare friendly public bare server
+    bare: '/bare/', 
     encodeUrl: Ultraviolet.codec.xor.encode,
     decodeUrl: Ultraviolet.codec.xor.decode,
     handler: '/uv/uv.handler.js',
