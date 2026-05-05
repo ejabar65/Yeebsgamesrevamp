@@ -5,6 +5,12 @@ import { motion, AnimatePresence } from 'motion/react';
 
 const SOURCES = [
   { 
+    id: 'vidking', 
+    name: 'Vidking', 
+    movieUrl: (id: string) => `https://vidking.net/embed/movie/${id}?autoPlay=true&color=facc15`,
+    tvUrl: (id: string, s: number, e: number) => `https://vidking.net/embed/tv/${id}/${s}/${e}?autoPlay=true&color=facc15&nextEpisode=true&episodeSelector=true`
+  },
+  { 
     id: 'vidsrc-to', 
     name: 'Server 1', 
     movieUrl: (id: string) => `https://vidsrc.to/embed/movie/${id}`,
@@ -31,12 +37,15 @@ const SOURCES = [
 ];
 
 export default function MovieView() {
+  const { user, addToHistory } = useGames();
   const { id, type } = useParams();
   const navigate = useNavigate();
   const [media, setMedia] = useState<MediaContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSource, setActiveSource] = useState(SOURCES[0]);
   const [showPlayer, setShowPlayer] = useState(false);
+  const [watchProgress, setWatchProgress] = useState<number>(0);
+  const [resumeTime, setResumeTime] = useState<number | null>(null);
   
   // TV specific state
   const [season, setSeason] = useState(1);
@@ -44,6 +53,37 @@ export default function MovieView() {
   const [episodes, setEpisodes] = useState<any[]>([]);
   const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
   const [showEpisodeDropdown, setShowEpisodeDropdown] = useState(false);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (data.type === 'PLAYER_EVENT') {
+          const { event: playerEvent, progress, currentTime } = data.data;
+          
+          if (playerEvent === 'timeupdate') {
+            setWatchProgress(progress);
+            // Save progress to local storage for resume feature
+            const progressKey = `yeebsgames_resume_${id}_${type}${type === 'tv' ? `_s${season}e${episode}` : ''}`;
+            localStorage.setItem(progressKey, currentTime.toString());
+
+            // Update history with progress
+            const history = JSON.parse(localStorage.getItem('yeebsgames_movie_history') || '[]');
+            const entryIndex = history.findIndex((h: any) => h.id === id);
+            if (entryIndex !== -1) {
+              history[entryIndex].progress = progress;
+              localStorage.setItem('yeebsgames_movie_history', JSON.stringify(history));
+            }
+          }
+        }
+      } catch (e) {
+        // Not a player event or invalid JSON
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [id, type, season, episode]);
 
   useEffect(() => {
     const loadMedia = async () => {
@@ -57,11 +97,34 @@ export default function MovieView() {
             setEpisodes(seasonData.episodes);
          }
       }
+
+      // Check for saved progress
+      const progressKey = `yeebsgames_resume_${id}_${type}${type === 'tv' ? `_s${season}e${episode}` : ''}`;
+      const savedTime = localStorage.getItem(progressKey);
+      if (savedTime) {
+        setResumeTime(parseFloat(savedTime));
+      } else {
+        setResumeTime(null);
+      }
+
       setLoading(false);
     };
     loadMedia();
     window.scrollTo(0, 0);
   }, [id, type]);
+
+  const handleStartWatching = () => {
+    setShowPlayer(true);
+    if (id) {
+       // addToHistory expects a gameId, but we can reuse it for movies/shows if we format it
+       // Actually, addToHistory in GameContext is specifically for games/history array
+       // Let's just track it in localStorage for now to avoid breaking game-specific logic
+       const history = JSON.parse(localStorage.getItem('yeebsgames_movie_history') || '[]');
+       const entry = { id, type, title: media?.title || media?.name, timestamp: Date.now(), poster: media?.poster_path };
+       const newHistory = [entry, ...history.filter((h: any) => h.id !== id)].slice(0, 20);
+       localStorage.setItem('yeebsgames_movie_history', JSON.stringify(newHistory));
+    }
+  };
 
   const handleSeasonChange = async (s: number) => {
     setSeason(s);
@@ -99,9 +162,16 @@ export default function MovieView() {
 
   const title = media.title || media.name;
   const date = media.release_date || media.first_air_date;
-  const rawUrl = type === 'movie' 
-    ? activeSource.movieUrl(id!) 
-    : activeSource.tvUrl(id!, season, episode);
+  
+  let rawUrl = '';
+  if (activeSource.id === 'vidking') {
+    const baseUrl = type === 'movie' ? activeSource.movieUrl(id!) : activeSource.tvUrl(id!, season, episode);
+    rawUrl = resumeTime ? `${baseUrl}&progress=${Math.floor(resumeTime)}` : baseUrl;
+  } else {
+    rawUrl = type === 'movie' 
+      ? activeSource.movieUrl(id!) 
+      : activeSource.tvUrl(id!, season, episode);
+  }
 
   // Ultraviolet Proxy Helper
   const getProxyUrl = (url: string) => {
@@ -150,12 +220,22 @@ export default function MovieView() {
             </div>
 
             {!showPlayer && (
-              <button 
-                onClick={() => setShowPlayer(true)}
-                className="px-12 py-5 rounded-2xl bg-primary text-black font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
-              >
-                Watch Now
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button 
+                  onClick={handleStartWatching}
+                  className="px-12 py-5 rounded-2xl bg-primary text-black font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                >
+                  Watch Now
+                </button>
+                {resumeTime && resumeTime > 10 && (
+                   <button 
+                     onClick={() => setShowPlayer(true)}
+                     className="px-12 py-5 rounded-2xl bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3"
+                   >
+                     Resume at {Math.floor(resumeTime / 60)}:{(Math.floor(resumeTime % 60)).toString().padStart(2, '0')}
+                   </button>
+                )}
+              </div>
             )}
           </div>
         </div>
