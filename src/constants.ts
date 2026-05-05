@@ -1,4 +1,4 @@
-export const MASCOT_URL = "https://lh3.googleusercontent.com/a/ACg8ocKFxTtfl9e-BoMuysn0FFqLOgXRtCrWfyP8NVm45njuz0onsUk=s288-c-no";
+export const MASCOT_URL = "https://images.unsplash.com/photo-1533924736468-daeb52fc2536?auto=format&fit=crop&q=80&w=1200";
 
 export const CLOAK_OPTIONS = [
   { name: 'None (Default)', title: 'YEEBS GAMES', icon: '/favicon.ico' },

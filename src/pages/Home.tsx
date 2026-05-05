@@ -52,7 +52,7 @@ export default function Home() {
           <img 
             src={MASCOT_URL} 
             alt="Mascot" 
-            className="w-full h-full object-cover grayscale opacity-20 transition-opacity duration-700" 
+            className="w-full h-full object-cover grayscale opacity-25 filter blur-[2px] scale-110 transition-all duration-700" 
           />
           
           {/* Color Reveal Layer */}
@@ -60,15 +60,15 @@ export default function Home() {
             className="absolute inset-0 pointer-events-none"
             animate={{
               clipPath: isHovering 
-                ? `circle(100px at ${mousePos.x}px ${mousePos.y}px)` 
+                ? `circle(120px at ${mousePos.x}px ${mousePos.y}px)` 
                 : `circle(0px at ${mousePos.x}px ${mousePos.y}px)`
             }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 250, mass: 0.5 }}
           >
             <img 
               src={MASCOT_URL} 
               alt="Mascot" 
-              className="w-full h-full object-cover" 
+              className="w-full h-full object-cover scale-110" 
             />
           </motion.div>
 

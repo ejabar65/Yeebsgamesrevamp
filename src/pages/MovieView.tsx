@@ -278,7 +278,6 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
                   className="w-full h-full"
                   allowFullScreen
                   allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope; clipboard-write; payment; geolocation"
-                  sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-downloads"
                   referrerPolicy="no-referrer"
                   title="Player"
                 />

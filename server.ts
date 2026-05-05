@@ -28,26 +28,40 @@ async function startServer() {
 
   // API Routes
   app.get('/api/movie-proxy/*', async (req, res) => {
-    // Hardcoded key as requested ("in the code not as a secret")
     const TMDB_API_KEY = '15e241bab4affc62f00422929d7efd8a';
-    const pathValue = req.params[0];
-    const query = new URLSearchParams(req.query as any).toString();
-    const url = `https://api.themoviedb.org/3/${pathValue}?api_key=${TMDB_API_KEY}&${query}`;
+    let pathValue = req.params[0];
+    if (pathValue.startsWith('/')) pathValue = pathValue.substring(1);
+    
+    const queryParams = new URLSearchParams(req.query as any);
+    queryParams.set('api_key', TMDB_API_KEY);
+    
+    const url = `https://api.themoviedb.org/3/${pathValue}?${queryParams.toString()}`;
 
     console.log(`[Proxy] Fetching: ${url}`);
 
     try {
       const response = await fetch(url);
-      const data = await response.json();
+      const contentType = response.headers.get('content-type');
       
-      if (!response.ok) {
-        console.error(`[Proxy] TMDB Error (${response.status}):`, data);
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        if (!response.ok) {
+          console.error(`[Proxy] TMDB Error (${response.status}):`, data);
+          return res.status(response.status).json(data);
+        }
+        res.json(data);
+      } else {
+        const text = await response.text();
+        console.error(`[Proxy] Non-JSON Response from TMDB (${response.status}):`, text.substring(0, 500));
+        res.status(500).json({ 
+          error: 'TMDB returned an invalid response (HTML instead of JSON)', 
+          status: response.status,
+          preview: text.substring(0, 100)
+        });
       }
-      
-      res.json(data);
     } catch (error) {
-      console.error(`[Proxy] Request failed for ${url}:`, error);
-      res.status(500).json({ error: 'Proxy request failed', details: error instanceof Error ? error.message : String(error) });
+      console.error(`[Proxy] Fetch failed for ${url}:`, error);
+      res.status(500).json({ error: 'Proxy fetch failed', details: error instanceof Error ? error.message : String(error) });
     }
   });
 
