@@ -4,6 +4,7 @@ import { movieService, MediaContent } from '../services/movieService';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, doc, getDoc } from '../lib/firebase';
 import { Play, RotateCcw, Monitor, Info, Star, ChevronRight, X, ExternalLink, Calendar, Timer, Activity, Zap, Shield } from 'lucide-react';
+import { MASCOT_URL } from '../constants';
 
 const SOURCES = [
   { 

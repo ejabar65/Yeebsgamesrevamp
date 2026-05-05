@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Play, Star, ChevronRight, ChevronLeft, TrendingUp, Monitor, Film, Plus } from 'lucide-react';
 import { db, collection, getDocs } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
+import { MASCOT_URL } from '../constants';
 
 const MediaCard: React.FC<{ item: any, index: number, type: string, onClick: () => void }> = ({ item, index, type, onClick }) => {
   const title = item.title || item.name;
@@ -127,10 +128,15 @@ export default function Movies() {
         {/* Navigation & Search */}
         <header className="flex flex-col lg:flex-row gap-12 items-start lg:items-center justify-between">
           <div className="space-y-6">
-            <h1 className="text-7xl md:text-9xl font-black tracking-[calc(-0.06em)] uppercase italic leading-[0.75] animate-in fade-in slide-in-from-left duration-1000">
-              Cinema<span className="text-blue-500 text-3xl not-italic ml-2 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">™</span>
-            </h1>
-            <nav className="flex gap-2 bg-white/5 p-1 rounded-2xl backdrop-blur-3xl border border-white/10 shadow-2xl">
+            <div className="flex items-center gap-6 animate-in fade-in slide-in-from-left duration-1000">
+              <div className="w-16 h-16 md:w-24 md:h-24 rounded-3xl overflow-hidden shadow-2xl shadow-blue-500/20 border border-white/10 shrink-0">
+                <img src={MASCOT_URL} alt="Logo" className="w-full h-full object-cover" />
+              </div>
+              <h1 className="text-7xl md:text-9xl font-black tracking-[calc(-0.06em)] uppercase italic leading-[0.75]">
+                Yeebs<span className="text-blue-500 block text-5xl md:text-7xl not-italic mt-2 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">Cinema™</span>
+              </h1>
+            </div>
+            <nav className="flex gap-2 bg-white/5 p-1 rounded-2xl backdrop-blur-3xl border border-white/10 shadow-2xl w-fit">
               {[
                 { id: 'movie', label: 'Theater' },
                 { id: 'tv', label: 'Episodes' },

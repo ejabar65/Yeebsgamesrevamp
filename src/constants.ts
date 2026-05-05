@@ -1,7 +1,7 @@
-export const MASCOT_URL = "https://images.unsplash.com/photo-1533924736468-daeb52fc2536?auto=format&fit=crop&q=80&w=1200";
+export const MASCOT_URL = "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&q=80&w=1000"; // Sleek geometric minimalist logo
 
 export const CLOAK_OPTIONS = [
-  { name: 'None (Default)', title: 'YEEBS GAMES', icon: '/favicon.ico' },
+  { name: 'None (Default)', title: 'YEEBS GAMES', icon: MASCOT_URL },
   { name: 'Google Classroom', title: 'Classes', icon: 'https://ssl.gstatic.com/classroom/favicon.png' },
   { name: 'Google Drive', title: 'My Drive - Google Drive', icon: 'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png' },
   { name: 'Khan Academy', title: 'Khan Academy | Free Online Courses', icon: 'https://www.khanacademy.org/favicon.ico' },
