@@ -9,70 +9,63 @@ interface GameCardProps {
 }
 
 export default function GameCard({ game }: GameCardProps) {
-  const { toggleFavorite, isFavorite, user } = useGames();
+  const { toggleFavorite, isFavorite } = useGames();
   const favorite = isFavorite(game.id);
-  const isCompact = user?.settings?.compactMode;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="group relative"
+      className="group"
     >
-      <div className={`absolute z-10 ${isCompact ? 'top-1 right-1' : 'top-2 right-2'}`}>
-        <button 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleFavorite(game.id);
-          }}
-          className={`${isCompact ? 'p-1.5' : 'p-2'} rounded-xl backdrop-blur-md transition-all ${
-            favorite 
-              ? 'bg-red-500 text-white shadow-lg shadow-red-500/40' 
-              : 'bg-black/40 text-white/60 hover:bg-black/60 hover:text-white'
-          }`}
-        >
-          <Heart className={`w-3 h-3 ${favorite ? 'fill-current' : ''}`} />
-        </button>
-      </div>
-      <Link to={`/game/${game.id}`}>
-        <div className={`relative overflow-hidden rounded-2xl bg-[#111] border border-white/5 transition-all duration-300 group-hover:border-primary/50 group-hover:shadow-[0_0_20px_rgba(250,204,21,0.1)] ${isCompact ? 'aspect-square' : 'aspect-[4/3]'}`}>
+      <Link to={`/game/${game.id}`} className="block space-y-3">
+        <div className="relative aspect-video rounded-lg bg-white/[0.02] overflow-hidden border border-white/5 transition-all duration-500 group-hover:border-blue-500/30">
           {game.thumbnail ? (
             <img
               src={game.thumbnail}
               alt={game.title}
-              className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
+              className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-700 group-hover:scale-105"
               referrerPolicy="no-referrer"
             />
           ) : (
-            <div className="w-full h-full bg-white/5 flex items-center justify-center">
-              <span className="text-[10px] font-black text-white/10 uppercase tracking-widest">No Preview</span>
+            <div className="w-full h-full bg-white/[0.01] flex items-center justify-center">
+              <span className="text-[9px] font-bold text-white/5 uppercase tracking-widest text-center px-4">No Asset Found</span>
             </div>
           )}
           
-          <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className={`w-full py-2 bg-primary text-black flex justify-center rounded-xl items-center gap-2 shadow-lg`}>
-               <Play className="w-3 h-3 fill-current" />
-               <span className="text-[10px] font-black uppercase tracking-widest">Play Now</span>
+          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center translate-y-2 group-hover:translate-y-0 transition-transform">
+               <Play className="w-4 h-4 fill-current ml-0.5" />
             </div>
           </div>
+
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleFavorite(game.id);
+            }}
+            className={`absolute top-2 right-2 p-2 rounded-lg transition-all z-20 ${
+              favorite 
+                ? 'bg-red-500 text-white' 
+                : 'bg-black/40 text-white/20 hover:text-white opacity-0 group-hover:opacity-100'
+            }`}
+          >
+            <Heart className={`w-3 h-3 ${favorite ? 'fill-current' : ''}`} />
+          </button>
         </div>
         
-        <div className="mt-3 px-1">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className={`font-sans font-black uppercase tracking-tight text-white group-hover:text-primary transition-colors truncate ${isCompact ? 'text-[10px]' : 'text-sm'}`}>
+        <div className="px-1 flex justify-between items-start gap-3">
+          <div className="min-w-0">
+            <h3 className="font-bold text-[13px] text-gray-300 group-hover:text-white transition-colors truncate tracking-tight">
               {game.title}
             </h3>
+            <p className="text-[10px] text-gray-600 font-medium uppercase tracking-[0.05em] mt-0.5">Initialize</p>
           </div>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-[8px] font-black uppercase tracking-widest text-primary px-1.5 py-0.5 rounded-md bg-primary/10">
-               {game.category}
-            </span>
-            <span className="text-[8px] font-black uppercase tracking-widest text-gray-600 block">
-               • EXE
-            </span>
-          </div>
+          <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest pt-1">
+             {game.category}
+          </span>
         </div>
       </Link>
     </motion.div>

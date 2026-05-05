@@ -4,50 +4,54 @@ import { movieService, MediaContent } from '../services/movieService';
 import { useNavigate } from 'react-router-dom';
 import { Film, Monitor, Search, Play, Star, TrendingUp } from 'lucide-react';
 
-function MediaCard({ item, index, type, onClick }: { item: MediaContent, index: number, type: 'movie' | 'tv', onClick: () => void, key?: any }) {
+import { db, collection, getDocs } from '../lib/firebase';
+
+function MediaCard({ item, index, type, onClick, isCustom }: { item: any, index: number, type: string, onClick: () => void, isCustom?: boolean }) {
   const title = item.title || item.name;
-  const date = item.release_date || item.first_air_date;
+  const date = item.release_date || item.first_air_date || item.createdAt;
+  const posterPath = isCustom ? item.thumbnail : movieService.getPosterUrl(item.poster_path);
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="group relative cursor-pointer"
+      className="group cursor-pointer"
       onClick={onClick}
     >
-      <div className="aspect-[2/3] rounded-3xl overflow-hidden border border-white/5 bg-[#111] relative transition-all duration-500 shadow-lg group-hover:shadow-primary/20">
-        <img 
-          src={movieService.getPosterUrl(item.poster_path)} 
-          alt={title} 
-          className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110 opacity-70 group-hover:opacity-100"
-          referrerPolicy="no-referrer"
-        />
-        <div className="absolute inset-0 bg-linear-to-t from-black via-transparent to-transparent opacity-80" />
-        
-        <div className="absolute top-4 left-4 px-3 py-1 bg-black/80 backdrop-blur-md rounded-xl border border-white/10 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-          {type === 'movie' ? <Film className="w-3 h-3 text-primary" /> : <Monitor className="w-3 h-3 text-accent" />}
-          <span className="text-[8px] font-black text-white uppercase tracking-widest">{type}</span>
+      <div className="space-y-3">
+        <div className="aspect-[2/3] rounded-xl overflow-hidden bg-white/[0.02] border border-white/5 relative transition-all duration-500 group-hover:border-blue-500/30">
+          <img 
+            src={posterPath} 
+            alt={title} 
+            className="w-full h-full object-cover transition-all duration-700 opacity-80 group-hover:opacity-100 group-hover:scale-105"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center translate-y-2 group-hover:translate-y-0 transition-transform">
+               <Play className="w-4 h-4 fill-current ml-0.5" />
+            </div>
+          </div>
+          
+          {!isCustom && item.vote_average && (
+            <div className="absolute top-2 right-2 px-2 py-1 bg-black/40 rounded-lg flex items-center gap-1">
+              <span className="text-[10px] font-bold text-white opacity-80">{item.vote_average.toFixed(1)}</span>
+            </div>
+          )}
+          {isCustom && (
+            <div className="absolute top-2 left-2 px-2 py-1 bg-blue-500/80 rounded-md">
+              <span className="text-[8px] font-bold text-white uppercase tracking-widest">Linked</span>
+            </div>
+          )}
         </div>
 
-        <div className="absolute top-4 right-4 px-3 py-1 bg-black/80 backdrop-blur-md rounded-xl border border-white/10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-          <Star className="w-3 h-3 text-yellow-500 fill-current" />
-          <span className="text-[10px] font-black text-white">{item.vote_average.toFixed(1)}</span>
-        </div>
-
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 scale-75 group-hover:scale-100">
-           <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center shadow-[0_0_30px_rgba(250,204,21,0.4)]">
-              <Play className="w-8 h-8 text-black fill-current ml-1" />
-           </div>
-        </div>
-
-        <div className="absolute bottom-6 left-6 right-6 translate-y-2 group-hover:translate-y-0 transition-all duration-500">
-          <h3 className="text-xs font-black uppercase tracking-widest text-white mb-2 line-clamp-2 leading-tight group-hover:text-primary transition-colors">
+        <div className="px-1">
+          <h3 className="font-bold text-xs text-gray-300 group-hover:text-white transition-colors line-clamp-1 truncate tracking-tight">
             {title}
           </h3>
-          <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">
-            {date?.split('-')[0] || '2024'}
-          </span>
+          <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">
+            {type} • {date?.split('-')[0] || '2026'}
+          </p>
         </div>
       </div>
     </motion.div>
@@ -55,8 +59,9 @@ function MediaCard({ item, index, type, onClick }: { item: MediaContent, index: 
 }
 
 export default function Movies() {
-  const [activeTab, setActiveTab] = useState<'movie' | 'tv'>('movie');
+  const [activeTab, setActiveTab] = useState<'movie' | 'tv' | 'custom'>('movie');
   const [popular, setPopular] = useState<MediaContent[]>([]);
+  const [customMovies, setCustomMovies] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MediaContent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,8 +71,17 @@ export default function Movies() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      const data = await movieService.getPopular(activeTab);
-      setPopular(data);
+      if (activeTab === 'custom') {
+        try {
+          const snapshot = await getDocs(collection(db, 'custom_movies'));
+          setCustomMovies(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        } catch (error) {
+          console.error(error);
+        }
+      } else {
+        const data = await movieService.getPopular(activeTab);
+        setPopular(data);
+      }
       setLoading(false);
     };
     loadData();
@@ -85,106 +99,88 @@ export default function Movies() {
   };
 
   return (
-    <main className="p-6 md:p-12 max-w-[1600px] mx-auto min-h-screen">
-      <section className="mb-20">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-12 p-12 rounded-[40px] border border-white/5 bg-linear-to-br from-primary/5 via-transparent to-transparent relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 right-0 p-12 opacity-5 scale-150 rotate-12">
-            <TrendingUp className="w-64 h-64 text-primary" />
-          </div>
-
-          <div className="space-y-4 text-center md:text-left relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[8px] font-black uppercase tracking-widest mb-2">
-              <Star className="w-3 h-3 fill-current" />
-              Featured Selection
-            </div>
-            <h1 className="text-6xl font-black uppercase tracking-tighter leading-none italic">Cinema<span className="text-primary">.tv</span></h1>
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Accessing local media stream</p>
-          </div>
-
-          <div className="flex flex-col gap-8 w-full max-w-xl relative z-10">
-             <div className="flex justify-center md:justify-end gap-3">
-                <button 
-                  onClick={() => setActiveTab('movie')}
-                  className={`px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border flex items-center gap-2 ${activeTab === 'movie' ? 'bg-primary text-black border-primary shadow-lg shadow-primary/20' : 'bg-white/5 text-gray-500 border-white/5 hover:border-white/20'}`}
-                >
-                  <Film className="w-4 h-4" />
-                  Films
-                </button>
-                <button 
-                  onClick={() => setActiveTab('tv')}
-                  className={`px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border flex items-center gap-2 ${activeTab === 'tv' ? 'bg-primary text-black border-primary shadow-lg shadow-primary/20' : 'bg-white/5 text-gray-500 border-white/5 hover:border-white/20'}`}
-                >
-                  <Monitor className="w-4 h-4" />
-                  Shows
-                </button>
-             </div>
-
-             <form onSubmit={handleSearch} className="relative group">
-                <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
-                  <Search className="w-5 h-5 text-gray-600 group-focus-within:text-primary transition-colors" />
-                </div>
-                <input 
-                  type="text" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Enter keywords..." 
-                  className="w-full bg-white/5 border border-white/5 rounded-3xl py-6 pl-14 pr-8 text-sm font-medium focus:border-primary/50 outline-hidden transition-all uppercase placeholder:text-gray-700"
-                />
-                <button 
-                  type="submit"
-                  className="absolute right-3 top-2.5 bottom-2.5 bg-primary text-black px-8 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all shadow-md active:scale-95"
-                >
-                  Search
-                </button>
-             </form>
+    <div className="flex flex-col gap-16 font-sans">
+      {/* Header Selection */}
+      <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-8 border-b border-white/5 pb-8">
+        <div className="space-y-6">
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-white">Cinema.</h1>
+          <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
+            {[
+              { id: 'movie', label: 'Movies' },
+              { id: 'tv', label: 'TV Shows' },
+              { id: 'custom', label: 'Linked' }
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-4 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-[0.2em] transition-all border shrink-0 ${activeTab === tab.id ? 'bg-white text-black border-white' : 'bg-white/[0.03] text-gray-500 border-white/5 hover:border-white/10 hover:text-white'}`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
-      </section>
+
+        <form onSubmit={handleSearch} className="w-full max-w-sm relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600 group-focus-within:text-blue-500 transition-colors" />
+          <input 
+            type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search Database..." 
+            className="w-full bg-white/[0.02] border border-white/5 rounded-xl py-3 pl-12 pr-4 text-[13px] focus:border-blue-500/30 outline-hidden transition-all"
+          />
+        </form>
+      </div>
 
       <div className="space-y-12">
         {isSearching ? (
-          <div>
-            <div className="flex items-center justify-between mb-10 border-b border-white/5 pb-6">
-              <div className="flex items-center gap-3">
-                <Search className="w-4 h-4 text-primary" />
-                <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Search Results</h2>
-              </div>
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold tracking-tight text-white">Query Results</h2>
               <button 
                 onClick={() => { setIsSearching(false); setSearchQuery(''); }}
-                className="text-[8px] font-black uppercase text-gray-600 hover:text-white transition-colors tracking-widest"
+                className="text-[9px] font-bold text-gray-500 hover:text-white uppercase tracking-[0.2em] transition-colors"
               >
-                [ Clear Results ]
+                Terminate
               </button>
             </div>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-8">
-              <AnimatePresence>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+              <AnimatePresence mode="popLayout">
                 {searchResults.length > 0 ? (
                   searchResults.map((item, i) => (
                     <MediaCard key={item.id} item={item} index={i} type={activeTab} onClick={() => navigate(`/media/${activeTab}/${item.id}`)} />
                   ))
                 ) : (
-                  <div className="col-span-full h-80 flex flex-col items-center justify-center bg-white/[0.01] rounded-[40px] border border-dashed border-white/5 space-y-4">
-                    <Search className="w-12 h-12 text-gray-800" />
-                    <p className="text-gray-700 font-black text-[10px] uppercase tracking-[0.4em]">No transmissions found</p>
+                  <div className="col-span-full py-24 text-center card-subtle border-dashed">
+                    <p className="text-[10px] uppercase font-bold tracking-[0.3em] text-gray-700">No content identified.</p>
                   </div>
                 )}
               </AnimatePresence>
             </div>
           </div>
         ) : (
-          <div>
-            <div className="mb-10 pb-6 border-b border-white/5">
-              <div className="flex items-center gap-3">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Popular {activeTab === 'movie' ? 'Films' : 'Shows'}</h2>
-              </div>
-            </div>
+          <div className="space-y-8">
+            <h2 className="text-xl font-bold tracking-tight text-white border-l-2 border-blue-500 pl-4 py-1">
+              {activeTab === 'custom' ? 'Linked Assets' : `Popular ${activeTab === 'movie' ? 'Movies' : 'Television'}`}
+            </h2>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
               {loading ? (
                 Array(12).fill(0).map((_, i) => (
-                  <div key={i} className="aspect-[2/3] bg-white/[0.02] rounded-3xl animate-pulse" />
+                  <div key={i} className="aspect-[2/3] bg-white/[0.01] border border-white/5 rounded-xl animate-pulse" />
+                ))
+              ) : activeTab === 'custom' ? (
+                customMovies.map((item, i) => (
+                  <MediaCard 
+                    key={item.id} 
+                    item={item} 
+                    index={i} 
+                    type={item.type} 
+                    isCustom 
+                    onClick={() => navigate(`/media/custom/${item.id}`)} 
+                  />
                 ))
               ) : (
                 popular.map((item, i) => (
@@ -195,6 +191,6 @@ export default function Movies() {
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }

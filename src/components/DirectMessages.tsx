@@ -172,109 +172,125 @@ export const DirectMessages: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center h-[600px] bg-[#0f0f0f] rounded-2xl border border-white/5 p-8 text-center text-[10px] font-black uppercase tracking-widest text-gray-600">
-        Login required for messages
+      <div className="flex flex-col items-center justify-center h-[600px] p-8 text-center">
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-600">Login required for messages</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-[600px] bg-[#0f0f0f] rounded-2xl border border-white/5 overflow-hidden">
-      <div className={`w-full md:w-80 border-r border-white/5 flex flex-col ${activeChat ? 'hidden md:flex' : 'flex'}`}>
-        <div className="p-4 border-b border-white/5 bg-white/[0.02]">
-          <form onSubmit={handleStartChat} className="relative">
+    <div className="flex h-[600px] bg-[#0c0c0c] overflow-hidden">
+      {/* Sidebar: Chat List */}
+      <div className={`w-full md:w-80 border-r border-white/5 flex flex-col bg-black/20 ${activeChat ? 'hidden md:flex' : 'flex'}`}>
+        <div className="p-6 border-b border-white/5 space-y-4">
+           <h2 className="font-bold text-lg text-white">Private Threads</h2>
+           <form onSubmit={handleStartChat} className="relative group">
             <input 
               type="text"
               value={searchName}
               onChange={(e) => setSearchName(e.target.value)}
-              placeholder="Enter username..."
-              className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest focus:outline-hidden focus:border-primary/50 transition-all pr-20"
+              placeholder="Username..."
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-hidden focus:border-blue-500/50 transition-all pr-16 text-white"
             />
             <button 
               type="submit" 
               disabled={isSearching}
-              className="absolute right-2 top-1.5 bottom-1.5 px-3 bg-primary text-black rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all"
+              className="absolute right-1 top-1 bottom-1 px-3 bg-blue-500 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-blue-600 transition-all disabled:opacity-30"
             >
-              {isSearching ? '...' : 'Start'}
+              {isSearching ? '...' : 'Open'}
             </button>
           </form>
         </div>
         
-        <div className="flex-1 overflow-y-auto scrollbar-hide">
+        <div className="flex-1 overflow-y-auto scrollbar-hide p-2 space-y-1">
           {chats.map((chat, i) => {
             const recipient = chat.participants.find((p: string) => p !== user.username.toLowerCase());
+            const isActive = activeChat?.id === chat.id;
             return (
               <button
                 key={`${chat.id}-${i}`}
                 onClick={() => setActiveChat(chat)}
-                className={`w-full p-6 flex items-center gap-4 hover:bg-white/5 transition-colors border-b border-white/[0.02] text-left ${activeChat?.id === chat.id ? 'bg-white/5' : ''}`}
+                className={`w-full p-4 flex items-center gap-3 rounded-xl transition-all duration-200 group ${isActive ? 'bg-blue-500/10 border border-blue-500/20' : 'hover:bg-white/5 border border-transparent'}`}
               >
-                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-primary font-black text-xs">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm ${isActive ? 'bg-blue-500 text-white' : 'bg-white/5 text-gray-500'}`}>
                   {recipient?.[0]?.toUpperCase()}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-black text-xs uppercase tracking-widest truncate">{recipient}</span>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="flex justify-between items-center">
+                    <span className={`font-bold text-sm truncate ${isActive ? 'text-blue-500' : 'text-gray-300'}`}>{recipient}</span>
                   </div>
-                  <p className="text-[10px] text-gray-600 truncate font-bold uppercase tracking-tight">{chat.lastMessage}</p>
+                  <p className={`text-[10px] truncate font-medium ${isActive ? 'text-blue-500/60' : 'text-gray-500'}`}>{chat.lastMessage}</p>
                 </div>
               </button>
             );
           })}
           {chats.length === 0 && (
-            <div className="p-12 text-center text-gray-700 text-[10px] font-black uppercase tracking-widest">
-              Empty
+            <div className="py-20 text-center flex flex-col items-center gap-3">
+              <User className="w-8 h-8 opacity-5 text-white" />
+              <p className="text-[10px] font-bold text-gray-700 uppercase tracking-widest">No Active Chats</p>
             </div>
           )}
         </div>
       </div>
 
-      <div className={`flex-1 flex flex-col bg-black/40 ${!activeChat ? 'hidden md:flex items-center justify-center p-8' : 'flex'}`}>
+      {/* Main: Chat Window */}
+      <div className={`flex-1 flex flex-col bg-black/10 relative ${!activeChat ? 'hidden md:flex items-center justify-center p-8' : 'flex'}`}>
         {activeChat ? (
           <>
-            <div className="p-4 border-b border-white/5 flex items-center gap-4 bg-white/[0.02]">
-              <button onClick={() => setActiveChat(null)} className="md:hidden text-[10px] font-black uppercase tracking-widest text-gray-500">
-                ← Back
-              </button>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-primary text-[10px] font-black">
-                  {activeChat.participants.find((p: string) => p !== user.username.toLowerCase())?.[0]?.toUpperCase()}
-                </div>
-                <Link 
-                  to={`/profile/${activeChat.participants.find((p: string) => p !== user.username.toLowerCase())}`}
-                  className="font-black text-xs uppercase tracking-widest hover:text-primary transition-colors"
+            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-black/20 backdrop-blur-md relative z-10">
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => setActiveChat(null)} 
+                  className="md:hidden p-2 text-gray-500 hover:text-white"
                 >
-                  {activeChat.participants.find((p: string) => p !== user.username.toLowerCase())}
-                </Link>
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 font-bold text-lg">
+                    {activeChat.participants.find((p: string) => p !== user.username.toLowerCase())?.[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <Link 
+                      to={`/profile/${activeChat.participants.find((p: string) => p !== user.username.toLowerCase())}`}
+                      className="font-bold text-white hover:text-blue-400 transition-colors"
+                    >
+                      {activeChat.participants.find((p: string) => p !== user.username.toLowerCase())}
+                    </Link>
+                    <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">Secure Channel</p>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div 
               ref={scrollRef}
-              className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide"
+              className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide relative z-10"
             >
               <AnimatePresence>
-                {messages.map((msg, i) => (
-                  <motion.div 
-                    key={`${msg.id}-${i}`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className={`flex ${msg.senderId === user.username.toLowerCase() ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`max-w-[85%] px-5 py-3 rounded-2xl text-[13px] ${msg.senderId === user.username.toLowerCase() ? 'bg-primary text-black font-bold' : 'bg-white/5 text-white'}`}>
-                      {msg.image && (
-                         <div className="mb-2 rounded-lg overflow-hidden border border-black/10">
-                            <img src={msg.image} alt="Upload" className="max-w-full h-auto" />
-                         </div>
-                      )}
-                      {msg.text}
-                    </div>
-                  </motion.div>
-                ))}
+                {messages.map((msg, i) => {
+                  const isOwn = msg.senderId === user.username.toLowerCase();
+                  return (
+                    <motion.div 
+                      key={`${msg.id}-${i}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm shadow-lg relative ${isOwn ? 'bg-blue-500 text-white font-medium rounded-tr-none' : 'bg-white/5 text-gray-200 border border-white/10 rounded-tl-none'}`}>
+                        {msg.image && (
+                           <div className="mb-2 rounded-xl overflow-hidden border border-black/20">
+                              <img src={msg.image} alt="Upload" className="max-w-full h-auto" />
+                           </div>
+                        )}
+                        <p>{msg.text}</p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             </div>
 
-            <form onSubmit={handleSendMessage} className="p-4 bg-white/[0.01] border-t border-white/5">
+            <form onSubmit={handleSendMessage} className="p-4 bg-black/40 border-t border-white/5 relative z-10">
               <input 
                 type="file"
                 ref={fileInputRef}
@@ -286,16 +302,16 @@ export const DirectMessages: React.FC = () => {
               <AnimatePresence>
                 {selectedImage && (
                   <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="relative inline-block mb-4 p-1 bg-white/5 rounded-xl border border-white/10"
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="relative inline-block mb-4"
                   >
-                    <img src={selectedImage} alt="Selected" className="w-20 h-20 object-cover rounded-lg" />
+                    <img src={selectedImage} alt="Selected" className="w-20 h-20 object-cover rounded-xl border-2 border-blue-500 shadow-xl" />
                     <button 
                       type="button"
                       onClick={() => setSelectedImage(null)}
-                      className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full shadow-lg"
+                      className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full shadow-lg"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -309,22 +325,22 @@ export const DirectMessages: React.FC = () => {
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder={selectedImage ? "Add a caption..." : "Type a message..."}
-                    className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-4 pr-24 focus:outline-hidden focus:border-primary/50 transition-all text-sm font-medium"
+                    placeholder={selectedImage ? "Add description..." : "Type a message..."}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-hidden focus:border-blue-500/50 transition-all text-white placeholder:text-gray-600"
                   />
-                  <div className="absolute right-2 top-2 bottom-2 flex items-center gap-2">
+                  <div className="absolute right-2 top-1.5 bottom-1.5 flex items-center gap-2">
                     <button 
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className={`p-2 rounded-lg transition-all ${selectedImage ? 'bg-primary/20 text-primary' : 'text-gray-500 hover:text-white'}`}
+                      className={`p-2 rounded-lg transition-all ${selectedImage ? 'bg-blue-500 text-white' : 'text-gray-500 hover:text-blue-500'}`}
                       disabled={isUploading}
                     >
-                      <ImageIcon className="w-5 h-5" />
+                      <ImageIcon className="w-4 h-4" />
                     </button>
                     <button 
                       type="submit"
                       disabled={(!newMessage.trim() && !selectedImage) || isUploading}
-                      className="px-4 h-full bg-primary text-black rounded-lg hover:bg-white transition-all disabled:opacity-50 font-black text-[10px] uppercase tracking-widest"
+                      className="px-6 h-full bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all disabled:opacity-30 font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-500/20"
                     >
                       Send
                     </button>
@@ -334,8 +350,9 @@ export const DirectMessages: React.FC = () => {
             </form>
           </>
         ) : (
-          <div className="text-center">
-            <h3 className="text-[10px] font-black text-gray-700 uppercase tracking-[0.2em]">Select Conversation</h3>
+          <div className="text-center opacity-10">
+            <h3 className="font-bold text-3xl text-white uppercase tracking-widest mb-2">Select a Thread</h3>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Connect with verified users</p>
           </div>
         )}
       </div>

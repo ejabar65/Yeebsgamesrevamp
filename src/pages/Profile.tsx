@@ -15,7 +15,7 @@ export default function Profile() {
   const { user: currentUser, games, favorites: currentFavorites, authLoading, toggleFavorite, logout, updateSettings, updateAvatar, updateBio, getPublicProfile } = useGames();
   const navigate = useNavigate();
   
-  const [activeTab, setActiveTab] = useState<'inventory' | 'settings' | 'avatar'>('inventory');
+  const [activeTab, setActiveTab] = useState<'collection' | 'settings' | 'avatar'>('collection');
 
   // Handle tab from query param
   useEffect(() => {
@@ -23,8 +23,9 @@ export default function Profile() {
     const tab = params.get('tab');
     if (tab === 'settings') setActiveTab('settings');
     if (tab === 'avatar') setActiveTab('avatar');
-    if (tab === 'inventory') setActiveTab('inventory');
+    if (tab === 'collection') setActiveTab('collection');
   }, [location.search]);
+
   const [saveStatus, setSaveStatus] = useState(false);
   const [publicUser, setPublicUser] = useState<any>(null);
   const [loadingPublic, setLoadingPublic] = useState(false);
@@ -84,41 +85,35 @@ export default function Profile() {
 
   if (authLoading || loadingPublic) {
     return (
-      <div className="min-h-screen pt-32 px-4 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!profileData) {
     return (
-      <div className="min-h-screen pt-32 px-4 flex flex-col items-center justify-center text-center">
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center max-w-md mx-auto space-y-6">
         {!profileUsername ? (
-          <div className="max-w-md w-full flex flex-col items-center">
+          <div className="card-subtle p-8 w-full">
              <Login inline />
-             <button 
-               onClick={() => navigate('/')}
-               className="mt-6 text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
-             >
-               ← Back to Home
-             </button>
           </div>
         ) : (
-          <>
-            <div className="p-6 rounded-full bg-primary/10 mb-6">
-              <User className="w-12 h-12 text-primary" />
+          <div className="card-subtle p-12 w-full space-y-6">
+            <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto text-blue-500">
+               <User className="w-8 h-8" />
             </div>
-            <h1 className="text-3xl font-display font-black uppercase mb-4">User Not Found</h1>
-            <p className="text-gray-400 mb-8 max-w-sm">
-              This user doesn't exist or has set their profile to private.
-            </p>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold text-white">User not found</h1>
+              <p className="text-gray-500 text-sm">This profile may be private or the identifier is incorrect.</p>
+            </div>
             <button 
               onClick={() => navigate('/')}
-              className="px-8 py-3 rounded-xl bg-primary text-dark-surface font-black uppercase tracking-widest hover:bg-white transition-all shadow-[0_0_20px_rgba(250,204,21,0.2)]"
+              className="w-full py-3 rounded-xl bg-blue-500 text-white font-bold text-sm uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
             >
-              Go Back Home
+              Return Home
             </button>
-          </>
+          </div>
         )}
       </div>
     );
@@ -138,489 +133,414 @@ export default function Profile() {
   };
 
   return (
-    <main className="pt-24 pb-12 px-4 md:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Profile Header */}
-        <div className="glass rounded-3xl p-8 mb-8 flex flex-col md:flex-row items-center gap-8 border border-white/5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-5">
-             <SettingsIcon className="w-64 h-64 rotate-12" />
+    <div className="space-y-12 max-w-7xl mx-auto font-sans">
+      {/* Profile Header */}
+      <header className="card-subtle p-8 md:p-12 flex flex-col md:flex-row items-center gap-12 relative overflow-hidden bg-white/[0.02]">
+        <div className="relative">
+          <div className="w-40 h-40 rounded-3xl border-4 border-white/5 overflow-hidden bg-white/5 p-1">
+            {profileData.photoURL ? (
+              <img 
+                src={profileData.photoURL} 
+                alt={profileData.username} 
+                className="w-full h-full object-cover rounded-2xl"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-700">
+                <User className="w-16 h-16" />
+              </div>
+            )}
           </div>
-
-          <div className="relative">
-            <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
-            <div className="w-32 h-32 rounded-full border-4 border-primary/20 relative z-10 overflow-hidden bg-dark-card flex items-center justify-center">
-              {profileData.photoURL ? (
-                <img 
-                  src={profileData.photoURL} 
-                  alt={profileData.username} 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User className="w-12 h-12 text-gray-600" />
-              )}
+        </div>
+        
+        <div className="flex-1 text-center md:text-left space-y-6">
+          <div>
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-white mb-2">
+              {profileData.username}
+            </h1>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+              <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest px-2 py-1 bg-blue-500/10 rounded-md border border-blue-500/20">
+                {profileData.isAdmin ? 'Administrator' : 'Verified Member'}
+              </span>
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                ID {profileData.uid?.slice(0, 8) || 'PUBLIC'}
+              </span>
             </div>
           </div>
           
-          <div className="flex-1 text-center md:text-left relative z-10">
-            <h1 className="text-4xl font-display font-black uppercase mb-1">@{profileData.username}</h1>
-            
-            {isOwnProfile ? (
-              <div className="mb-4">
-                {isEditingBio ? (
-                  <div className="flex flex-col gap-2 max-w-md">
-                    <textarea 
-                      value={bioDraft}
-                      onChange={(e) => setBioDraft(e.target.value)}
-                      placeholder="Add a transmission to your profile..."
-                      className="bg-white/5 border border-white/10 rounded-xl p-3 text-sm font-mono focus:border-primary outline-hidden min-h-[80px]"
-                      autoFocus
-                    />
-                    <div className="flex gap-2">
-                       <button 
-                         onClick={async () => {
-                           await updateBio(bioDraft);
-                           setIsEditingBio(false);
-                         }}
-                         className="px-4 py-1.5 rounded-lg bg-primary text-dark-surface text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all"
-                       >
-                         Save Transmission
-                       </button>
-                       <button 
-                         onClick={() => {
-                           setBioDraft(currentUser?.bio || '');
-                           setIsEditingBio(false);
-                         }}
-                         className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
-                       >
-                         Cancel
-                       </button>
-                    </div>
+          {isOwnProfile ? (
+            <div className="max-w-md">
+              {isEditingBio ? (
+                <div className="space-y-3">
+                  <textarea 
+                    value={bioDraft}
+                    onChange={(e) => setBioDraft(e.target.value)}
+                    placeholder="Tell us about yourself..."
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-medium focus:border-blue-500 outline-hidden min-h-[100px] text-gray-200 transition-all"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                     <button 
+                       onClick={async () => {
+                         await updateBio(bioDraft);
+                         setIsEditingBio(false);
+                       }}
+                       className="px-6 py-2 rounded-lg bg-blue-500 text-white text-xs font-bold uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
+                     >
+                       Save
+                     </button>
+                     <button 
+                       onClick={() => {
+                         setBioDraft(currentUser?.bio || '');
+                         setIsEditingBio(false);
+                       }}
+                       className="px-6 py-2 rounded-lg bg-white/5 text-gray-500 text-xs font-bold uppercase tracking-widest hover:text-white transition-all border border-white/10"
+                     >
+                       Cancel
+                     </button>
                   </div>
-                ) : (
-                  <div 
-                    onClick={() => setIsEditingBio(true)}
-                    className="group cursor-pointer max-w-md"
-                  >
-                    <p className={`text-sm mb-1 ${!profileData.bio ? 'text-gray-500 italic' : 'text-gray-300'}`}>
-                      {profileData.bio || "No transmission set. Click to add a bio..."}
-                    </p>
-                    <div className="h-0.5 w-0 group-hover:w-full bg-primary/30 transition-all duration-300" />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-gray-300 text-sm mb-4 max-w-md font-medium leading-relaxed italic">
-                {profileData.bio ? `"${profileData.bio}"` : "This user hasn't transmitted a bio yet."}
-              </p>
-            )}
-
-            <p className="text-gray-500 mb-6 font-mono text-[10px] uppercase tracking-widest">
-              {profileData.isAdmin ? 'System Administrator' : 'Portal User'} • ID: {profileData.uid?.slice(0, 8) || 'PUBLIC'}
-            </p>
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-                <Package className="w-4 h-4 text-primary" />
-                <span className="text-sm font-bold uppercase tracking-widest">{savedGames.length} Items</span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-                <Heart className="w-4 h-4 text-red-500" />
-                <span className="text-sm font-bold uppercase tracking-widest">{profileFavorites.length} Favs</span>
-              </div>
-            </div>
-          </div>
-
-          {isOwnProfile && (
-            <button 
-              onClick={handleLogout}
-              className="px-6 py-3 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 font-bold uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 relative z-10"
-            >
-              <LogOut className="w-4 h-4" />
-              Log Out
-            </button>
-          )}
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-4 mb-8 overflow-x-auto pb-2 scrollbar-hide">
-            <button 
-              onClick={() => setActiveTab('inventory')}
-              className={`px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border whitespace-nowrap ${activeTab === 'inventory' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
-            >
-              Inventory
-            </button>
-            {isOwnProfile && (
-              <>
-                <button 
-                  onClick={() => setActiveTab('avatar')}
-                  className={`px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border whitespace-nowrap ${activeTab === 'avatar' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
-                >
-                  Custom Avatar
-                </button>
-                <button 
-                  onClick={() => setActiveTab('settings')}
-                  className={`px-8 py-3 rounded-xl font-display font-black uppercase tracking-widest text-sm transition-all border whitespace-nowrap ${activeTab === 'settings' ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5'}`}
-                >
-                  Settings
-                </button>
-              </>
-            )}
-        </div>
-
-        <AnimatePresence mode="wait">
-          {activeTab === 'inventory' ? (
-            <motion.section 
-              key="inventory"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-            >
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-display font-black uppercase flex items-center gap-3">
-                  <Package className="w-6 h-6 text-primary" />
-                  {isOwnProfile ? 'Your Inventory' : `${profileData.username}'s Collection`}
-                </h2>
-                <div className="text-xs text-gray-500 font-bold uppercase tracking-[0.2em]">
-                  Saved for later
-                </div>
-              </div>
-
-              {savedGames.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                  {savedGames.map((game, i) => (
-                    <div key={`${game.id}-${i}`} className="relative group">
-                      <GameCard game={game} />
-                      {isOwnProfile && (
-                        <button 
-                          onClick={() => toggleFavorite(game.id)}
-                          className="absolute bottom-4 right-4 p-2 rounded-lg bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                          title="Remove from inventory"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
                 </div>
               ) : (
-                <div className="glass rounded-3xl p-20 text-center flex flex-col items-center justify-center border-dashed border-2 border-white/5">
-                  <div className="p-6 rounded-full bg-white/5 mb-6">
-                    <History className="w-12 h-12 text-gray-600" />
+                <button 
+                  onClick={() => setIsEditingBio(true)}
+                  className="group block text-sm font-medium text-gray-400 hover:text-white transition-colors text-left"
+                >
+                  <p className="leading-relaxed">
+                    {profileData.bio || "Click to add a short bio or status..."}
+                  </p>
+                </button>
+              )}
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm font-medium leading-relaxed max-w-md">
+              {profileData.bio || "No status information available for this sector."}
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-12">
+            <div className="space-y-1">
+               <span className="block text-3xl font-bold text-white tracking-tight">{savedGames.length}</span>
+               <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest">Library</span>
+            </div>
+            <div className="space-y-1">
+               <span className="block text-3xl font-bold text-white tracking-tight">{profileFavorites.length}</span>
+               <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest">Favorites</span>
+            </div>
+            {isOwnProfile && (
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-gray-500 hover:text-red-500 transition-colors text-xs font-bold uppercase tracking-widest"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Tab Navigation */}
+      <nav className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <button 
+            onClick={() => setActiveTab('collection')}
+            className={`px-8 py-3 rounded-full text-xs font-bold tracking-widest uppercase transition-all border ${activeTab === 'collection' ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20' : 'bg-white/5 text-gray-500 border-white/10 hover:border-white/20'}`}
+          >
+            Collection
+          </button>
+          {isOwnProfile && (
+            <>
+              <button 
+                onClick={() => setActiveTab('avatar')}
+                className={`px-8 py-3 rounded-full text-xs font-bold tracking-widest uppercase transition-all border ${activeTab === 'avatar' ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20' : 'bg-white/5 text-gray-500 border-white/10 hover:border-white/20'}`}
+              >
+                Avatar
+              </button>
+              <button 
+                onClick={() => setActiveTab('settings')}
+                className={`px-8 py-3 rounded-full text-xs font-bold tracking-widest uppercase transition-all border ${activeTab === 'settings' ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20' : 'bg-white/5 text-gray-500 border-white/10 hover:border-white/20'}`}
+              >
+                Settings
+              </button>
+            </>
+          )}
+      </nav>
+
+      <AnimatePresence mode="wait">
+        {activeTab === 'collection' ? (
+          <motion.section 
+            key="collection"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-8"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">
+                {isOwnProfile ? 'Your Collection' : `${profileData.username}'s Collection`}
+              </h2>
+            </div>
+
+            {savedGames.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {savedGames.map((game, i) => (
+                  <div key={`${game.id}-${i}`} className="relative group">
+                    <GameCard game={game} />
+                    {isOwnProfile && (
+                      <button 
+                        onClick={() => toggleFavorite(game.id)}
+                        className="absolute top-4 right-4 p-2 rounded-lg bg-red-500/90 text-white opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:scale-105 active:scale-95"
+                        title="Remove from favorites"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
-                  <h3 className="text-xl font-bold text-gray-400 mb-2">Inventory Empty</h3>
-                  <p className="text-gray-500 text-sm mb-8 max-w-xs">Start building your collection by liking games across the platform.</p>
+                ))}
+              </div>
+            ) : (
+              <div className="card-subtle p-20 text-center flex flex-col items-center justify-center space-y-6">
+                <div className="w-16 h-16 rounded-3xl bg-white/5 flex items-center justify-center text-gray-700">
+                  <Package className="w-8 h-8" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-white uppercase tracking-widest">Collection Empty</h3>
+                  <p className="text-gray-500 text-xs max-w-xs mx-auto leading-relaxed">Save your favorite games and media to build your personal library.</p>
+                </div>
+                {isOwnProfile && (
                   <Link 
                     to="/" 
-                    className="px-8 py-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-primary hover:text-dark-surface transition-all font-bold uppercase tracking-widest"
+                    className="px-8 py-3 rounded-xl bg-white text-black hover:bg-blue-500 hover:text-white transition-all font-bold text-[10px] uppercase tracking-widest shadow-lg active:scale-95"
                   >
-                    Discover Games
+                    Explore Games
                   </Link>
+                )}
+              </div>
+            )}
+          </motion.section>
+        ) : activeTab === 'avatar' ? (
+          <motion.section 
+            key="avatar"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl"
+          >
+             <div className="card-subtle p-12 text-center flex flex-col items-center justify-center relative overflow-hidden bg-white/5">
+                <div className="relative group">
+                   <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full" />
+                   <img 
+                     src={`https://api.dicebear.com/7.x/${avatarForm.style}/svg?seed=${avatarForm.seed}`}
+                     alt="Preview"
+                     className="w-48 h-48 rounded-3xl relative z-10 bg-black/40 shadow-2xl transition-all duration-500"
+                   />
                 </div>
-              )}
-            </motion.section>
-          ) : activeTab === 'avatar' ? (
-            <motion.section 
-              key="avatar"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              className="max-w-4xl"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                 <div className="glass rounded-3xl p-8 border border-white/5 text-center flex flex-col items-center justify-center">
-                    <div className="relative mb-8">
-                       <div className="absolute inset-0 bg-primary/30 blur-3xl rounded-full" />
-                       <img 
-                         src={`https://api.dicebear.com/7.x/${avatarForm.style}/svg?seed=${avatarForm.seed}`}
-                         alt="Preview"
-                         className="w-48 h-48 rounded-full border-8 border-white/10 relative z-10 bg-dark-card shadow-2xl"
-                       />
-                    </div>
-                    <h3 className="text-2xl font-display font-black uppercase mb-1">Avatar Preview</h3>
-                    <p className="text-gray-500 text-[10px] uppercase tracking-widest font-mono">Generated ID: {avatarForm.seed}</p>
-                 </div>
+                <h3 className="text-2xl font-bold text-white mt-8 mb-2 capitalize">{avatarForm.style.replace('-', ' ')}</h3>
+                <p className="text-gray-500 text-[10px] uppercase font-bold tracking-widest">Seed: {avatarForm.seed}</p>
+             </div>
 
-                 <div className="glass rounded-3xl p-8 border border-white/5 space-y-8">
-                    <div className="space-y-4">
-                       <h4 className="text-sm font-black uppercase tracking-widest text-primary">1. Choose Your Vibe</h4>
-                       <div className="grid grid-cols-2 gap-2">
-                          {[
-                            { id: 'avataaars', name: 'Original' },
-                            { id: 'pixel-art', name: 'Retro Pixel' },
-                            { id: 'bottts', name: 'Cyber Bot' },
-                            { id: 'human', name: 'Minimalist' },
-                            { id: 'identicon', name: 'Abstract' },
-                            { id: 'croodles', name: 'Hand-drawn' }
-                          ].map(style => (
-                            <button
-                              key={style.id}
-                              onClick={() => setAvatarForm({ ...avatarForm, style: style.id })}
-                              className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${avatarForm.style === style.id ? 'bg-primary text-dark-surface border-primary' : 'bg-white/5 text-gray-500 border-white/5 hover:border-white/20'}`}
-                            >
-                               {style.name}
-                            </button>
-                          ))}
-                       </div>
-                    </div>
+             <div className="card-subtle p-10 space-y-10">
+                <div className="space-y-6">
+                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-500">Avatar Style</h4>
+                   <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { id: 'avataaars', name: 'Avataaars' },
+                        { id: 'pixel-art', name: 'Pixel Art' },
+                        { id: 'bottts', name: 'Bottts' },
+                        { id: 'human', name: 'Humans' },
+                        { id: 'identicon', name: 'Identicon' },
+                        { id: 'croodles', name: 'Croodles' }
+                      ].map(style => (
+                        <button
+                          key={style.id}
+                          onClick={() => setAvatarForm({ ...avatarForm, style: style.id })}
+                          className={`px-4 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${avatarForm.style === style.id ? 'bg-blue-500 text-white border-blue-500 shadow-md' : 'bg-white/5 text-gray-500 border-white/5 hover:border-white/10'}`}
+                        >
+                           {style.name}
+                        </button>
+                      ))}
+                   </div>
+                </div>
 
-                    <div className="space-y-4">
-                       <h4 className="text-sm font-black uppercase tracking-widest text-primary">2. Personalize Seed</h4>
-                       <div className="relative">
-                          <input 
-                            type="text"
-                            value={avatarForm.seed}
-                            onChange={(e) => setAvatarForm({ ...avatarForm, seed: e.target.value })}
-                            placeholder="Type anything to randomize..."
-                            className="w-full px-4 py-4 pr-16 bg-white/5 border border-white/10 rounded-2xl focus:border-primary transition-all text-sm font-mono"
-                          />
-                          <button 
-                            onClick={() => setAvatarForm({ ...avatarForm, seed: Math.random().toString(36).substring(7) })}
-                            className="absolute right-2 top-2 p-3 rounded-xl bg-white/10 hover:bg-primary hover:text-dark-surface transition-all"
-                          >
-                             <History className="w-4 h-4" />
-                          </button>
-                       </div>
-                       <p className="text-[10px] text-gray-500 uppercase italic">Every character is unique. Share your seed with friends!</p>
-                    </div>
-
-                    <button 
-                      onClick={() => {
-                        updateAvatar(avatarForm);
-                        setSaveStatus(true);
-                        setTimeout(() => setSaveStatus(false), 2000);
-                      }}
-                      className="w-full py-4 rounded-2xl bg-white text-dark-surface font-black uppercase tracking-[0.2em] hover:bg-primary transition-all flex items-center justify-center gap-3"
-                    >
-                       <Save className="w-5 h-5" />
-                       Apply Character
-                    </button>
-                 </div>
-              </div>
-            </motion.section>
-          ) : (
-            <motion.section 
-              key="settings"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="max-w-3xl"
-            >
-              <div className="glass rounded-3xl p-8 border border-white/5 space-y-8">
-                 <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-display font-black uppercase flex items-center gap-3">
-                       <SettingsIcon className="w-5 h-5 text-primary" />
-                       Custom Preferences
-                    </h3>
-                    {saveStatus && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-2 text-green-500 text-[10px] font-black uppercase italic"
+                <div className="space-y-6">
+                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-500">Identity Seed</h4>
+                   <div className="relative">
+                      <input 
+                        type="text"
+                        value={avatarForm.seed}
+                        onChange={(e) => setAvatarForm({ ...avatarForm, seed: e.target.value })}
+                        placeholder="Type anything..."
+                        className="w-full px-6 py-4 pr-16 bg-white/5 border border-white/10 rounded-xl focus:border-blue-500/50 transition-all text-sm font-medium text-white"
+                      />
+                      <button 
+                        onClick={() => setAvatarForm({ ...avatarForm, seed: Math.random().toString(36).substring(7) })}
+                        className="absolute right-2 top-2 bottom-2 px-3 rounded-lg bg-white/5 text-gray-400 hover:text-white transition-all"
                       >
-                        <CheckCircle2 className="w-4 h-4" />
-                        Settings Synced
-                      </motion.div>
-                    )}
-                 </div>
+                         <History className="w-4 h-4" />
+                      </button>
+                   </div>
+                </div>
 
-                 <div className="grid gap-6">
-                    {/* Compact Mode */}
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                       <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-xl bg-primary/10">
-                             <Layout className="w-5 h-5 text-primary" />
-                          </div>
-                          <div>
-                             <h4 className="font-bold text-sm text-white">Compact Mode</h4>
-                             <p className="text-[10px] text-gray-500 uppercase tracking-widest">Denser UI for power users</p>
-                          </div>
-                       </div>
-                       <button 
-                         onClick={() => setSettingsForm({ ...settingsForm, compactMode: !settingsForm.compactMode })}
-                         className={`w-12 h-6 rounded-full relative transition-colors ${settingsForm.compactMode ? 'bg-primary' : 'bg-gray-700'}`}
+                <button 
+                  onClick={() => {
+                    updateAvatar(avatarForm);
+                    setSaveStatus(true);
+                    setTimeout(() => setSaveStatus(false), 2000);
+                  }}
+                  className="w-full py-4 rounded-xl bg-blue-500 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
+                >
+                   Save Avatar
+                </button>
+             </div>
+          </motion.section>
+        ) : (
+          <motion.section 
+            key="settings"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="max-w-4xl space-y-8"
+          >
+            <div className="card-subtle p-10 space-y-12">
+               <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                     <h3 className="text-2xl font-bold text-white">Interface Settings</h3>
+                     <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Customize your platform experience</p>
+                  </div>
+                  {saveStatus && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 text-blue-500 text-xs font-bold uppercase tracking-widest"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      Saved
+                    </motion.div>
+                  )}
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Compact Mode */}
+                  <div className="p-6 rounded-2xl bg-white/2 border border-white/5 flex items-center justify-between hover:bg-white/5 transition-all">
+                     <div className="space-y-1">
+                        <h4 className="font-bold text-sm text-white">High Density Layout</h4>
+                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Optimized for power users</p>
+                     </div>
+                     <button 
+                       onClick={() => setSettingsForm({ ...settingsForm, compactMode: !settingsForm.compactMode })}
+                       className={`w-12 h-6 rounded-full relative transition-all ${settingsForm.compactMode ? 'bg-blue-500' : 'bg-white/10'}`}
+                     >
+                        <motion.div 
+                          animate={{ x: settingsForm.compactMode ? 26 : 2 }}
+                          className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-md" 
+                        />
+                     </button>
+                  </div>
+
+                  {/* Private Profile */}
+                  <div className="p-6 rounded-2xl bg-white/2 border border-white/5 flex items-center justify-between hover:bg-white/5 transition-all">
+                     <div className="space-y-1">
+                        <h4 className="font-bold text-sm text-white">Privacy Mode</h4>
+                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Restrict profile visibility</p>
+                     </div>
+                     <button 
+                       onClick={() => setSettingsForm({ ...settingsForm, privateProfile: !settingsForm.privateProfile })}
+                       className={`w-12 h-6 rounded-full relative transition-all ${settingsForm.privateProfile ? 'bg-blue-500' : 'bg-white/10'}`}
+                     >
+                        <motion.div 
+                          animate={{ x: settingsForm.privateProfile ? 26 : 2 }}
+                          className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-md" 
+                        />
+                     </button>
+                  </div>
+               </div>
+
+               {/* Tab Cloaking */}
+               <div className="space-y-6 pt-10 border-t border-white/5">
+                  <div className="space-y-1">
+                     <h4 className="text-xl font-bold text-white">Tab Disguise</h4>
+                     <p className="text-[10px] text-gray-600 uppercase font-bold tracking-widest">Stealth Browser Integration</p>
+                  </div>
+
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                     {CLOAK_OPTIONS.map(option => (
+                       <button
+                         key={option.name}
+                         onClick={() => handleCloakChange(option.name)}
+                         className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${settingsForm.cloak === option.name ? 'bg-blue-500/10 border-blue-500 shadow-lg' : 'bg-white/2 border-white/5 text-gray-500 hover:border-white/10'}`}
                        >
-                          <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-all ${settingsForm.compactMode ? 'translate-x-6' : ''}`} />
+                          <img src={option.icon} alt="" className="w-6 h-6 rounded" />
+                          <span className={`text-[9px] font-bold uppercase tracking-widest ${settingsForm.cloak === option.name ? 'text-white' : 'text-gray-600'}`}>{option.name}</span>
                        </button>
+                     ))}
+                  </div>
+
+                  <div className="card-subtle p-8 bg-blue-500/5 border border-blue-500/20 flex flex-col md:flex-row items-center gap-8">
+                     <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-500/20">
+                        <Globe className="w-6 h-6" />
+                     </div>
+                     <div className="flex-1 space-y-4 text-center md:text-left">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                           <div>
+                              <h4 className="font-bold text-lg text-white leading-none">About:Blank Stealth</h4>
+                              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-1">Full isolation environment</p>
+                           </div>
+                           <button 
+                             onClick={() => launchAboutBlank()}
+                             className="px-8 py-2.5 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-all font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20"
+                           >
+                              Activate
+                           </button>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
+               {/* Panic Button */}
+               <div className="card-subtle p-8 bg-black/40 border border-red-500/20 space-y-8">
+                    <div>
+                       <h4 className="text-xl font-bold text-red-500 leading-none">Emergency Configuration</h4>
+                       <p className="text-[10px] text-gray-700 uppercase font-bold tracking-widest mt-1">Panic button protocol</p>
                     </div>
-
-                    {/* Chat Preview */}
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                       <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-xl bg-blue-500/10">
-                             <MessageCircle className="w-5 h-5 text-blue-500" />
-                          </div>
-                          <div>
-                             <h4 className="font-bold text-sm text-white">Chat Previews</h4>
-                             <p className="text-[10px] text-gray-500 uppercase tracking-widest">Show live chat snippets in navbar</p>
-                          </div>
-                       </div>
-                       <button 
-                         onClick={() => setSettingsForm({ ...settingsForm, showChatPreview: !settingsForm.showChatPreview })}
-                         className={`w-12 h-6 rounded-full relative transition-colors ${settingsForm.showChatPreview ? 'bg-primary' : 'bg-gray-700'}`}
-                       >
-                          <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-all ${settingsForm.showChatPreview ? 'translate-x-6' : ''}`} />
-                       </button>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase text-gray-700 tracking-widest">Trigger Key</label>
+                            <input 
+                                type="text"
+                                maxLength={1}
+                                value={settingsForm.panicKey}
+                                onChange={(e) => setSettingsForm({ ...settingsForm, panicKey: e.target.value })}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-red-500 transition-all font-mono"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase text-gray-700 tracking-widest">Target Redirect URL</label>
+                            <input 
+                                type="text"
+                                value={settingsForm.panicUrl}
+                                onChange={(e) => setSettingsForm({ ...settingsForm, panicUrl: e.target.value })}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-red-500 transition-all"
+                            />
+                        </div>
                     </div>
+                    
+                    <button 
+                        onClick={handlePanicSave}
+                        className="w-full py-4 rounded-xl border border-red-500/30 text-red-500 font-bold text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg active:scale-95"
+                    >
+                        Commit Emergency Protocol
+                    </button>
+               </div>
 
-                    {/* Custom Theme */}
-                    <div className="space-y-4">
-                       <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-xl bg-orange-500/10">
-                             <Palette className="w-5 h-5 text-orange-500" />
-                          </div>
-                          <div>
-                             <h4 className="font-bold text-sm text-white">System Theme</h4>
-                             <p className="text-[10px] text-gray-500 uppercase tracking-widest">Personalize your portal aesthetic</p>
-                          </div>
-                       </div>
-                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                          {['default', 'cyber', 'retro', 'minimal'].map(theme => (
-                            <button
-                              key={theme}
-                              onClick={() => setSettingsForm({ ...settingsForm, customTheme: theme })}
-                              className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${settingsForm.customTheme === theme ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'}`}
-                            >
-                               {theme}
-                            </button>
-                          ))}
-                       </div>
-                    </div>
-
-                    {/* Sounds Toggle */}
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                       <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-xl bg-emerald-500/10">
-                             <Zap className="w-5 h-5 text-emerald-500" />
-                          </div>
-                          <div>
-                             <h4 className="font-bold text-sm text-white">Audio Feedback</h4>
-                             <p className="text-[10px] text-gray-500 uppercase tracking-widest">Enable system sound effects</p>
-                          </div>
-                       </div>
-                       <button 
-                         onClick={() => setSettingsForm({ ...settingsForm, soundsEnabled: !settingsForm.soundsEnabled })}
-                         className={`w-12 h-6 rounded-full relative transition-colors ${settingsForm.soundsEnabled ? 'bg-primary' : 'bg-gray-700'}`}
-                       >
-                          <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-all ${settingsForm.soundsEnabled ? 'translate-x-6' : ''}`} />
-                       </button>
-                    </div>
-
-                    {/* Private Profile */}
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                       <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-xl bg-purple-500/10">
-                             <Shield className="w-5 h-5 text-purple-500" />
-                          </div>
-                          <div>
-                             <h4 className="font-bold text-sm text-white">Privacy Lock</h4>
-                             <p className="text-[10px] text-gray-500 uppercase tracking-widest">Hide your inventory from search</p>
-                          </div>
-                       </div>
-                       <button 
-                         onClick={() => setSettingsForm({ ...settingsForm, privateProfile: !settingsForm.privateProfile })}
-                         className={`w-12 h-6 rounded-full relative transition-colors ${settingsForm.privateProfile ? 'bg-primary' : 'bg-gray-700'}`}
-                       >
-                          <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-all ${settingsForm.privateProfile ? 'translate-x-6' : ''}`} />
-                       </button>
-                    </div>
-
-                    {/* Tab Cloaking */}
-                    <div className="space-y-6 pt-4 border-t border-white/5">
-                       <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                             <div className="p-3 rounded-xl bg-rose-500/10">
-                                <Globe className="w-5 h-5 text-rose-500" />
-                             </div>
-                             <div>
-                                <h4 className="font-bold text-sm text-white">Tab Masking</h4>
-                                <p className="text-[10px] text-gray-500 uppercase tracking-widest">Disguise this tab as another site</p>
-                             </div>
-                          </div>
-                       </div>
-
-                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {CLOAK_OPTIONS.map(option => (
-                            <button
-                              key={option.name}
-                              onClick={() => handleCloakChange(option.name)}
-                              className={`flex flex-col items-center gap-3 p-4 rounded-2xl border transition-all ${settingsForm.cloak === option.name ? 'bg-primary/20 border-primary' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'}`}
-                            >
-                               <img src={option.icon} alt="" className="w-6 h-6 rounded-sm" />
-                               <span className="text-[9px] font-black uppercase tracking-widest text-center">{option.name}</span>
-                            </button>
-                          ))}
-                       </div>
-
-                       <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-4">
-                          <div className="flex items-center justify-between">
-                             <div>
-                                <h4 className="font-bold text-sm text-white">Advanced: About:Blank Cloak</h4>
-                                <p className="text-[10px] text-gray-500 uppercase tracking-widest">Launches the portal in a stealth tab</p>
-                             </div>
-                             <button 
-                               onClick={() => launchAboutBlank()}
-                               className="px-4 py-2 rounded-xl bg-white text-dark-surface hover:bg-primary transition-all font-black text-[10px] uppercase tracking-widest flex items-center gap-2"
-                             >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                Launch Now
-                             </button>
-                          </div>
-                          <p className="text-[9px] text-gray-500 leading-relaxed font-medium">
-                             This method opens an <code className="text-white">about:blank</code> page and embeds the app inside.
-                             It hides your browsing history and is harder for most filters to detect. 
-                             The current tab will automatically redirect to Google.
-                          </p>
-                       </div>
-
-                       <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-6">
-                            <div>
-                               <h4 className="font-bold text-sm text-white">Panic Button</h4>
-                               <p className="text-[10px] text-gray-500 uppercase tracking-widest italic">Instant escape mechanism</p>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Activation Key</label>
-                                    <input 
-                                        type="text"
-                                        maxLength={1}
-                                        value={settingsForm.panicKey}
-                                        onChange={(e) => setSettingsForm({ ...settingsForm, panicKey: e.target.value })}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-red-500 transition-all font-mono"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Redirect URL</label>
-                                    <input 
-                                        type="text"
-                                        value={settingsForm.panicUrl}
-                                        onChange={(e) => setSettingsForm({ ...settingsForm, panicUrl: e.target.value })}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-red-500 transition-all font-mono"
-                                    />
-                                </div>
-                            </div>
-                            
-                            <button 
-                                onClick={handlePanicSave}
-                                className="w-full py-3 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 font-black text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg"
-                            >
-                                Update Emergency Protocol
-                            </button>
-                       </div>
-                    </div>
-                 </div>
-
-                 <button 
-                   onClick={handleSaveSettings}
-                   className="w-full py-4 rounded-2xl bg-primary text-dark-surface font-black uppercase tracking-[0.2em] hover:bg-white transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(250,204,21,0.2)]"
-                 >
-                    <Save className="w-5 h-5" />
-                    Save & Sync Settings
-                 </button>
-              </div>
-            </motion.section>
-          )}
-        </AnimatePresence>
-      </div>
-    </main>
+               <button 
+                 onClick={handleSaveSettings}
+                 className="w-full py-5 rounded-2xl bg-blue-500 text-white font-bold text-sm uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+               >
+                  Sync System Settings
+               </button>
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

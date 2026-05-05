@@ -1,126 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;600;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  --font-display: "Outfit", sans-serif;
   
-  --color-primary: #facc15;
-  --color-accent: #f97316;
-  --color-dark-surface: #050505;
-  --color-dark-card: #0f0f0f;
-}
-
-[data-theme='cyber'] {
-  --color-primary: #00ff41;
-  --color-accent: #ff00ff;
-  --color-dark-surface: #0a0a0f;
-  --color-dark-card: #12121a;
-}
-
-[data-theme='retro'] {
-  --color-primary: #ff9d00;
-  --color-accent: #ff00ff;
-  --color-dark-surface: #1e1e1e;
-  --color-dark-card: #2a2a2a;
+  --color-primary: #3b82f6;
+  --color-accent: #6366f1;
+  --color-dark-surface: #000000;
+  --color-dark-card: #080808;
 }
 
 @layer base {
   body {
     background-color: var(--color-dark-surface);
-    color: white;
+    color: #e5e7eb;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
-    overflow: hidden;
+    letter-spacing: -0.01em;
   }
 }
 
 @utility glass {
-  background-color: rgba(17, 17, 17, 0.8);
-  backdrop-filter: blur(48px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: rgba(5, 5, 5, 0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
-@utility os-window {
-  background-color: rgba(17, 17, 17, 0.8);
-  backdrop-filter: blur(48px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
-}
-
-@utility os-btn {
-  padding-left: 1rem;
-  padding-right: 1rem;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+@utility card-subtle {
+  background-color: #080808;
+  border: 1px solid rgba(255, 255, 255, 0.03);
   border-radius: 0.75rem;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition-property: all;
-  transition-duration: 300ms;
-  font-weight: 700;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #9ca3af;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: white;
-  }
-}
-
-@utility os-btn-primary {
-  background-color: var(--color-primary);
-  color: black;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 20px rgba(250, 204, 21, 0.2);
-
-  &:hover {
-    background-color: white;
-    box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
-  }
-}
-
-@utility desktop-icon {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.5rem;
-  border-radius: 0.75rem;
-  width: 6rem;
-  cursor: pointer;
-  transition-property: all;
-  transition-duration: 300ms;
-
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-
-  & img, & .icon-box {
-    width: 3rem;
-    height: 3rem;
-    border-radius: 0.75rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    margin-bottom: 0.25rem;
-  }
-
-  & span {
-    font-size: 0.625rem;
-    font-weight: 700;
-    color: white;
-    text-align: center;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    border-color: rgba(255, 255, 255, 0.08);
+    background-color: #0c0c0c;
   }
 }
 

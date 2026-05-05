@@ -88,99 +88,81 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass h-16 px-4 md:px-8 flex items-center justify-between">
-      {/* iOS Style Chat Notification */}
+      {/* Notifications */}
       <AnimatePresence>
         {latestMessage && (
           <motion.div 
-            initial={{ opacity: 0, y: -100, x: '-50%', scale: 0.8 }}
-            animate={{ opacity: 1, y: 20, x: '-50%', scale: 1 }}
-            exit={{ opacity: 0, y: -100, x: '-50%', scale: 0.8 }}
-            className="fixed top-0 left-1/2 z-[100] w-[90%] max-w-[400px] pointer-events-none"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-20 left-1/2 -translate-x-1/2 w-full max-w-sm px-4"
           >
-            <div className="bg-dark-surface rounded-[24px] px-4 py-3 border border-white/20 shadow-[0_20px_40px_rgba(0,0,0,0.6)] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-linear-to-br from-primary to-primary/40 p-2 flex items-center justify-center shadow-lg shadow-primary/20">
-                <MessageSquare className="w-full h-full text-dark-surface fill-current" />
-              </div>
+            <div className="bg-blue-500 text-white rounded-xl px-4 py-3 shadow-lg flex items-center gap-3">
+              <MessageSquare className="w-4 h-4 shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-primary italic">Global Transmission</span>
-                  <span className="text-[8px] font-bold text-white/30 uppercase tracking-tighter">Just Now</span>
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xs font-black text-white whitespace-nowrap">{latestMessage.sender}</span>
-                  <p className="text-xs text-white/70 truncate font-medium">{latestMessage.text}</p>
-                </div>
+                <span className="text-[10px] font-bold block uppercase tracking-wider mb-0.5">New Message</span>
+                <p className="text-xs truncate opacity-90"><span className="font-bold">{latestMessage.sender}:</span> {latestMessage.text}</p>
               </div>
-              <div className="w-1 h-8 rounded-full bg-white/5" />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <Link to="/" onClick={() => handleNavClick('/')} className="flex items-center gap-2 group">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-all flex items-center justify-center p-1.5 border border-primary/20">
-          <img 
-            src={MASCOT_URL} 
-            alt="YEEBS Logo"
-            className="w-full h-full object-contain rounded-sm brightness-110 group-hover:scale-110 transition-transform"
-          />
+      <Link to="/" onClick={() => handleNavClick('/')} className="flex items-center gap-3 group">
+        <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center transition-transform group-hover:scale-105 active:scale-95">
+          <Zap className="w-4 h-4 text-white fill-current" />
         </div>
-        <span className="font-display font-bold text-xl tracking-tight uppercase relative">
-          YEEBS<span className="text-primary">GAMES</span>
-          <span className="absolute -top-3 -right-2 bg-red-600 text-[8px] px-1.5 py-0.5 rounded text-white font-black italic tracking-tighter rotate-12 shadow-md border border-red-400/30">
-            REVAMPED
-          </span>
+        <span className="font-bold text-sm tracking-tight text-white uppercase tracking-widest">
+          Yeebs<span className="text-blue-500 opacity-80">Games</span>
         </span>
       </Link>
 
-      <div className="hidden md:flex items-center gap-8 relative group">
+      <div className="hidden md:flex items-center gap-6">
         {[
-          { name: 'Home', icon: Home, path: '/', sort: 'newest' },
-          { name: 'Movies', icon: Film, path: '/movies' },
-          { name: 'Community', icon: Users, path: '/community' },
-          { name: 'Chat', icon: MessageSquare, path: '/chat' },
+          { name: 'Index', icon: Home, path: '/', sort: 'newest' },
+          { name: 'Cinema', icon: Film, path: '/movies' },
+          { name: 'Comms', icon: MessageSquare, path: '/chat' },
           { name: 'Trending', icon: TrendingUp, path: '/', sort: 'trending' },
-          { name: 'Top Rated', icon: Trophy, path: '/', sort: 'top' },
+          ...(user?.isAdmin ? [{ name: 'Admin', icon: Shield, path: '/admin' }] : []),
         ].map((item) => (
           <button
             key={item.name}
             onClick={() => {
-              if (item.path === '/chat' || item.path === '/community' || item.path === '/movies') {
+              if (item.path === '/chat' || item.path === '/movies' || item.path === '/admin') {
                 navigate(item.path);
               } else {
                 handleNavClick(item.path, item.sort);
               }
             }}
-            className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary relative
-              ${location.pathname === item.path ? 'text-primary' : 'text-gray-400'}`}
+            className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] transition-all
+              ${location.pathname === item.path ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
           >
-            <item.icon className="w-4 h-4" />
+            <item.icon className="w-3.5 h-3.5" />
             {item.name}
           </button>
         ))}
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative group hidden sm:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-primary transition-colors" />
+      <div className="flex items-center gap-3">
+        <div className="relative group hidden lg:block">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600 group-focus-within:text-blue-500 transition-colors" />
           <input
             type="text"
-            placeholder="Search games..."
+            placeholder="System Search..."
             value={searchQuery}
             onChange={handleSearchChange}
-            className="pl-10 pr-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm focus:outline-hidden focus:border-primary focus:ring-1 focus:ring-primary transition-all w-48 md:w-64"
+            className="pl-9 pr-4 py-1.5 rounded-full bg-white/[0.03] border border-white/5 text-[11px] focus:outline-hidden focus:border-blue-500/50 focus:bg-white/[0.05] transition-all w-48 transition-all"
           />
         </div>
 
-        {/* Cloak Selector */}
         <div className="relative">
           <button 
             onClick={() => setIsCloakOpen(!isCloakOpen)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/10 transition-all uppercase tracking-widest whitespace-nowrap"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/5 text-[9px] font-bold text-gray-500 hover:text-white transition-all uppercase tracking-widest"
           >
-            <Monitor className="w-3.5 h-3.5 text-primary" />
-            <span className="hidden lg:inline">{currentCloak.split(' ')[0]}</span>
-            <ChevronDown className={`w-3 h-3 transition-transform ${isCloakOpen ? 'rotate-180' : ''}`} />
+            <Monitor className="w-3 h-3" />
+            <span className="hidden sm:inline">{currentCloak.split(' ')[0]}</span>
+            <ChevronDown className={`w-2.5 h-2.5 transition-transform ${isCloakOpen ? 'rotate-180' : ''}`} />
           </button>
 
           <AnimatePresence>
@@ -191,19 +173,16 @@ export default function Navbar() {
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute right-0 mt-2 w-56 glass border border-white/10 rounded-2xl p-2 z-50 shadow-2xl"
+                  className="absolute right-0 mt-2 w-56 bg-[#111] border border-white/10 rounded-xl p-1 z-50 shadow-2xl"
                 >
-                  <div className="px-3 py-2 border-b border-white/5 mb-1">
-                    <p className="text-[9px] font-black uppercase text-gray-500 tracking-[0.2em]">Cloaking Engine</p>
-                  </div>
                   {CLOAK_OPTIONS.map((option) => (
                     <button
                       key={option.name}
                       onClick={() => handleCloakChange(option.name)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all hover:bg-white/10 text-left
-                        ${currentCloak === option.name ? 'text-primary' : 'text-gray-400'}`}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all hover:bg-white/5 text-left
+                        ${currentCloak === option.name ? 'text-blue-500 bg-blue-500/5' : 'text-gray-400'}`}
                     >
-                      <img src={option.icon} alt="" className="w-4 h-4 object-contain rounded-xs" />
+                      <img src={option.icon} alt="" className="w-4 h-4 object-contain rounded-sm" />
                       {option.name}
                     </button>
                   ))}
@@ -214,18 +193,16 @@ export default function Navbar() {
         </div>
 
         {user ? (
-          <div className="flex items-center gap-2 pl-4 border-l border-white/10">
+          <div className="flex items-center gap-4 pl-4 border-l border-white/10">
             <Link 
               to="/profile" 
-              className="w-9 h-9 rounded-full overflow-hidden border border-white/10 hover:border-primary transition-all group/profile"
-              title="Profile"
+              className="w-8 h-8 rounded-full overflow-hidden border border-white/10 hover:border-blue-500 transition-all"
             >
-              <img src={user.photoURL || undefined} alt={user.username || 'User'} className="w-full h-full object-cover group-hover/profile:scale-110 transition-transform" />
+              <img src={user.photoURL || undefined} alt="" className="w-full h-full object-cover" />
             </Link>
             <button 
               onClick={handleLogout}
-              className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-              title="Logout"
+              className="p-2 text-gray-500 hover:text-red-500 transition-colors"
             >
               <LogOut className="w-5 h-5" />
             </button>
@@ -233,9 +210,8 @@ export default function Navbar() {
         ) : (
           <button 
             onClick={() => setShowLoginModal(true)}
-            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary text-dark-surface font-bold text-xs uppercase tracking-widest hover:bg-white transition-all shadow-[0_0_20px_rgba(250,204,21,0.2)]"
+            className="px-4 py-2 rounded-lg bg-blue-500 text-white font-bold text-xs uppercase tracking-widest hover:bg-white hover:text-blue-500 transition-all shadow-lg shadow-blue-500/20"
           >
-            <LogIn className="w-4 h-4" />
             Login
           </button>
         )}
@@ -243,7 +219,7 @@ export default function Navbar() {
 
       <AnimatePresence>
         {showLoginModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -255,7 +231,7 @@ export default function Navbar() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-md glass p-8 rounded-3xl border border-white/10"
+              className="relative w-full max-w-md bg-[#111] p-8 rounded-2xl border border-white/10 shadow-2xl"
             >
               <button 
                 onClick={() => setShowLoginModal(false)}
@@ -265,52 +241,49 @@ export default function Navbar() {
               </button>
 
               <div className="mb-8 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 border border-primary/20">
-                  <UserIcon className="w-8 h-8 text-primary" />
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+                  <UserIcon className="w-6 h-6 text-blue-500" />
                 </div>
-                <h2 className="text-2xl font-display font-black uppercase tracking-tight">Access <span className="text-primary">Portal</span></h2>
-                <p className="text-gray-400 text-sm mt-1">Claim your username to save favorites</p>
+                <h2 className="text-xl font-bold">Access Portal</h2>
+                <p className="text-gray-500 text-sm mt-1">Authenticate to synchronize data</p>
               </div>
 
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase text-gray-500 px-1 tracking-widest">Username</label>
+                  <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest block">Username</label>
                   <input 
                     autoFocus
                     required
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary focus:outline-hidden transition-all text-sm"
-                    placeholder="ENTER NAME..."
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500 focus:outline-hidden transition-all text-sm"
+                    placeholder="Enter name..."
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase text-gray-500 px-1 tracking-widest flex items-center gap-2">
-                    {username.toLowerCase() === 'yeebs' && <Shield className="w-3 h-3 text-primary" />} 
-                    Password
-                  </label>
+                  <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest block">Password</label>
                   <input 
                     required
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-xl bg-white/5 border focus:outline-hidden transition-all text-sm ${username.toLowerCase() === 'yeebs' ? 'border-primary/50 focus:border-primary' : 'border-white/10 focus:border-primary'}`}
-                    placeholder="ENTER KEY..."
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500 focus:outline-hidden transition-all text-sm"
+                    placeholder="Enter key..."
                   />
                 </div>
 
                 <button 
                   disabled={isSubmitting}
-                  className="w-full py-4 rounded-xl bg-primary text-dark-surface font-display font-black text-sm uppercase tracking-widest hover:bg-white transition-all disabled:opacity-50 mt-4 flex items-center justify-center gap-2"
+                  className="w-full py-4 rounded-xl bg-blue-500 text-white font-bold text-sm uppercase tracking-widest hover:bg-white hover:text-blue-500 transition-all disabled:opacity-50 mt-4 flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
-                    <div className="w-4 h-4 border-2 border-dark-surface border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <Zap className="w-4 h-4 fill-current" />
-                      SYNC SESSION
+                      <LogIn className="w-4 h-4" />
+                      Login
                     </>
                   )}
                 </button>

@@ -4,23 +4,85 @@ import { Shield, Plus, Tag, FileCode, Type, Image as ImageIcon, CheckCircle2, Al
 import { addGame, deleteGame, updateGame } from '../services/gameService';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGames } from '../context/GameContext';
-import { db, collection, getDocs, doc, updateDoc, deleteDoc, query, limit } from '../lib/firebase';
+import { db, collection, getDocs, doc, updateDoc, deleteDoc, query, limit, setDoc } from '../lib/firebase';
 
 export default function Admin() {
   const { games, refreshGames, user, authLoading, setSearchQuery, setSortBy } = useGames();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'games' | 'users'>('games');
+  const [activeTab, setActiveTab] = useState<'games' | 'users' | 'cinema'>('games');
   const [users, setUsers] = useState<any[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [movies, setMovies] = useState<any[]>([]);
+  const [moviesLoading, setMoviesLoading] = useState(false);
+  const [movieFormData, setMovieFormData] = useState({
+    title: '',
+    description: '',
+    url: '',
+    thumbnail: '',
+    type: 'movie' as 'movie' | 'tv' | 'outside'
+  });
 
   useEffect(() => {
     if (activeTab === 'users' && user?.isAdmin) {
       fetchUsers();
     }
+    if (activeTab === 'cinema' && user?.isAdmin) {
+      fetchMovies();
+    }
   }, [activeTab, user]);
+
+  const fetchMovies = async () => {
+    setMoviesLoading(true);
+    try {
+      const q = query(collection(db, 'custom_movies'), limit(50));
+      const querySnapshot = await getDocs(q);
+      const moviesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMovies(moviesList);
+    } catch (error) {
+      console.error("Error fetching movies:", error);
+    }
+    setMoviesLoading(false);
+  };
+
+  const handleMovieSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.isAdmin) return;
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      const movieId = movieFormData.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const movieRef = doc(db, 'custom_movies', movieId);
+      
+      await setDoc(movieRef, {
+        ...movieFormData,
+        id: movieId,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      
+      setStatus({ type: 'success', message: 'Nexus entry established.' });
+      setMovieFormData({ title: '', description: '', url: '', thumbnail: '', type: 'movie' });
+      fetchMovies();
+    } catch (error) {
+       console.error(error);
+       setStatus({ type: 'error', message: 'Link protocol failed.' });
+    }
+    setLoading(false);
+  };
+
+  const handleDeleteMovie = async (id: string) => {
+    if (!confirm('Permanent deletion requested. Continue?')) return;
+    try {
+      await deleteDoc(doc(db, 'custom_movies', id));
+      setMovies(prev => prev.filter(m => m.id !== id));
+      setStatus({ type: 'success', message: 'Movie removed.' });
+    } catch (error) {
+       setStatus({ type: 'error', message: 'Deletion failed.' });
+    }
+  };
 
   const fetchUsers = async () => {
     setUsersLoading(true);
@@ -181,40 +243,32 @@ export default function Admin() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen pt-32 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!user?.isAdmin) {
     return (
-      <div className="min-h-screen pt-32 px-4 flex items-center justify-center">
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center max-w-md mx-auto space-y-6">
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md p-8 glass rounded-3xl text-center"
+          className="card-subtle p-12 w-full space-y-6"
         >
-          <div className="flex flex-col items-center mb-8">
-            <div className="p-4 rounded-2xl bg-red-500/10 mb-4 border border-red-500/20">
-              <Shield className="w-8 h-8 text-red-500" />
-            </div>
-            <h1 className="text-2xl font-display font-bold">Access Denied</h1>
-            <p className="text-gray-400 text-sm mt-4 leading-relaxed">
-              This portal is reserved for authorized supervisors. 
-              {user ? (
-                <span> You are currently logged in as <span className="text-white font-bold">{user.username}</span>.</span>
-              ) : (
-                <span> Please login through the system portal.</span>
-              )}
-            </p>
+          <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto text-red-500">
+             <Shield className="w-8 h-8" />
           </div>
-          
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-white">Access Denied</h1>
+            <p className="text-gray-500 text-sm">This area is reserved for administrators only.</p>
+          </div>
           <Link 
             to="/" 
-            className="inline-flex w-full py-4 rounded-xl bg-primary text-dark-surface font-display font-black hover:bg-white transition-all shadow-[0_0_20px_rgba(250,204,21,0.2)] justify-center"
+            className="block w-full py-3 rounded-xl bg-white text-black font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
           >
-            RETURN TO BASE
+            Return Home
           </Link>
         </motion.div>
       </div>
@@ -222,313 +276,317 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-full px-4 md:px-8 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
-          <div>
-            <h1 className="text-3xl font-display font-black tracking-tighter uppercase italic">
-              System <span className="text-primary italic">Admin</span>
-            </h1>
-            <p className="text-[10px] uppercase font-black tracking-widest text-gray-500">Privileged Session • {editingId ? 'Edit Mode' : 'Expansion Mode'}</p>
-          </div>
-          <div className="flex items-center gap-4">
-            {user && (
-              <div className="hidden md:flex flex-col items-end">
-                <span className="text-xs font-bold text-white tracking-tighter uppercase italic">@{user.username}</span>
-                <span className="text-[8px] uppercase font-black tracking-widest text-primary italic">Clearance Level: OMEGA</span>
-              </div>
-            )}
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${editingId ? 'bg-orange-500/10 border-orange-500/20 text-orange-500' : 'bg-primary/10 border-primary/20 text-primary'}`}>
-              {editingId ? <Edit2 className="w-5 h-5 shadow-[0_0_10px_rgba(249,115,22,0.3)]" /> : <Shield className="w-5 h-5 shadow-[0_0_10px_rgba(250,204,21,0.3)]" />}
-            </div>
+    <div className="max-w-4xl mx-auto space-y-12 py-12 px-4 md:px-0 font-sans">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-white/5">
+        <div>
+          <h1 className="text-5xl font-bold tracking-tighter text-white mb-2">Admin</h1>
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">{editingId ? 'Updating Resource' : 'System Oversight'}</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest underline decoration-blue-500/30 underline-offset-4">@{user.username}</span>
+            <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-1">Clearance: Level 4</span>
           </div>
         </div>
+      </header>
 
-        <div className="flex items-center gap-2 mb-8">
+      <nav className="flex gap-1.5 p-1.5 bg-white/[0.02] border border-white/5 rounded-xl w-fit">
+        {[
+          { id: 'games', label: 'Index', icon: Gamepad2 },
+          { id: 'cinema', label: 'Cinema', icon: Play },
+          { id: 'users', label: 'Network', icon: Users },
+        ].map(tab => (
           <button
-            onClick={() => setActiveTab('games')}
-            className={`os-btn flex-1 py-3 justify-center ${activeTab === 'games' ? 'os-btn-primary' : ''}`}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-6 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
+              activeTab === tab.id 
+                ? 'bg-white text-black' 
+                : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+            }`}
           >
-            <Gamepad2 className="w-4 h-4" />
-            Resources
+            <tab.icon className="w-3.5 h-3.5" />
+            {tab.label}
           </button>
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`os-btn flex-1 py-3 justify-center ${activeTab === 'users' ? 'os-btn-primary' : ''}`}
-          >
-            <Users className="w-4 h-4" />
-            Entities
-          </button>
-        </div>
+        ))}
+      </nav>
 
-        {activeTab === 'games' ? (
-          <>
-            <form onSubmit={handleSubmit} className="space-y-6 glass p-8 rounded-3xl border border-white/5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-xs font-bold uppercase text-gray-400 px-1">
-                <Type className="w-3 h-3" /> Game Name
-              </label>
-              <input
-                required
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-hidden focus:border-primary transition-all"
-                placeholder="e.g. Pixel Racer"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-xs font-bold uppercase text-gray-400 px-1">
-                <Tag className="w-3 h-3" /> Category
-              </label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-hidden focus:border-primary transition-all appearance-none"
-              >
-                {['Action', 'Sports', 'Puzzle', 'IO', 'Racing', 'Horror', 'Skill', 'Idle', 'Adventure'].map(c => (
-                  <option key={c} value={c} className="bg-dark-card">{c}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-xs font-bold uppercase text-gray-400 px-1">
-              <ImageIcon className="w-3 h-3" /> Thumbnail URL
-            </label>
-            <input
-              required
-              type="url"
-              value={formData.thumbnail}
-              onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-hidden focus:border-primary transition-all"
-              placeholder="https://images.unsplash.com/..."
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-xs font-bold uppercase text-gray-400 px-1">
-              <AlertCircle className="w-3 h-3" /> Description
-            </label>
-            <textarea
-              required
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-hidden focus:border-primary transition-all resize-none"
-              placeholder="Short catchy description of the game..."
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-xs font-bold uppercase text-gray-400 px-1">
-              <FileCode className="w-3 h-3" /> HTML Code Block (Optional if URL provided)
-            </label>
-            <textarea
-              rows={6}
-              value={formData.htmlBlock}
-              onChange={(e) => setFormData({ ...formData, htmlBlock: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-hidden focus:border-primary transition-all font-mono text-sm resize-none"
-              placeholder="Paste the game's <!DOCTYPE html> ... here"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-xs font-bold uppercase text-gray-400 px-1">
-              <Globe className="w-3 h-3" /> Redirect URL (Optional if HTML provided)
-            </label>
-            <input
-              type="text"
-              value={formData.url}
-              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-hidden focus:border-primary transition-all"
-              placeholder="/games/local-game.html"
-            />
-          </div>
-
-          <div className="flex gap-4">
-            {editingId && (
-              <button
-                type="button"
-                onClick={cancelEdit}
-                className="flex-1 py-4 rounded-xl bg-white/5 border border-white/10 text-white font-display font-black hover:bg-white/10 transition-all flex items-center justify-center gap-2"
-              >
-                <X className="w-5 h-5" />
-                CANCEL
-              </button>
-            )}
-            <button
-              disabled={loading}
-              className={`flex-[2] py-4 rounded-xl bg-primary text-dark-surface font-display font-black transition-all shadow-[0_0_20px_rgba(250,204,21,0.2)] flex items-center justify-center gap-2 
-                ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white '}`}
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-dark-surface border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  {editingId ? <CheckCircle2 className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                  {editingId ? 'UPDATE GAME' : 'PUBLISH GAME'}
-                </>
+      {activeTab === 'games' ? (
+        <div className="space-y-12">
+          {/* Game Management UI */}
+          <section className="card-subtle p-8 space-y-10">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                <Gamepad2 className="w-5 h-5 text-gray-500" />
+                {editingId ? 'Modify Transmission' : 'Register Entry'}
+              </h2>
+              {editingId && (
+                <button onClick={cancelEdit} className="text-xs font-bold text-gray-500 hover:text-white uppercase tracking-widest">Abort</button>
               )}
-            </button>
-          </div>
-        </form>
+            </div>
 
-        <div className="mt-12 space-y-4">
-          <h2 className="text-2xl font-display font-bold px-2 flex items-center gap-2">
-            <Globe className="w-5 h-5 text-primary" />
-            Manage Games ({games.length})
-          </h2>
-          <div className="grid gap-4">
-            {games.map((game, i) => (
-              <div key={`${game.id}-${i}`} className="glass p-4 rounded-2xl flex items-center justify-between group hover:border-primary/30 transition-all border border-white/5">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-12 rounded-lg overflow-hidden bg-dark-card border border-white/5 flex items-center justify-center">
-                    {game.thumbnail ? (
-                      <img src={game.thumbnail} alt={game.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                        <Play className="w-4 h-4 text-white/20" />
-                      </div>
-                    )}
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Descriptor</label>
+                  <input
+                    required
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-lg bg-white/[0.02] border border-white/5 focus:border-blue-500/30 outline-hidden transition-all text-xs text-white"
+                    placeholder="Title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Node Category</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-lg bg-[#050505] border border-white/5 focus:border-blue-500/30 outline-hidden transition-all text-xs text-white"
+                  >
+                    {['Action', 'Sports', 'Puzzle', 'IO', 'Racing', 'Horror', 'Skill', 'Idle', 'Adventure'].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Asset URL (Thumbnail)</label>
+                <input
+                  required
+                  type="url"
+                  value={formData.thumbnail}
+                  onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/[0.02] border border-white/5 focus:border-blue-500/30 outline-hidden transition-all text-xs text-white font-mono"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Metadata Description</label>
+                <textarea
+                  required
+                  rows={2}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/[0.02] border border-white/5 focus:border-blue-500/30 outline-hidden transition-all text-xs text-white resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Executable Block (Embed)</label>
+                  <textarea
+                    rows={3}
+                    value={formData.htmlBlock}
+                    onChange={(e) => setFormData({ ...formData, htmlBlock: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-lg bg-white/[0.02] border border-white/5 focus:border-blue-500/30 outline-hidden transition-all text-[10px] text-gray-400 font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Direct Source</label>
+                  <input
+                    type="text"
+                    value={formData.url}
+                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-lg bg-white/[0.02] border border-white/5 focus:border-blue-500/30 outline-hidden transition-all text-xs text-white"
+                  />
+                </div>
+              </div>
+
+              <button
+                disabled={loading}
+                className="w-full py-4 rounded-xl bg-white text-black font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-gray-200 transition-all flex items-center justify-center"
+              >
+                {loading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : (editingId ? 'Update System Resource' : 'Finalize Entry')}
+              </button>
+            </form>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-[10px] font-bold text-gray-700 uppercase tracking-widest px-1">Registry Index ({games.length})</h2>
+            <div className="grid gap-1">
+              {games.map((game, i) => (
+                <div key={`${game.id}-${i}`} className="p-3 rounded-lg bg-black border border-white/5 flex items-center justify-between group hover:border-white/10 transition-all font-sans">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-7 rounded overflow-hidden bg-white/5 shrink-0">
+                      <img src={game.thumbnail} alt="" className="w-full h-full object-cover grayscale opacity-20 group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-400 text-[11px] uppercase tracking-tight">{game.title}</h3>
+                      <p className="text-[8px] text-gray-700 uppercase font-bold tracking-[0.2em]">{game.id}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-white group-hover:text-primary transition-colors">{game.title}</h3>
-                    <p className="text-xs text-gray-400">{game.category}</p>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleEdit(game)} className="p-2 text-gray-700 hover:text-white transition-colors"><Edit2 className="w-3 h-3" /></button>
+                    <button onClick={() => handleDelete(game.id)} className="p-2 text-gray-700 hover:text-red-500 transition-colors"><Trash2 className="w-3 h-3" /></button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => handleEdit(game)}
-                    className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white transition-all"
-                    title="Edit Game"
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : activeTab === 'cinema' ? (
+        <div className="space-y-12">
+          <section className="card-subtle p-8 space-y-10">
+            <h2 className="text-xl font-bold text-white flex items-center gap-3">
+              <Play className="w-5 h-5 text-gray-500" />
+              Link Digital Asset
+            </h2>
+
+            <form onSubmit={handleMovieSubmit} className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Asset Name</label>
+                  <input
+                    required
+                    type="text"
+                    value={movieFormData.title}
+                    onChange={(e) => setMovieFormData({ ...movieFormData, title: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-lg bg-white/[0.02] border border-white/5 focus:border-blue-500/30 outline-hidden transition-all text-xs text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Format</label>
+                  <select
+                    value={movieFormData.type}
+                    onChange={(e) => setMovieFormData({ ...movieFormData, type: e.target.value as any })}
+                    className="w-full px-4 py-2.5 rounded-lg bg-[#050505] border border-white/5 focus:border-blue-500/30 outline-hidden transition-all text-xs text-white"
                   >
-                    <Edit2 className="w-4 h-4" />
+                    <option value="movie">Movie</option>
+                    <option value="tv">TV Series</option>
+                    <option value="outside">External Link</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Direct Link / Resource ID</label>
+                <input
+                  required
+                  type="text"
+                  value={movieFormData.url}
+                  onChange={(e) => setMovieFormData({ ...movieFormData, url: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/[0.02] border border-white/5 focus:border-blue-500/30 outline-hidden transition-all text-xs text-white font-mono"
+                  placeholder="TMDB ID or Direct URL"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Cover Source</label>
+                <input
+                  type="url"
+                  value={movieFormData.thumbnail}
+                  onChange={(e) => setMovieFormData({ ...movieFormData, thumbnail: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/[0.02] border border-white/5 text-xs text-white"
+                />
+              </div>
+
+              <button
+                disabled={loading}
+                className="w-full py-4 rounded-xl bg-white text-black font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-gray-200 transition-all"
+              >
+                {loading ? 'Processing...' : 'Secure Link'}
+              </button>
+            </form>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-[10px] font-bold text-gray-700 uppercase tracking-widest px-1">Cinema Registry ({movies.length})</h2>
+            <div className="grid gap-1">
+              {movies.map((m, i) => (
+                <div key={`${m.id}-${i}`} className="p-3 rounded-lg bg-black border border-white/5 flex items-center justify-between group hover:border-white/10 transition-all font-sans">
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 rounded-sm overflow-hidden bg-white/5 shrink-0">
+                      {m.thumbnail && <img src={m.thumbnail} alt="" className="w-full h-full object-cover grayscale opacity-20 group-hover:grayscale-0 group-hover:opacity-100 transition-all" />}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-400 text-[11px] uppercase tracking-tight">{m.title}</h3>
+                      <p className="text-[8px] text-gray-700 uppercase font-bold tracking-[0.2em]">{m.type}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => handleDeleteMovie(m.id)} className="p-2 text-gray-800 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                    <X className="w-3.5 h-3.5" />
                   </button>
-                  <Link 
-                    to={`/game/${game.id}`}
-                    className="p-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-dark-surface transition-all"
-                    title="View Game"
-                  >
-                    <Play className="w-4 h-4" />
-                  </Link>
-                  <button 
-                    onClick={() => handleDelete(game.id)}
-                    className="p-2.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"
-                    title="Delete Game"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : (
+        <section className="card-subtle p-8 space-y-10">
+          {/* User Management UI */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/5 pb-8">
+            <h2 className="text-xl font-bold text-white flex items-center gap-3">
+              <Users className="w-5 h-5 text-gray-500" />
+              Pulse Graph
+            </h2>
+            <div className="relative w-full md:max-w-xs">
+              <input
+                type="text"
+                value={userSearchQuery}
+                onChange={(e) => setUserSearchQuery(e.target.value)}
+                placeholder="Query User..."
+                className="w-full px-10 py-2.5 bg-white/[0.02] border border-white/5 rounded-lg focus:border-blue-500/30 outline-hidden transition-all text-xs text-white"
+              />
+              <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" />
+            </div>
+          </div>
+          
+          <div className="grid gap-1">
+            {usersLoading ? (
+              <div className="py-20 flex justify-center"><div className="w-4 h-4 border-2 border-white/10 border-t-white rounded-full animate-spin" /></div>
+            ) : filteredUsers.map((u, i) => (
+              <div key={`${u.id}-${i}`} className="p-3 rounded-lg bg-black border border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-white/10 transition-all font-sans">
+                <div className="flex items-center gap-4 w-full">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-white/5 shrink-0 border border-white/10 grayscale opacity-40">
+                    {u.photoURL && <img src={u.photoURL} alt="" className="w-full h-full object-cover" />}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                       <h3 className="font-bold text-gray-400 text-[11px] uppercase tracking-tight">@{u.id}</h3>
+                       <div className="flex gap-1">
+                         {u.isAdmin && <span className="bg-blue-500/5 text-blue-500 text-[6px] font-bold px-1 py-0.5 rounded uppercase border border-blue-500/10 tracking-widest">Root</span>}
+                         {u.isBanned && <span className="bg-red-500/5 text-red-500 text-[6px] font-bold px-1 py-0.5 rounded uppercase border border-red-500/10 tracking-widest">Banned</span>}
+                       </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-1 w-full md:w-auto">
+                  {u.id.toLowerCase() !== 'yeebs' && u.id.toLowerCase() !== user?.username.toLowerCase() && (
+                    <>
+                      <button
+                        onClick={() => handleToggleAdmin(u.id, !!u.isAdmin)}
+                        className={`px-3 py-1.5 rounded-md text-[8px] font-bold uppercase tracking-[0.2em] border transition-all ${
+                          u.isAdmin ? 'bg-white text-black border-white' : 'bg-white/[0.02] text-gray-800 border-white/10 hover:text-white'
+                        }`}
+                      >
+                        {u.isAdmin ? 'Revoke' : 'Admin'}
+                      </button>
+                      <button
+                        onClick={() => handleBanToggle(u.id, !!u.isBanned)}
+                        className={`px-3 py-1.5 rounded-md text-[8px] font-bold uppercase tracking-[0.2em] border transition-all ${
+                          u.isBanned ? 'bg-white text-black border-white' : 'bg-red-500/5 text-red-500 border-red-500/10 hover:bg-red-500 hover:text-white'
+                        }`}
+                      >
+                        {u.isBanned ? 'Unlock' : 'Ban'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(u.id)}
+                        className="p-2 text-gray-800 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      </>
-    ) : (
-          <div className="space-y-6">
-            <div className="glass p-8 rounded-3xl border border-white/5">
-              <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-                <h2 className="text-2xl font-display font-bold flex items-center gap-2">
-                  <Users className="w-6 h-6 text-primary" />
-                  User Management
-                </h2>
-                <div className="relative flex-1 max-w-sm">
-                  <input
-                    type="text"
-                    value={userSearchQuery}
-                    onChange={(e) => setUserSearchQuery(e.target.value)}
-                    placeholder="Search users..."
-                    className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl focus:border-primary transition-all text-sm"
-                  />
-                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                </div>
-              </div>
-              
-              {usersLoading ? (
-                <div className="flex justify-center py-12">
-                   <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {filteredUsers.map((u, i) => (
-                    <div key={`${u.id}-${i}`} className="glass p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between border border-white/5 hover:border-white/10 transition-all gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 bg-dark-card flex-shrink-0">
-                          {u.photoURL ? (
-                            <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full bg-white/10 flex items-center justify-center">
-                              <Users className="w-6 h-6 text-white/20" />
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                             <h3 className="font-bold text-white">@{u.id}</h3>
-                             {(u.id.toLowerCase() === 'yeebs' || u.isAdmin) && <span className="bg-primary/20 text-primary text-[8px] font-black px-1.5 py-0.5 rounded uppercase italic border border-primary/20">Admin</span>}
-                             {u.isBanned && <span className="bg-red-500/20 text-red-500 text-[8px] font-black px-1.5 py-0.5 rounded uppercase italic border border-red-500/20">Banned</span>}
-                          </div>
-                          <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono line-clamp-1">{u.uid}</p>
-                          {u.bio && <p className="text-[10px] text-gray-400 mt-1 italic line-clamp-1 max-w-md">"{u.bio}"</p>}
-                          {u.createdAt && <p className="text-[8px] text-gray-600 uppercase mt-1">Joined {new Date(u.createdAt).toLocaleDateString()}</p>}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        {u.id.toLowerCase() !== 'yeebs' && u.id.toLowerCase() !== user?.username.toLowerCase() && (
-                          <>
-                            <button
-                              onClick={() => handleToggleAdmin(u.id, !!u.isAdmin)}
-                              className={`p-2 rounded-lg transition-all flex items-center gap-2 font-bold text-[8px] uppercase tracking-widest border ${
-                                u.isAdmin 
-                                  ? 'bg-primary text-dark-surface border-primary' 
-                                  : 'bg-white/5 text-gray-400 border-white/5 hover:border-primary/30'
-                              }`}
-                              title={u.isAdmin ? "Revoke Admin" : "Grant Admin"}
-                            >
-                              <Shield className="w-3.5 h-3.5" />
-                              {u.isAdmin ? 'Admin' : 'Make Admin'}
-                            </button>
-                            <button
-                              onClick={() => handleBanToggle(u.id, !!u.isBanned)}
-                              className={`p-2 rounded-lg transition-all flex items-center gap-2 font-bold text-[8px] uppercase tracking-widest border ${
-                                u.isBanned 
-                                  ? 'bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500 hover:text-white' 
-                                  : 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500 hover:text-white'
-                              }`}
-                            >
-                              {u.isBanned ? <UserCheck className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
-                              {u.isBanned ? 'Unban' : 'Ban User'}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(u.id)}
-                              className="p-2 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white transition-all"
-                              title="Delete User Permanently"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {filteredUsers.length === 0 && (
-                    <div className="text-center py-12">
-                      <div className="p-4 rounded-full bg-white/5 inline-block mb-4">
-                        <Users className="w-8 h-8 text-gray-600" />
-                      </div>
-                      <p className="text-gray-500 italic text-sm">No users matching search criteria.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+        </section>
+      )}
     </div>
   );
 }
