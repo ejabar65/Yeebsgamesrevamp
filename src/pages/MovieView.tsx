@@ -87,6 +87,45 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
     window.scrollTo(0, 0);
   }, [id, type]);
 
+  const title = media.title || media.name;
+  const date = media.release_date || media.first_air_date;
+  const backdrop = media.isCustom ? media.thumbnail : movieService.getBackdropUrl(media.backdrop_path, 'original');
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        if (typeof event.data === 'string') {
+          const data = JSON.parse(event.data);
+          if (data.type === 'PLAYER_EVENT' && data.data.event === 'timeupdate') {
+            const progressData = {
+              id: id,
+              type: type,
+              time: data.data.currentTime,
+              duration: data.data.duration,
+              percentage: data.data.progress,
+              updatedAt: Date.now(),
+              title: media.title || media.name,
+              backdrop: backdrop,
+              season: season,
+              episode: episode
+            };
+            localStorage.setItem(`yeebs_progress_${id}`, JSON.stringify(progressData));
+            
+            // Also store in a central "continue watching" list
+            const continueList = JSON.parse(localStorage.getItem('yeebs_continue_watching') || '[]');
+            const filtered = continueList.filter((i: any) => i.id !== id);
+            localStorage.setItem('yeebs_continue_watching', JSON.stringify([progressData, ...filtered].slice(0, 10)));
+          }
+        }
+      } catch (e) {
+        // Not a player event or malformed JSON, ignore
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [id, type, media, backdrop, season, episode]);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#020202] gap-12">
@@ -117,13 +156,18 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
     );
   }
 
-  const title = media.title || media.name;
-  const date = media.release_date || media.first_air_date;
-  const backdrop = media.isCustom ? media.thumbnail : movieService.getBackdropUrl(media.backdrop_path, 'original');
+  const savedProgress = JSON.parse(localStorage.getItem(`yeebs_progress_${id}`) || 'null');
+  const startProgress = savedProgress?.time ? `&progress=${Math.floor(savedProgress.time)}` : '';
+  const playerColor = '&color=3b82f6'; // Yeebs Blue
+
+  const getUrl = (baseUrl: string) => {
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${separator}autoPlay=true${playerColor}${startProgress}&nextEpisode=true&episodeSelector=true`;
+  };
 
   const playerUrl = media.isCustom 
     ? media.url 
-    : (type === 'movie' ? activeSource.movieUrl(id!) : activeSource.tvUrl(id!, season, episode));
+    : (type === 'movie' ? getUrl(activeSource.movieUrl(id!)) : getUrl(activeSource.tvUrl(id!, season, episode)));
 
   return (
     <main className="min-h-screen bg-[#020202] text-white font-sans selection:bg-blue-500 pb-32">

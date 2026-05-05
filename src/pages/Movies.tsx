@@ -59,7 +59,13 @@ export default function Movies() {
   const [loading, setLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
+  const [continueWatching, setContinueWatching] = useState<any[]>([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const list = JSON.parse(localStorage.getItem('yeebs_continue_watching') || '[]');
+    setContinueWatching(list);
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -274,6 +280,39 @@ export default function Movies() {
                          ))}
                       </div>
                     </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Continue Watching */}
+              {continueWatching.length > 0 && (
+                <section className="space-y-8 animate-in fade-in slide-in-from-bottom duration-700">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-[2px] bg-blue-500" />
+                    <p className="text-[11px] font-black text-blue-500 uppercase tracking-[0.5em]">Active Protocols</p>
+                  </div>
+                  <div className="flex overflow-x-auto gap-8 pb-8 no-scrollbar scroll-smooth">
+                    {continueWatching.map((item, i) => (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        onClick={() => navigate(`/media/${item.type}/${item.id}`)}
+                        className="group relative min-w-[300px] aspect-video rounded-3xl overflow-hidden bg-white/5 border border-white/5 cursor-pointer flex-shrink-0"
+                      >
+                        <img src={item.backdrop} alt={item.title} className="w-full h-full object-cover grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
+                        <div className="absolute inset-0 bg-linear-to-t from-black/90 via-transparent p-6 flex flex-col justify-end">
+                           <h4 className="text-sm font-black uppercase tracking-tighter mb-2">{item.title}</h4>
+                           <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                              <div className="h-full bg-blue-500" style={{ width: `${item.percentage}%` }} />
+                           </div>
+                           <p className="text-[8px] font-black uppercase tracking-widest text-gray-500 mt-2">
+                             {item.type === 'tv' ? `S${item.season} E${item.episode}` : 'Resume Playback'} • {Math.round(item.percentage)}%
+                           </p>
+                        </div>
+                      </motion.div>
+                    ))}
                   </div>
                 </section>
               )}
