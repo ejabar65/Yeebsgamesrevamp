@@ -47,11 +47,23 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (user?.tabs && user.tabs.length > 0) {
       setTabs(user.tabs);
-      // Optional: set active tab to last synced one or first
-      setActiveTabId(user.tabs[0].id);
-      navigate(user.tabs[0].path);
+      // Only force navigation if we are at the home page or root
+      // This prevents "yanking" the user away if they manually navigated to a path
+      if (location.pathname === '/' || location.pathname === '') {
+        setActiveTabId(user.tabs[0].id);
+        navigate(user.tabs[0].path);
+      } else {
+        // Just find and set the active tab based on current path if it exists in synced tabs
+        const matchingTab = user.tabs.find(t => t.path === location.pathname);
+        if (matchingTab) {
+          setActiveTabId(matchingTab.id);
+        } else {
+          // If no matching tab, maybe we added a new one manually
+          // The other effect will sync it
+        }
+      }
     }
-  }, [user?.uid]);
+  }, [user?.uid]); // Only run when user login state actually changes uid
 
   // Sync state to cloud on change
   useEffect(() => {
