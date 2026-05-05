@@ -1,5 +1,24 @@
 const BASE_URL = '/api/movie-proxy';
 
+const safeFetch = async (url: string) => {
+  const response = await fetch(url);
+  const contentType = response.headers.get('content-type');
+  
+  if (!response.ok) {
+    if (contentType?.includes('application/json')) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Server returned ${response.status}`);
+    }
+    throw new Error(`Server returned ${response.status}`);
+  }
+
+  if (!contentType?.includes('application/json')) {
+    throw new Error('Server returned non-JSON response. Check proxy configuration.');
+  }
+
+  return response.json();
+};
+
 export interface MediaContent {
   id: number;
   title?: string;
@@ -22,8 +41,7 @@ export interface MediaContent {
 export const movieService = {
   getTrending: async (type: 'movie' | 'tv' = 'movie'): Promise<MediaContent[]> => {
     try {
-      const response = await fetch(`${BASE_URL}/trending/${type}/week`);
-      const data = await response.json();
+      const data = await safeFetch(`${BASE_URL}/trending/${type}/week`);
       return data.results || [];
     } catch (error) {
       console.error(`Error fetching trending ${type}:`, error);
@@ -33,8 +51,7 @@ export const movieService = {
 
   getPopular: async (type: 'movie' | 'tv' = 'movie'): Promise<MediaContent[]> => {
     try {
-      const response = await fetch(`${BASE_URL}/${type}/popular`);
-      const data = await response.json();
+      const data = await safeFetch(`${BASE_URL}/${type}/popular`);
       return data.results || [];
     } catch (error) {
       console.error(`Error fetching popular ${type}:`, error);
@@ -45,8 +62,7 @@ export const movieService = {
   searchMedia: async (query: string, type: 'movie' | 'tv' = 'movie'): Promise<MediaContent[]> => {
     if (!query) return [];
     try {
-      const response = await fetch(`${BASE_URL}/search/${type}?query=${encodeURIComponent(query)}`);
-      const data = await response.json();
+      const data = await safeFetch(`${BASE_URL}/search/${type}?query=${encodeURIComponent(query)}`);
       return data.results || [];
     } catch (error) {
       console.error(`Error searching ${type}:`, error);
@@ -56,8 +72,7 @@ export const movieService = {
 
   getDetails: async (id: string, type: 'movie' | 'tv' = 'movie'): Promise<MediaContent | null> => {
     try {
-      const response = await fetch(`${BASE_URL}/${type}/${id}`);
-      const data = await response.json();
+      const data = await safeFetch(`${BASE_URL}/${type}/${id}`);
       return data;
     } catch (error) {
       console.error(`Error fetching ${type} details:`, error);
@@ -67,8 +82,7 @@ export const movieService = {
 
   getSeasonDetails: async (tvId: string, seasonNumber: number) => {
     try {
-      const response = await fetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}`);
-      return await response.json();
+      return await safeFetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}`);
     } catch (error) {
       console.error('Error fetching season details:', error);
       return null;

@@ -27,10 +27,9 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
 
   // API Routes
-  app.get('/api/movie-proxy/*', async (req, res) => {
+  app.get('/api/movie-proxy/:path(*)', async (req, res) => {
     const TMDB_API_KEY = '15e241bab4affc62f00422929d7efd8a';
-    const rawPath = req.params[0];
-    const pathValue = rawPath.startsWith('/') ? rawPath.substring(1) : rawPath;
+    const pathValue = req.params.path;
     
     // Construct the TMDB URL
     const queryParams = new URLSearchParams();
@@ -43,7 +42,7 @@ async function startServer() {
     
     const url = `https://api.themoviedb.org/3/${pathValue}?${queryParams.toString()}`;
 
-    console.log(`[Cinema-Proxy] Establishing connection to: ${url}`);
+    console.log(`[Cinema-Proxy] Request: ${req.url} -> ${url}`);
 
     try {
       const response = await fetch(url, {
@@ -69,11 +68,11 @@ async function startServer() {
       } else {
         const text = await response.text();
         console.error(`[Cinema-Proxy] Protocol violation: Received non-JSON response (${response.status}) from ${url}`);
-        console.error(`[Cinema-Proxy] Snapshot: ${text.substring(0, 200)}...`);
+        console.error(`[Cinema-Proxy] Snapshot: ${text.substring(0, 100)}...`);
         return res.status(502).json({ 
           error: 'The downstream provider returned an invalid format (HTML)', 
           status: response.status,
-          preview: text.substring(0, 100)
+          preview: text.substring(0, 50)
         });
       }
     } catch (error) {
@@ -151,13 +150,17 @@ async function startServer() {
   });
 
   // Vite middleware
-  if (process.env.NODE_ENV !== 'production') {
+  const isProd = process.env.NODE_ENV === 'production' || fs.existsSync(path.join(__dirname, 'dist'));
+  
+  if (!isProd) {
+    console.log('[Cinema-Server] Entering DEVELOPMENT mode (Vite Middleware)');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
+    console.log('[Cinema-Server] Entering PRODUCTION mode (Static Assets)');
     const distPath = path.join(__dirname, 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
@@ -166,7 +169,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`[Cinema-Server] Online: http://localhost:${PORT}`);
   });
 }
 
