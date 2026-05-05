@@ -27,9 +27,11 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
 
   // API Routes
-  app.get('/api/movie-proxy/:path(*)', async (req, res) => {
+  app.all('/api/movie-proxy/*', async (req, res) => {
     const TMDB_API_KEY = '15e241bab4affc62f00422929d7efd8a';
-    const pathValue = req.params.path;
+    
+    // Extract everything after /api/movie-proxy/
+    const pathValue = req.path.replace(/^\/api\/movie-proxy\//, '');
     
     // Construct the TMDB URL
     const queryParams = new URLSearchParams();
@@ -42,13 +44,14 @@ async function startServer() {
     
     const url = `https://api.themoviedb.org/3/${pathValue}?${queryParams.toString()}`;
 
-    console.log(`[Cinema-Proxy] Request: ${req.url} -> ${url}`);
+    console.log(`[Cinema-Proxy] [${req.method}] ${req.url} -> ${url}`);
 
     try {
       const response = await fetch(url, {
+        method: req.method,
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'YeebsCinema/1.0'
+          'User-Agent': 'YeebsCinema/1.1'
         }
       });
 
@@ -76,7 +79,7 @@ async function startServer() {
         });
       }
     } catch (error) {
-      console.error(`[Cinema-Proxy] Failed to establish link to ${url}:`, error);
+      console.error(`[Cinema-Proxy] Connection failure to ${url}:`, error);
       return res.status(503).json({ 
         error: 'Cinema proxy link failure', 
         details: error instanceof Error ? error.message : String(error) 
