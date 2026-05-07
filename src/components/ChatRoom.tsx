@@ -17,12 +17,17 @@ import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
-import { Send, Trash2, MessageSquare, Shield, User, Zap, Image as ImageIcon, X, CheckCircle2, Star } from 'lucide-react';
+import { Send, Trash2, MessageSquare, Shield, User, Zap, Image as ImageIcon, X, CheckCircle2, Star, Phone, Settings } from 'lucide-react';
 import { ADMIN_LIST, MOD_LIST } from '../constants';
 
 const filter = new Filter();
 
-export const ChatRoom: React.FC = () => {
+export const ChatRoom: React.FC<{ 
+  groupId?: string; 
+  settings?: { spamLimit: boolean; filterEnabled: boolean };
+  ownerId?: string;
+  onUpdateSettings?: (settings: any) => void;
+}> = ({ groupId, settings, ownerId, onUpdateSettings }) => {
   const { user } = useGames();
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -32,10 +37,18 @@ export const ChatRoom: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [spamCooldown, setSpamCooldown] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [isInVoice, setIsInVoice] = useState(false);
+  const [callActive, setCallActive] = useState(false);
+
+  const isOwner = user?.uid === ownerId;
+  const spamLimitEnabled = settings ? settings.spamLimit : true;
+  const filterEnabled = settings ? settings.filterEnabled : true;
 
   useEffect(() => {
+    const colPath = groupId ? `groups/${groupId}/messages` : 'global_messages';
     const q = query(
-      collection(db, 'global_messages'),
+      collection(db, colPath),
       orderBy('createdAt', 'desc'),
       limit(50)
     );
@@ -54,11 +67,11 @@ export const ChatRoom: React.FC = () => {
         }
       }, 100);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'global_messages');
+      handleFirestoreError(error, OperationType.LIST, colPath);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [groupId]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,15 +79,18 @@ export const ChatRoom: React.FC = () => {
       alert('Please log in to chat.');
       return;
     }
-    if ((!newMessage.trim() && !selectedImage) || spamCooldown) return;
+    if ((!newMessage.trim() && !selectedImage) || (spamCooldown && spamLimitEnabled)) return;
 
-    setSpamCooldown(true);
-    setTimeout(() => setSpamCooldown(false), 2000);
+    if (spamLimitEnabled) {
+      setSpamCooldown(true);
+      setTimeout(() => setSpamCooldown(false), 2000);
+    }
 
     try {
-      const censoredText = filter.isProfane(newMessage) ? filter.clean(newMessage) : newMessage;
+      const censoredText = (filterEnabled && filter.isProfane(newMessage)) ? filter.clean(newMessage) : newMessage;
+      const colPath = groupId ? `groups/${groupId}/messages` : 'global_messages';
 
-      await addDoc(collection(db, 'global_messages'), {
+      await addDoc(collection(db, colPath), {
         text: censoredText,
         image: selectedImage,
         senderId: user.uid,
@@ -123,20 +139,145 @@ export const ChatRoom: React.FC = () => {
     }
   };
 
+  const handleUpdateSetting = async (key: string, value: boolean) => {
+    if (!groupId || !onUpdateSettings) return;
+    try {
+      const groupRef = doc(db, 'groups', groupId);
+      const newSettings = { ...settings, [key]: value };
+      await updateDoc(groupRef, { settings: newSettings });
+      onUpdateSettings(newSettings);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `groups/${groupId}`);
+    }
+  };
+
+  const toggleCall = () => {
+    if (!callActive) {
+      setCallActive(true);
+      setIsInVoice(true);
+    } else {
+      setCallActive(false);
+      setIsInVoice(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-[600px] bg-[#000] rounded-xl border border-white/5 overflow-hidden relative font-sans">
-      <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-md relative z-10">
+    <div className="flex flex-col h-full bg-[#000] rounded-xl border border-white/5 overflow-hidden relative font-sans">
+      <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-md relative z-20">
         <div className="flex items-center gap-3">
           <div>
-            <h2 className="font-bold text-xs text-white tracking-tight">Global Comms</h2>
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-700 mt-0.5">Network active</p>
+            <h2 className="font-bold text-xs text-white tracking-tight">{groupId ? 'Sector Comms' : 'Global Comms'}</h2>
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-700 mt-0.5">{groupId ? 'Secure Branch' : 'Network active'}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/5 border border-blue-500/10 rounded-full">
-          <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
-          <span className="text-[8px] text-blue-500 font-bold tracking-widest uppercase">Operational</span>
+        <div className="flex items-center gap-3">
+          {groupId && (
+            <>
+              <button 
+                onClick={toggleCall}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${callActive ? 'bg-green-500 border-green-500 text-white' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
+              >
+                <Phone className="w-3 h-3" />
+                <span className="text-[8px] font-black uppercase tracking-widest">{callActive ? 'In Voice' : 'Join Call'}</span>
+              </button>
+              
+              {isOwner && (
+                <button 
+                  onClick={() => setShowSettings(!showSettings)}
+                  className={`p-2 rounded-lg transition-all ${showSettings ? 'bg-blue-500 text-white' : 'bg-white/5 text-gray-500 hover:text-white'}`}
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </>
+          )}
+          {!groupId && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/5 border border-blue-500/10 rounded-full">
+              <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
+              <span className="text-[8px] text-blue-500 font-bold tracking-widest uppercase">Operational</span>
+            </div>
+          )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {showSettings && groupId && isOwner && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-blue-500/5 border-b border-blue-500/10 overflow-hidden relative z-10"
+          >
+            <div className="p-6 flex flex-wrap gap-8">
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => handleUpdateSetting('spamLimit', !spamLimitEnabled)}
+                  className={`w-10 h-5 rounded-full relative transition-all ${spamLimitEnabled ? 'bg-blue-500' : 'bg-white/10'}`}
+                >
+                  <div className={`absolute top-1 bottom-1 w-3 rounded-full bg-white transition-all ${spamLimitEnabled ? 'right-1' : 'left-1'}`} />
+                </button>
+                <div>
+                  <h4 className="text-[9px] font-black text-white uppercase tracking-widest">Spam Protocol</h4>
+                  <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{spamLimitEnabled ? 'Throttled' : 'Unrestricted'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => handleUpdateSetting('filterEnabled', !filterEnabled)}
+                  className={`w-10 h-5 rounded-full relative transition-all ${filterEnabled ? 'bg-blue-500' : 'bg-white/10'}`}
+                >
+                  <div className={`absolute top-1 bottom-1 w-3 rounded-full bg-white transition-all ${filterEnabled ? 'right-1' : 'left-1'}`} />
+                </button>
+                <div>
+                  <h4 className="text-[9px] font-black text-white uppercase tracking-widest">Integrity Filter</h4>
+                  <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{filterEnabled ? 'Enabled' : 'Bypassed'}</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Voice Call Overlay */}
+      <AnimatePresence>
+        {callActive && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="absolute top-20 right-6 z-30 w-48 bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[8px] font-black uppercase tracking-widest text-green-500 flex items-center gap-1.5">
+                <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
+                Live Sync
+              </span>
+              <span className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">00:12</span>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <img src={user?.photoURL} className="w-8 h-8 rounded-lg object-cover border border-green-500/50" />
+                  <div className="absolute inset-0 bg-green-500/20 rounded-lg animate-ping opacity-20" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold text-white uppercase tracking-tight">{user?.username}</p>
+                  <div className="flex gap-0.5 mt-1">
+                    {[1,2,3,4,5].map(i => <div key={i} className="w-0.5 h-1.5 bg-green-500/40 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }} />)}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button 
+              onClick={() => setCallActive(false)}
+              className="w-full mt-4 py-2 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-[8px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
+            >
+              Disconnect
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div 
         ref={scrollRef}

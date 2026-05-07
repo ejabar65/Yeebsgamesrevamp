@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { ChatRoom } from '../components/ChatRoom';
 import { DirectMessages } from '../components/DirectMessages';
+import { GroupChats } from '../components/GroupChats';
 import { motion } from 'motion/react';
-import { MessageSquare, Users, Star, Shield, Zap } from 'lucide-react';
+import { MessageSquare, Users, Star, Shield, Zap, LayoutGrid } from 'lucide-react';
 
 const Chat: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'global' | 'dm'>('global');
+  const [activeTab, setActiveTab] = useState<'global' | 'dm' | 'groups'>('global');
 
   return (
     <div className="flex flex-col gap-12 font-sans">
@@ -15,20 +16,20 @@ const Chat: React.FC = () => {
             Messages.
           </h1>
           <div className="flex gap-2">
-            <button
-              onClick={() => setActiveTab('global')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${activeTab === 'global' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white/5 text-gray-500 border-white/10 hover:border-white/20'}`}
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              Global Chat
-            </button>
-            <button
-              onClick={() => setActiveTab('dm')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${activeTab === 'dm' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white/5 text-gray-500 border-white/10 hover:border-white/20'}`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              Direct Messages
-            </button>
+            {[
+              { id: 'global', name: 'Global', icon: MessageSquare },
+              { id: 'dm', name: 'Peers', icon: Users },
+              { id: 'groups', name: 'Groups', icon: LayoutGrid }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold transition-all border ${activeTab === tab.id ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20' : 'bg-white/5 text-gray-500 border-white/10 hover:border-white/20'}`}
+              >
+                <tab.icon className="w-3.5 h-3.5" />
+                {tab.name}
+              </button>
+            ))}
           </div>
         </div>
       </header>
@@ -37,9 +38,11 @@ const Chat: React.FC = () => {
         key={activeTab}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="card-subtle bg-[#0c0c0c] border-white/10 overflow-hidden min-h-[600px] flex flex-col"
+        className="card-subtle bg-[#0c0c0c] border-white/10 overflow-hidden min-h-[600px] flex flex-col shadow-2xl"
       >
-        {activeTab === 'global' ? <ChatRoom /> : <DirectMessages />}
+        {activeTab === 'global' && <ChatRoom />}
+        {activeTab === 'dm' && <DirectMessages />}
+        {activeTab === 'groups' && <GroupChats />}
       </motion.div>
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">

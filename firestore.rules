@@ -103,7 +103,37 @@ service cloud.firestore {
              (data.get('thumbnail', '') is string);
     }
 
+    function isValidGroup(data) {
+      return data.keys().hasAll(['name', 'ownerId', 'ownerName', 'members', 'settings', 'createdAt']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.ownerId is string &&
+             data.members is list &&
+             data.settings is map &&
+             data.settings.keys().hasAll(['spamLimit', 'filterEnabled']) &&
+             data.createdAt == request.time;
+    }
+
+    function isValidGroupMessage(data) {
+      return data.keys().hasAll(['text', 'senderId', 'senderName', 'createdAt']) &&
+             data.text is string && data.text.size() <= 2000 &&
+             data.createdAt == request.time;
+    }
+
     // --- Collections ---
+
+    match /groups/{groupId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isValidGroup(incoming());
+      allow update: if isValidGroup(incoming()); // Simplified for this environment's loose auth
+      allow delete: if isAdmin() || (existing().ownerId == incoming().ownerId);
+
+      match /messages/{messageId} {
+        allow read: if true;
+        allow create: if isValidGroupMessage(incoming());
+        allow delete: if isAdmin();
+      }
+    }
 
     match /users/{username} {
       allow get: if true; 
