@@ -17,7 +17,8 @@ import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
-import { Send, Trash2, MessageSquare, Shield, User, Zap, Image as ImageIcon, X } from 'lucide-react';
+import { Send, Trash2, MessageSquare, Shield, User, Zap, Image as ImageIcon, X, CheckCircle2, Star } from 'lucide-react';
+import { ADMIN_LIST, MOD_LIST } from '../constants';
 
 const filter = new Filter();
 
@@ -78,6 +79,7 @@ export const ChatRoom: React.FC = () => {
         image: selectedImage,
         senderId: user.uid,
         senderName: user.username,
+        senderAvatar: user.photoURL,
         createdAt: serverTimestamp()
       });
 
@@ -157,37 +159,50 @@ export const ChatRoom: React.FC = () => {
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 key={`${msg.id}-${i}`} 
-                className={`flex flex-col ${msg.senderName === user?.username ? 'items-end' : 'items-start'}`}
+                className={`flex gap-4 ${msg.senderName === user?.username ? 'flex-row-reverse' : 'flex-row'}`}
               >
-                <div className="flex items-center gap-2 mb-2 px-1">
-                  <Link 
-                    to={`/profile/${msg.senderName.toLowerCase()}`}
-                    className={`text-[9px] font-bold uppercase tracking-[0.2em] transition-all cursor-pointer ${msg.senderName.toLowerCase() === 'yeebs' ? 'text-blue-500' : 'text-gray-600 hover:text-gray-400'}`}
-                  >
-                    {msg.senderName}
-                  </Link>
-                  {user?.isAdmin && (
-                    <button 
-                      onClick={() => handleDeleteMessage(msg.id)}
-                      className="p-1 rounded text-red-500/20 hover:text-red-500 transition-colors"
-                    >
-                      <X className="w-2.5 h-2.5" />
-                    </button>
-                  )}
+                <div className="flex-shrink-0">
+                  <div className={`w-10 h-10 rounded-xl overflow-hidden border ${msg.senderName === user?.username ? 'border-white/20' : 'border-white/5'} bg-white/5`}>
+                    <img 
+                      src={msg.senderAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.senderName}`} 
+                      alt="" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </div>
-                <div 
-                  className={`max-w-[80%] px-4 py-3 rounded-xl text-[13px] leading-relaxed relative ${
-                    msg.senderName === user?.username 
-                      ? 'bg-white text-black font-medium' 
-                      : 'bg-white/[0.02] text-gray-300 border border-white/5'
-                  }`}
-                >
-                  {msg.image && (
-                    <div className="mb-3 rounded-lg overflow-hidden border border-white/5 bg-white/5">
-                      <img src={msg.image} alt="Transmission Asset" className="max-w-full h-auto opacity-90 hover:opacity-100 transition-opacity" />
-                    </div>
-                  )}
-                  <p className="tracking-tight">{msg.text}</p>
+                <div className={`flex flex-col ${msg.senderName === user?.username ? 'items-end' : 'items-start'}`}>
+                  <div className="flex items-center gap-2 mb-2 px-1">
+                    <Link 
+                      to={`/profile/${msg.senderName.toLowerCase()}`}
+                      className={`text-[9px] font-bold uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center gap-1 ${ADMIN_LIST.includes(msg.senderName.toLowerCase()) ? 'text-blue-500' : MOD_LIST.includes(msg.senderName.toLowerCase()) ? 'text-yellow-500' : 'text-gray-600 hover:text-gray-400'}`}
+                    >
+                      {msg.senderName}
+                      {ADMIN_LIST.includes(msg.senderName.toLowerCase()) && <CheckCircle2 className="w-2.5 h-2.5" />}
+                      {MOD_LIST.includes(msg.senderName.toLowerCase()) && <Star className="w-2.5 h-2.5 fill-current" />}
+                    </Link>
+                    {user?.isAdmin && (
+                      <button 
+                        onClick={() => handleDeleteMessage(msg.id)}
+                        className="p-1 rounded text-red-500/20 hover:text-red-500 transition-colors"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div 
+                    className={`max-w-[100%] px-4 py-3 rounded-xl text-[13px] leading-relaxed relative ${
+                      msg.senderName === user?.username 
+                        ? 'bg-white text-black font-medium' 
+                        : 'bg-white/[0.02] text-gray-300 border border-white/5'
+                    }`}
+                  >
+                    {msg.image && (
+                      <div className="mb-3 rounded-lg overflow-hidden border border-white/5 bg-white/5">
+                        <img src={msg.image} alt="Transmission Asset" className="max-w-full h-auto opacity-90 hover:opacity-100 transition-opacity" />
+                      </div>
+                    )}
+                    <p className="tracking-tight">{msg.text}</p>
+                  </div>
                 </div>
               </motion.div>
             ))}

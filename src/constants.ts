@@ -1,4 +1,6 @@
-export const MASCOT_URL = "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&q=80&w=1000"; // Sleek geometric minimalist logo
+export const MASCOT_URL = "https://lh3.googleusercontent.com/a/ACg8ocKFxTtfl9e-BoMuysn0FFqLOgXRtCrWfyP8NVm45njuz0onsUk=s288-c-no";
+export const ADMIN_LIST = ['yeebs'];
+export const MOD_LIST = ['admin', 'moderator', 'mod'];
 
 export const CLOAK_OPTIONS = [
   { name: 'None (Default)', title: 'YEEBS GAMES', icon: MASCOT_URL },

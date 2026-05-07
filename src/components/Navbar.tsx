@@ -122,8 +122,9 @@ export default function Navbar() {
           { name: 'Index', icon: Home, path: '/', sort: 'newest' },
           { name: 'Cinema', icon: Film, path: '/movies' },
           { name: 'Comms', icon: MessageSquare, path: '/chat' },
-          { name: 'Trending', icon: TrendingUp, path: '/', sort: 'trending' },
-          ...(user?.isAdmin ? [{ name: 'Admin', icon: Shield, path: '/admin' }] : []),
+          { name: 'Academy', icon: Monitor, path: '/tutorials' },
+          { name: 'Reviews', icon: MessageSquare, path: '/reviews' },
+          ...(user?.isAdmin || user?.isMod ? [{ name: 'Admin', icon: Shield, path: '/admin' }] : []),
         ].map((item) => (
           <button
             key={item.name}

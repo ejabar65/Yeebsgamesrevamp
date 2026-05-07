@@ -80,8 +80,15 @@ export default function Profile() {
     style: currentUser?.avatarConfig?.style || 'avataaars',
     seed: currentUser?.avatarConfig?.seed || currentUser?.username || 'yeebs',
     backgroundColor: currentUser?.avatarConfig?.backgroundColor || 'b6e3f4',
-    rotate: currentUser?.avatarConfig?.rotate || 0
+    rotate: currentUser?.avatarConfig?.rotate || 0,
+    customUrl: ''
   });
+
+  const [useCustomUrl, setUseCustomUrl] = useState(!!currentUser?.photoURL && !currentUser?.photoURL.includes('dicebear'));
+
+  const previewUrl = useCustomUrl 
+    ? (avatarForm.customUrl || currentUser?.photoURL || '') 
+    : `https://api.dicebear.com/7.x/${avatarForm.style}/svg?seed=${avatarForm.seed}${avatarForm.backgroundColor ? `&backgroundColor=${avatarForm.backgroundColor}` : ''}`;
 
   if (authLoading || loadingPublic) {
     return (
@@ -328,66 +335,136 @@ export default function Profile() {
                 <div className="relative group">
                    <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full" />
                    <img 
-                     src={`https://api.dicebear.com/7.x/${avatarForm.style}/svg?seed=${avatarForm.seed}`}
+                     src={previewUrl}
                      alt="Preview"
-                     className="w-48 h-48 rounded-3xl relative z-10 bg-black/40 shadow-2xl transition-all duration-500"
+                     className="w-48 h-48 rounded-3xl relative z-10 bg-black/40 shadow-2xl transition-all duration-500 object-cover"
+                     onError={(e) => {
+                       (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${profileData.username}`;
+                     }}
                    />
                 </div>
-                <h3 className="text-2xl font-bold text-white mt-8 mb-2 capitalize">{avatarForm.style.replace('-', ' ')}</h3>
-                <p className="text-gray-500 text-[10px] uppercase font-bold tracking-widest">Seed: {avatarForm.seed}</p>
+                <h3 className="text-2xl font-bold text-white mt-8 mb-2 capitalize">
+                  {useCustomUrl ? 'External Identity' : avatarForm.style.replace('-', ' ')}
+                </h3>
+                <p className="text-gray-500 text-[10px] uppercase font-bold tracking-widest">
+                  {useCustomUrl ? 'Synchronized via URL' : `Seed: ${avatarForm.seed}`}
+                </p>
              </div>
-
+12345: 
              <div className="card-subtle p-10 space-y-10">
-                <div className="space-y-6">
-                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-500">Avatar Style</h4>
-                   <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { id: 'avataaars', name: 'Avataaars' },
-                        { id: 'pixel-art', name: 'Pixel Art' },
-                        { id: 'bottts', name: 'Bottts' },
-                        { id: 'human', name: 'Humans' },
-                        { id: 'identicon', name: 'Identicon' },
-                        { id: 'croodles', name: 'Croodles' }
-                      ].map(style => (
-                        <button
-                          key={style.id}
-                          onClick={() => setAvatarForm({ ...avatarForm, style: style.id })}
-                          className={`px-4 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${avatarForm.style === style.id ? 'bg-blue-500 text-white border-blue-500 shadow-md' : 'bg-white/5 text-gray-500 border-white/5 hover:border-white/10'}`}
-                        >
-                           {style.name}
-                        </button>
-                      ))}
-                   </div>
+                <div className="flex gap-4 p-1 bg-white/5 rounded-2xl border border-white/5">
+                  <button 
+                    onClick={() => setUseCustomUrl(false)}
+                    className={`flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${!useCustomUrl ? 'bg-blue-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-400'}`}
+                  >
+                    Generator
+                  </button>
+                  <button 
+                    onClick={() => setUseCustomUrl(true)}
+                    className={`flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${useCustomUrl ? 'bg-blue-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-400'}`}
+                  >
+                    Custom URL
+                  </button>
                 </div>
 
-                <div className="space-y-6">
-                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-500">Identity Seed</h4>
-                   <div className="relative">
+                {!useCustomUrl ? (
+                  <>
+                    <div className="space-y-6">
+                       <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-500">Avatar Style</h4>
+                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {[
+                            { id: 'avataaars', name: 'Avataaars' },
+                            { id: 'pixel-art', name: 'Pixel' },
+                            { id: 'bottts', name: 'Bots' },
+                            { id: 'adventurer', name: 'Adventurer' },
+                            { id: 'big-smile', name: 'Smile' },
+                            { id: 'croodles', name: 'Croodles' },
+                            { id: 'fun-emoji', name: 'Emoji' },
+                            { id: 'micah', name: 'Micah' },
+                            { id: 'notionists', name: 'Notion' }
+                          ].map(style => (
+                            <button
+                              key={style.id}
+                              onClick={() => setAvatarForm({ ...avatarForm, style: style.id })}
+                              className={`px-3 py-3 rounded-xl text-[9px] font-bold uppercase tracking-widest border transition-all ${avatarForm.style === style.id ? 'bg-blue-500 text-white border-blue-500 shadow-md' : 'bg-white/5 text-gray-500 border-white/5 hover:border-white/10'}`}
+                            >
+                               {style.name}
+                            </button>
+                          ))}
+                       </div>
+                    </div>
+
+                    <div className="space-y-6">
+                       <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-500">Background</h4>
+                       <div className="flex flex-wrap gap-2">
+                          {['b6e3f4', 'c0aede', 'd1d4f9', 'ffd5dc', 'ffdfbf', 'transparent'].map(color => (
+                            <button
+                              key={color}
+                              onClick={() => setAvatarForm({ ...avatarForm, backgroundColor: color === 'transparent' ? '' : color })}
+                              className={`w-8 h-8 rounded-full border-2 transition-all ${avatarForm.backgroundColor === color || (color === 'transparent' && !avatarForm.backgroundColor) ? 'border-blue-500 scale-110' : 'border-white/10'}`}
+                              style={{ backgroundColor: color === 'transparent' ? 'transparent' : `#${color}` }}
+                            />
+                          ))}
+                       </div>
+                    </div>
+
+                    <div className="space-y-6">
+                       <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-500">Identity Seed</h4>
+                       <div className="relative">
+                          <input 
+                            type="text"
+                            value={avatarForm.seed}
+                            onChange={(e) => setAvatarForm({ ...avatarForm, seed: e.target.value })}
+                            placeholder="Type anything..."
+                            className="w-full px-6 py-4 pr-16 bg-white/5 border border-white/10 rounded-xl focus:border-blue-500/50 transition-all text-sm font-medium text-white"
+                          />
+                          <button 
+                            onClick={() => setAvatarForm({ ...avatarForm, seed: Math.random().toString(36).substring(7) })}
+                            className="absolute right-2 top-2 bottom-2 px-3 rounded-lg bg-white/5 text-gray-400 hover:text-white transition-all"
+                          >
+                             <History className="w-4 h-4" />
+                          </button>
+                       </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-500">External Image URL</h4>
+                    <div className="space-y-4">
                       <input 
-                        type="text"
-                        value={avatarForm.seed}
-                        onChange={(e) => setAvatarForm({ ...avatarForm, seed: e.target.value })}
-                        placeholder="Type anything..."
-                        className="w-full px-6 py-4 pr-16 bg-white/5 border border-white/10 rounded-xl focus:border-blue-500/50 transition-all text-sm font-medium text-white"
+                        type="url"
+                        value={avatarForm.customUrl}
+                        onChange={(e) => setAvatarForm({ ...avatarForm, customUrl: e.target.value })}
+                        placeholder="https://images.com/your-avatar.jpg"
+                        className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-xl focus:border-blue-500/50 transition-all text-sm font-medium text-white"
                       />
-                      <button 
-                        onClick={() => setAvatarForm({ ...avatarForm, seed: Math.random().toString(36).substring(7) })}
-                        className="absolute right-2 top-2 bottom-2 px-3 rounded-lg bg-white/5 text-gray-400 hover:text-white transition-all"
-                      >
-                         <History className="w-4 h-4" />
-                      </button>
-                   </div>
-                </div>
+                      <p className="text-[10px] text-gray-500 font-medium leading-relaxed italic">
+                        Link a high-resolution image to represent your digital character. 
+                        Recommended size: 512x512.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <button 
-                  onClick={() => {
-                    updateAvatar(avatarForm);
+                  onClick={async () => {
+                    if (useCustomUrl) {
+                      const urlToSave = avatarForm.customUrl || currentUser?.photoURL;
+                      // We need a way to save just the PhotoURL, let's update AvatarConfig to handle it or similar
+                      // For now, I'll update GameContext to support this
+                      await updateAvatar({ 
+                        ...avatarForm, 
+                        photoURLOverride: urlToSave 
+                      } as any);
+                    } else {
+                      await updateAvatar(avatarForm);
+                    }
                     setSaveStatus(true);
                     setTimeout(() => setSaveStatus(false), 2000);
                   }}
                   className="w-full py-4 rounded-xl bg-blue-500 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
                 >
-                   Save Avatar
+                   Commit Avatar Update
                 </button>
              </div>
           </motion.section>

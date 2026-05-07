@@ -27,7 +27,7 @@ export default function Admin() {
   });
 
   useEffect(() => {
-    if (activeTab === 'users' && user?.isAdmin) {
+    if (activeTab === 'users' && (user?.isAdmin || user?.isMod)) {
       fetchUsers();
     }
     if (activeTab === 'cinema' && user?.isAdmin) {
@@ -104,6 +104,30 @@ export default function Admin() {
   const handleBanToggle = async (targetUserId: string, currentBanStatus: boolean) => {
     if (!confirm(`Are you sure you want to ${currentBanStatus ? 'unban' : 'ban'} @${targetUserId}?`)) return;
     
+    if (!currentBanStatus && user?.isMod && !user?.isAdmin) {
+      // Check ban limit
+      const now = new Date();
+      const lastReset = new Date(user.banLimitInfo?.lastReset || 0);
+      const isNewDay = now.toDateString() !== lastReset.toDateString();
+      
+      const currentCount = isNewDay ? 0 : (user.banLimitInfo?.count || 0);
+      if (currentCount >= 10) {
+        alert('Daily Mod Ban Limit (10) reached. Protocol suspended until next reset.');
+        return;
+      }
+
+      // Update ban count
+      try {
+        const modRef = doc(db, 'users', user.username.toLowerCase());
+        const newInfo = { count: currentCount + 1, lastReset: now.toISOString() };
+        await updateDoc(modRef, { banLimitInfo: newInfo });
+        // Local update of user object is usually handled by cache or refresh
+        // But for immediate UI feedback we'd need to update local context if exposed
+      } catch (e) {
+        console.error("Failed to update mod ban limit", e);
+      }
+    }
+
     try {
       const userRef = doc(db, 'users', targetUserId);
       await updateDoc(userRef, { isBanned: !currentBanStatus });
@@ -183,7 +207,7 @@ export default function Admin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user?.isAdmin) {
+    if (!user?.isAdmin && !user?.isMod) {
       alert('Access forbidden. Required clearance missing.');
       return;
     }
@@ -251,7 +275,9 @@ export default function Admin() {
     );
   }
 
-  if (!user?.isAdmin) {
+  const isModOnly = !user?.isAdmin && user?.isMod;
+
+  if (!user?.isAdmin && !user?.isMod) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center max-w-md mx-auto space-y-6">
         <motion.div 
@@ -282,12 +308,15 @@ export default function Admin() {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-white/5">
         <div>
           <h1 className="text-5xl font-bold tracking-tighter text-white mb-2">Admin</h1>
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">{editingId ? 'Updating Resource' : 'System Oversight'}</p>
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">{editingId ? 'Updating Resource' : (isModOnly ? 'Moderation Hub' : 'System Oversight')}</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex flex-col items-end">
             <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest underline decoration-blue-500/30 underline-offset-4">@{user.username}</span>
-            <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-1">Clearance: Level 4</span>
+            <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-1">Clearance: {isModOnly ? 'Mod' : 'Root'}</span>
+            {isModOnly && (
+              <span className="text-[8px] font-bold text-gray-600 uppercase tracking-widest mt-1">Daily Bans: {user.banLimitInfo?.count || 0}/10</span>
+            )}
           </div>
         </div>
       </header>
@@ -295,7 +324,7 @@ export default function Admin() {
       <nav className="flex gap-1.5 p-1.5 bg-white/[0.02] border border-white/5 rounded-xl w-fit">
         {[
           { id: 'games', label: 'Index', icon: Gamepad2 },
-          { id: 'cinema', label: 'Cinema', icon: Play },
+          ...(user?.isAdmin ? [{ id: 'cinema', label: 'Cinema', icon: Play }] : []),
           { id: 'users', label: 'Network', icon: Users },
         ].map(tab => (
           <button
@@ -550,6 +579,7 @@ export default function Admin() {
                        <h3 className="font-bold text-gray-400 text-[11px] uppercase tracking-tight">@{u.id}</h3>
                        <div className="flex gap-1">
                          {u.isAdmin && <span className="bg-blue-500/5 text-blue-500 text-[6px] font-bold px-1 py-0.5 rounded uppercase border border-blue-500/10 tracking-widest">Root</span>}
+                         {u.isMod && <span className="bg-yellow-500/5 text-yellow-500 text-[6px] font-bold px-1 py-0.5 rounded uppercase border border-yellow-500/10 tracking-widest">Mod</span>}
                          {u.isBanned && <span className="bg-red-500/5 text-red-500 text-[6px] font-bold px-1 py-0.5 rounded uppercase border border-red-500/10 tracking-widest">Banned</span>}
                        </div>
                     </div>
@@ -559,14 +589,16 @@ export default function Admin() {
                 <div className="flex items-center gap-1 w-full md:w-auto">
                   {u.id.toLowerCase() !== 'yeebs' && u.id.toLowerCase() !== user?.username.toLowerCase() && (
                     <>
-                      <button
-                        onClick={() => handleToggleAdmin(u.id, !!u.isAdmin)}
-                        className={`px-3 py-1.5 rounded-md text-[8px] font-bold uppercase tracking-[0.2em] border transition-all ${
-                          u.isAdmin ? 'bg-white text-black border-white' : 'bg-white/[0.02] text-gray-800 border-white/10 hover:text-white'
-                        }`}
-                      >
-                        {u.isAdmin ? 'Revoke' : 'Admin'}
-                      </button>
+                      {user?.isAdmin && (
+                        <button
+                          onClick={() => handleToggleAdmin(u.id, !!u.isAdmin)}
+                          className={`px-3 py-1.5 rounded-md text-[8px] font-bold uppercase tracking-[0.2em] border transition-all ${
+                            u.isAdmin ? 'bg-white text-black border-white' : 'bg-white/[0.02] text-gray-800 border-white/10 hover:text-white'
+                          }`}
+                        >
+                          {u.isAdmin ? 'Revoke' : 'Admin'}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleBanToggle(u.id, !!u.isBanned)}
                         className={`px-3 py-1.5 rounded-md text-[8px] font-bold uppercase tracking-[0.2em] border transition-all ${
@@ -575,12 +607,14 @@ export default function Admin() {
                       >
                         {u.isBanned ? 'Unlock' : 'Ban'}
                       </button>
-                      <button
-                        onClick={() => handleDeleteUser(u.id)}
-                        className="p-2 text-gray-800 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {user?.isAdmin && (
+                        <button
+                          onClick={() => handleDeleteUser(u.id)}
+                          className="p-2 text-gray-800 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </>
                   )}
                 </div>

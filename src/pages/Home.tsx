@@ -60,7 +60,7 @@ export default function Home() {
             className="absolute inset-0 pointer-events-none"
             animate={{
               clipPath: isHovering 
-                ? `circle(120px at ${mousePos.x}px ${mousePos.y}px)` 
+                ? `circle(80px at ${mousePos.x}px ${mousePos.y}px)` 
                 : `circle(0px at ${mousePos.x}px ${mousePos.y}px)`
             }}
             transition={{ type: 'spring', damping: 30, stiffness: 250, mass: 0.5 }}

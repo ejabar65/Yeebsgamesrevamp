@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Game } from '../types';
 import { getGames } from '../services/gameService';
+import { ADMIN_LIST, MOD_LIST } from '../constants';
 import { 
   auth, 
   db, 
@@ -37,6 +38,11 @@ export interface AuthUser {
   uid: string;
   username: string;
   isAdmin: boolean;
+  isMod: boolean;
+  banLimitInfo?: {
+    count: number;
+    lastReset: string;
+  };
   photoURL?: string;
   avatarConfig?: AvatarConfig;
   settings?: UserSettings;
@@ -60,7 +66,7 @@ interface GameContextType {
   addToHistory: (gameId: string) => Promise<void>;
   isFavorite: (gameId: string) => boolean;
   refreshGames: () => Promise<void>;
-  updateAvatar: (config: AvatarConfig) => Promise<void>;
+  updateAvatar: (config: AvatarConfig & { photoURLOverride?: string }) => Promise<void>;
   updateBio: (bio: string) => Promise<void>;
   getPublicProfile: (username: string) => Promise<any>;
   login: (username: string, password?: string) => Promise<boolean>;
@@ -119,10 +125,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
               setAuthLoading(false);
               return;
             }
+            const currentUserLower = savedUsername.toLowerCase();
+            const isAdmin = ADMIN_LIST.includes(currentUserLower) || data.isAdmin;
+            const isMod = MOD_LIST.includes(currentUserLower) || data.isMod;
+
             const authUser: AuthUser = {
               uid: data.uid,
               username: savedUsername,
-              isAdmin: savedUsername.toLowerCase() === 'yeebs' || data.isAdmin,
+              isAdmin,
+              isMod,
+              banLimitInfo: data.banLimitInfo || { count: 0, lastReset: new Date().toISOString() },
               photoURL: data.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${savedUsername}`,
               avatarConfig: data.avatarConfig || { style: 'avataaars', seed: savedUsername },
               settings: data.settings || { compactMode: false, showChatPreview: true, soundsEnabled: true, privateProfile: false },
@@ -177,6 +189,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       if (userSnap.exists()) {
         const data = userSnap.data();
+        const userLower = lowerUsername;
         if (data.isBanned) {
           alert('This account has been banned from the system.');
           return false;
@@ -194,20 +207,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
 
         await setDoc(userRef, {
-          username: cleanUsername, // Keep original for display? 
-          // Actually, let's just stick to cleanUsername for display but ID is lower
+          username: cleanUsername,
           password: cleanPassword,
           uid: 'user_' + Math.random().toString(36).substr(2, 9),
           favoriteGameIds: favorites,
           createdAt: new Date().toISOString(),
-          isAdmin: lowerUsername === 'yeebs'
+          isAdmin: ADMIN_LIST.includes(lowerUsername),
+          isMod: MOD_LIST.includes(lowerUsername)
         });
       }
+
+      const isAdmin = ADMIN_LIST.includes(lowerUsername) || (userSnap.exists() && userSnap.data().isAdmin);
+      const isMod = MOD_LIST.includes(lowerUsername) || (userSnap.exists() && userSnap.data().isMod);
 
       const finalUser: AuthUser = {
         uid: userSnap.exists() ? userSnap.data().uid : 'user_' + Math.random().toString(36).substr(2, 9),
         username: cleanUsername,
-        isAdmin: lowerUsername === 'yeebs' || (userSnap.exists() && userSnap.data().isAdmin),
+        isAdmin,
+        isMod,
+        banLimitInfo: (userSnap.exists() && userSnap.data().banLimitInfo) || { count: 0, lastReset: new Date().toISOString() },
         photoURL: (userSnap.exists() && userSnap.data().photoURL) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`,
         avatarConfig: (userSnap.exists() && userSnap.data().avatarConfig) || { style: 'avataaars', seed: cleanUsername },
         settings: userSnap.exists() ? userSnap.data().settings : { compactMode: false, showChatPreview: true, soundsEnabled: true, privateProfile: false },
@@ -307,11 +325,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateAvatar = async (config: AvatarConfig) => {
+  const updateAvatar = async (config: AvatarConfig & { photoURLOverride?: string }) => {
     if (!user) return;
     try {
       const userRef = doc(db, 'users', user.username.toLowerCase());
-      const newPhotoURL = `https://api.dicebear.com/7.x/${config.style}/svg?seed=${config.seed}${config.backgroundColor ? `&backgroundColor=${config.backgroundColor}` : ''}${config.rotate ? `&rotate=${config.rotate}` : ''}`;
+      const newPhotoURL = config.photoURLOverride || `https://api.dicebear.com/7.x/${config.style}/svg?seed=${config.seed}${config.backgroundColor ? `&backgroundColor=${config.backgroundColor}` : ''}${config.rotate ? `&rotate=${config.rotate}` : ''}`;
       await updateDoc(userRef, { 
         avatarConfig: config,
         photoURL: newPhotoURL

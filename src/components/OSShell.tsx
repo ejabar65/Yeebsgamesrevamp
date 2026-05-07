@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import Navbar from './Navbar';
 
 export default function OSShell({ children }: { children: React.ReactNode }) {
@@ -33,9 +33,14 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
 
       <footer className="py-12 px-8 border-t border-white/5 bg-black/40">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="flex flex-col gap-2">
-            <h3 className="text-xl font-bold tracking-tight">YEEBS<span className="text-blue-500">GAMES</span></h3>
-            <p className="text-sm text-gray-500">Minimalist entertainment portal. Established 2026.</p>
+          <div className="flex flex-col gap-4">
+            <h3 className="text-xl font-bold tracking-tight text-white italic">YEEBS<span className="text-blue-500">GAMES</span></h3>
+            <div className="flex gap-6 text-[10px] font-black uppercase tracking-widest text-gray-500">
+              <Link to="/updates" className="hover:text-blue-500 transition-colors">Updates</Link>
+              <Link to="/legal" className="hover:text-blue-500 transition-colors">Legal</Link>
+              <Link to="/reviews" className="hover:text-blue-500 transition-colors">Contact</Link>
+            </div>
+            <p className="text-[10px] text-gray-600 font-medium">Minimalist entertainment portal. Established 2026.</p>
           </div>
           
           <div className="flex items-center gap-12 text-xs font-medium text-gray-400 uppercase tracking-widest">
