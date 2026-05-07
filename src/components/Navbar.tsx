@@ -129,7 +129,7 @@ export default function Navbar() {
           <button
             key={item.name}
             onClick={() => {
-              if (item.path === '/chat' || item.path === '/movies' || item.path === '/admin') {
+              if (['/chat', '/movies', '/admin', '/tutorials', '/reviews'].includes(item.path)) {
                 navigate(item.path);
               } else {
                 handleNavClick(item.path, item.sort);

@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Star, MessageSquare, Shield, CheckCircle2 } from 'lucide-react';
-
-const ADMIN_LIST = ['yeebs'];
-const MOD_LIST = ['admin', 'moderator', 'mod'];
+import { ADMIN_LIST, MOD_LIST } from '../constants';
 
 const INITIAL_REVIEWS = [
   {
     id: '1',
-    user: 'CyberPhantom',
+    user: 'NovaStream',
     rating: 5,
-    text: "The interface is incredibly clean. Finally a site that doesn't feel like it's screaming at me. Performance is top-tier.",
-    date: '2 hours ago',
+    text: "The low-latency video transmission is unmatched. It's rare to find a portal that balances aesthetic minimalism with such high-performance architecture.",
+    date: '1 hour ago',
     isAdmin: false,
     isMod: false
   },
@@ -19,17 +17,17 @@ const INITIAL_REVIEWS = [
     id: '2',
     user: 'Yeebs',
     rating: 5,
-    text: "Welcome to the grid. We're constantly optimizing every byte to ensure your experience remains uninterrupted and private.",
-    date: '5 hours ago',
+    text: "Operational integrity confirmed. We continue to monitor all grid sectors to ensure an optimized experience for all users. Welcome back.",
+    date: '3 hours ago',
     isAdmin: true,
     isMod: false
   },
   {
     id: '3',
-    user: 'NocturnalDev',
-    rating: 4,
-    text: "Love the movie player integration. The progress tracking works exactly as advertised across different devices.",
-    date: 'Yesterday',
+    user: 'GridWalker',
+    rating: 5,
+    text: "Academy sessions saved me at least 40 hours of research. The bridge between design philosophy and practical code is perfectly executed here.",
+    date: '5 hours ago',
     isAdmin: false,
     isMod: false
   },
@@ -37,10 +35,19 @@ const INITIAL_REVIEWS = [
     id: '4',
     user: 'ModZero',
     rating: 5,
-    text: "System infrastructure is holding steady. Security protocols are optimal.",
-    date: '1 day ago',
+    text: "System infrastructure is holding steady. Security protocols are optimal. Moderation tools are responding with high precision.",
+    date: 'Yesterday',
     isAdmin: false,
     isMod: true
+  },
+  {
+    id: '5',
+    user: 'PixelPerfect',
+    rating: 4,
+    text: "The UI detail is insane for a web app. Love the spring physics on the navigation elements and the clean Swiss typography.",
+    date: '2 days ago',
+    isAdmin: false,
+    isMod: false
   }
 ];
 

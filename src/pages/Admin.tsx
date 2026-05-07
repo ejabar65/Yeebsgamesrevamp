@@ -166,6 +166,19 @@ export default function Admin() {
     }
   };
 
+  const handleToggleMod = async (targetUserId: string, currentIsMod: boolean) => {
+    if (!confirm(`Are you sure you want to ${currentIsMod ? 'revoke' : 'grant'} moderator privileges for @${targetUserId}?`)) return;
+    try {
+      const userRef = doc(db, 'users', targetUserId);
+      await updateDoc(userRef, { isMod: !currentIsMod });
+      setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, isMod: !currentIsMod } : u));
+      setStatus({ type: 'success', message: `Moderator status for @${targetUserId} updated.` });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
+      setStatus({ type: 'error', message: "Failed to update moderator status." });
+    }
+  };
+
   const filteredUsers = users.filter(u => 
     u.username?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
     u.uid?.toLowerCase().includes(userSearchQuery.toLowerCase())
@@ -590,14 +603,24 @@ export default function Admin() {
                   {u.id.toLowerCase() !== 'yeebs' && u.id.toLowerCase() !== user?.username.toLowerCase() && (
                     <>
                       {user?.isAdmin && (
-                        <button
-                          onClick={() => handleToggleAdmin(u.id, !!u.isAdmin)}
-                          className={`px-3 py-1.5 rounded-md text-[8px] font-bold uppercase tracking-[0.2em] border transition-all ${
-                            u.isAdmin ? 'bg-white text-black border-white' : 'bg-white/[0.02] text-gray-800 border-white/10 hover:text-white'
-                          }`}
-                        >
-                          {u.isAdmin ? 'Revoke' : 'Admin'}
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleToggleAdmin(u.id, !!u.isAdmin)}
+                            className={`px-3 py-1.5 rounded-md text-[8px] font-bold uppercase tracking-[0.2em] border transition-all ${
+                              u.isAdmin ? 'bg-white text-black border-white' : 'bg-white/[0.02] text-gray-800 border-white/10 hover:text-white'
+                            }`}
+                          >
+                            {u.isAdmin ? 'Revoke Root' : 'Grant Root'}
+                          </button>
+                          <button
+                            onClick={() => handleToggleMod(u.id, !!u.isMod)}
+                            className={`px-3 py-1.5 rounded-md text-[8px] font-bold uppercase tracking-[0.2em] border transition-all ${
+                              u.isMod ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-white/[0.02] text-gray-800 border-white/10 hover:text-yellow-500 hover:border-yellow-500/50'
+                            }`}
+                          >
+                            {u.isMod ? 'Revoke Mod' : 'Grant Mod'}
+                          </button>
+                        </>
                       )}
                       <button
                         onClick={() => handleBanToggle(u.id, !!u.isBanned)}

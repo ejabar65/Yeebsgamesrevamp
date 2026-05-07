@@ -4,44 +4,36 @@ import { Play, Code, Globe, Terminal, X } from 'lucide-react';
 
 const TUTORIALS = [
   {
-    title: "Mastering Modern Web Architecture",
-    duration: "15:20",
-    thumbnail: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800",
+    title: "Mastering React 18 & Typescript",
+    duration: "12:45",
+    thumbnail: "https://i.ytimg.com/vi/SqcY0GlQWvY/maxresdefault.jpg",
     embedId: "SqcY0GlQWvY",
     category: "Development",
-    desc: "A deep dive into high-performance web structures and scalable systems."
+    desc: "A comprehensive guide to building scalable React applications with modern TypeScript patterns."
   },
   {
-    title: "TypeScript Integration Patterns",
-    duration: "24:45",
-    thumbnail: "https://images.unsplash.com/photo-1516116216624-53e697fedbea?auto=format&fit=crop&q=80&w=800",
-    embedId: "zQnBQ4tB3ZA",
-    category: "Coding",
-    desc: "Advanced type safety and architectural patterns for complex applications."
-  },
-  {
-    title: "Cloud Deployment Protocols",
-    duration: "12:10",
-    thumbnail: "https://images.unsplash.com/photo-1451187530220-4e2b1d496ad4?auto=format&fit=crop&q=80&w=800",
-    embedId: "2-777T_zX-E",
-    category: "Infrastructure",
-    desc: "Seamless synchronization between local development and cloud nodes."
-  },
-  {
-    title: "Minimalist Interface Design",
-    duration: "18:30",
-    thumbnail: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&q=80&w=800",
+    title: "Advanced Tailwind CSS Layouts",
+    duration: "18:20",
+    thumbnail: "https://i.ytimg.com/vi/hQ1-3In77W4/maxresdefault.jpg",
     embedId: "hQ1-3In77W4",
     category: "Design",
-    desc: "The philosophy of the Swiss style and its application in modern digital spaces."
+    desc: "Master the utility-first philosophy to create distinctive, minimalist Swiss-style interfaces."
   },
   {
-    title: "Real-time Communication Systems",
-    duration: "21:15",
-    thumbnail: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=800",
-    embedId: "p66Xv3T5mIs",
-    category: "Network",
-    desc: "Building low-latency transmission channels for global synchronization."
+    title: "Cloud Deployment Strategies",
+    duration: "15:10",
+    thumbnail: "https://i.ytimg.com/vi/2-777T_zX-E/maxresdefault.jpg",
+    embedId: "2-777T_zX-E",
+    category: "Infrastructure",
+    desc: "Protocols for synchronizing local development environments with enterprise cloud nodes."
+  },
+  {
+    title: "The Future of Web Performance",
+    duration: "22:30",
+    thumbnail: "https://i.ytimg.com/vi/zQnBQ4tB3ZA/maxresdefault.jpg",
+    embedId: "zQnBQ4tB3ZA",
+    category: "Performance",
+    desc: "Optimizing transmission latency and rendering cycles for high-bandwidth digital experiences."
   }
 ];
 
