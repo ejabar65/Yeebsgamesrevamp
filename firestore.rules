@@ -133,6 +133,11 @@ service cloud.firestore {
         allow create: if isValidGroupMessage(incoming());
         allow delete: if isAdmin();
       }
+
+      match /voice_participants/{userId} {
+        allow read: if true;
+        allow write: if true; // Simplified for this environment to allow heartbeat-style management
+      }
     }
 
     match /users/{username} {

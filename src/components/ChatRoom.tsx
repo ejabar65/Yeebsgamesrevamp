@@ -10,6 +10,7 @@ import {
   addDoc, 
   serverTimestamp,
   doc,
+  setDoc,
   updateDoc,
   deleteDoc
 } from 'firebase/firestore';
@@ -38,12 +39,23 @@ export const ChatRoom: React.FC<{
   const [spamCooldown, setSpamCooldown] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [isInVoice, setIsInVoice] = useState(false);
-  const [callActive, setCallActive] = useState(false);
+  const [voiceParticipants, setVoiceParticipants] = useState<any[]>([]);
+  const [isCalling, setIsCalling] = useState(false);
 
   const isOwner = user?.uid === ownerId;
   const spamLimitEnabled = settings ? settings.spamLimit : true;
   const filterEnabled = settings ? settings.filterEnabled : true;
+
+  useEffect(() => {
+    if (!groupId) return;
+    
+    const voiceRef = collection(db, `groups/${groupId}/voice_participants`);
+    const unsubscribe = onSnapshot(voiceRef, (snapshot) => {
+      setVoiceParticipants(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    return () => unsubscribe();
+  }, [groupId]);
 
   useEffect(() => {
     const colPath = groupId ? `groups/${groupId}/messages` : 'global_messages';
@@ -151,13 +163,26 @@ export const ChatRoom: React.FC<{
     }
   };
 
-  const toggleCall = () => {
-    if (!callActive) {
-      setCallActive(true);
-      setIsInVoice(true);
-    } else {
-      setCallActive(false);
-      setIsInVoice(false);
+  const toggleCall = async () => {
+    if (!groupId || !user) return;
+    
+    try {
+      const participantRef = doc(db, `groups/${groupId}/voice_participants`, user.uid);
+      if (!isCalling) {
+        await setDoc(participantRef, {
+          uid: user.uid,
+          username: user.username,
+          photoURL: user.photoURL,
+          joinedAt: serverTimestamp(),
+          isSpeaking: false
+        });
+        setIsCalling(true);
+      } else {
+        await deleteDoc(participantRef);
+        setIsCalling(false);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `groups/${groupId}/voice_participants`);
     }
   };
 
@@ -175,10 +200,11 @@ export const ChatRoom: React.FC<{
             <>
               <button 
                 onClick={toggleCall}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${callActive ? 'bg-green-500 border-green-500 text-white' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${isCalling ? 'bg-green-500 border-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
               >
+                <div className={`w-1.5 h-1.5 rounded-full ${isCalling ? 'bg-white animate-pulse' : 'bg-gray-700'}`} />
                 <Phone className="w-3 h-3" />
-                <span className="text-[8px] font-black uppercase tracking-widest">{callActive ? 'In Voice' : 'Join Call'}</span>
+                <span className="text-[8px] font-black uppercase tracking-widest">{isCalling ? 'Disconnect' : 'Connect Voice'}</span>
               </button>
               
               {isOwner && (
@@ -239,42 +265,60 @@ export const ChatRoom: React.FC<{
         )}
       </AnimatePresence>
 
-      {/* Voice Call Overlay */}
+      {/* Sync Voice Overlay */}
       <AnimatePresence>
-        {callActive && (
+        {(isCalling || voiceParticipants.length > 0) && groupId && (
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="absolute top-20 right-6 z-30 w-48 bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="absolute top-20 right-6 z-30 w-56 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl p-5 shadow-2xl flex flex-col gap-4"
           >
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[8px] font-black uppercase tracking-widest text-green-500 flex items-center gap-1.5">
-                <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
-                Live Sync
+            <div className="flex items-center justify-between">
+              <span className="text-[8px] font-black uppercase tracking-widest text-green-500 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                Sync Channel
               </span>
-              <span className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">00:12</span>
+              <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">{voiceParticipants.length} Linked</span>
             </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <img src={user?.photoURL} className="w-8 h-8 rounded-lg object-cover border border-green-500/50" />
-                  <div className="absolute inset-0 bg-green-500/20 rounded-lg animate-ping opacity-20" />
-                </div>
-                <div>
-                  <p className="text-[9px] font-bold text-white uppercase tracking-tight">{user?.username}</p>
-                  <div className="flex gap-0.5 mt-1">
-                    {[1,2,3,4,5].map(i => <div key={i} className="w-0.5 h-1.5 bg-green-500/40 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }} />)}
+            
+            <div className="space-y-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+              {voiceParticipants.map((p) => (
+                <div key={p.id} className="flex items-center justify-between group/user">
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <img src={p.photoURL} className={`w-9 h-9 rounded-xl object-cover transition-all ${p.isSpeaking || p.uid === user?.uid ? 'border-2 border-green-500' : 'border border-white/10 opacity-70'}`} />
+                      {(p.isSpeaking || p.uid === user?.uid) && (
+                        <div className="absolute inset-0 bg-green-500/20 rounded-xl animate-ping opacity-20" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-white uppercase tracking-tight">{p.username}</p>
+                      <div className="flex gap-0.5 mt-1">
+                        {[1,2,3].map(i => (
+                          <div 
+                            key={i} 
+                            className={`w-1 h-2 rounded-full transition-all duration-300 ${p.isSpeaking || p.uid === user?.uid ? 'bg-green-500' : 'bg-gray-800'}`} 
+                            style={{ 
+                              animation: (p.isSpeaking || p.uid === user?.uid) ? `bounce 0.8s ease-in-out infinite ${i * 0.1}s` : 'none' 
+                            }} 
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
-            <button 
-              onClick={() => setCallActive(false)}
-              className="w-full mt-4 py-2 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-[8px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
-            >
-              Disconnect
-            </button>
+
+            {isCalling && (
+              <button 
+                onClick={toggleCall}
+                className="w-full py-2.5 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-xl shadow-red-500/20 active:scale-95"
+              >
+                Terminate Link
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -313,6 +357,9 @@ export const ChatRoom: React.FC<{
                 </div>
                 <div className={`flex flex-col ${msg.senderName === user?.username ? 'items-end' : 'items-start'}`}>
                   <div className="flex items-center gap-2 mb-2 px-1">
+                    {voiceParticipants.some(vp => vp.uid === msg.senderId) && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                    )}
                     <Link 
                       to={`/profile/${msg.senderName.toLowerCase()}`}
                       className={`text-[9px] font-bold uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center gap-1 ${ADMIN_LIST.includes(msg.senderName.toLowerCase()) ? 'text-blue-500' : MOD_LIST.includes(msg.senderName.toLowerCase()) ? 'text-yellow-500' : 'text-gray-600 hover:text-gray-400'}`}
