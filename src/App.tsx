@@ -22,6 +22,7 @@ import { applyCloak, getSavedCloak } from './cloakUtils';
 import { useGames } from './context/GameContext';
 
 import OSShell from './components/OSShell';
+import { MiniChat } from './components/MiniChat';
 
 function ThemeWrapper({ children }: { children: React.ReactNode }) {
   const { user } = useGames();
@@ -88,6 +89,7 @@ export default function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/:username" element={<Profile />} />
             </Routes>
+            <MiniChat />
           </OSShell>
         </ThemeWrapper>
       </GameProvider>

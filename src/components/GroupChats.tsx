@@ -10,6 +10,7 @@ import {
   addDoc, 
   serverTimestamp,
   doc,
+  updateDoc,
   deleteDoc,
   orderBy
 } from 'firebase/firestore';
@@ -20,6 +21,7 @@ import { ChatRoom } from './ChatRoom';
 interface Group {
   id: string;
   name: string;
+  code: string;
   ownerId: string;
   ownerName: string;
   members: string[];
@@ -35,13 +37,15 @@ export const GroupChats: React.FC = () => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
+  const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
 
-    // Fetch all groups where user is a member or owner
+    // Fetch all groups
     const q = query(
       collection(db, 'groups'),
       orderBy('createdAt', 'desc')
@@ -53,9 +57,11 @@ export const GroupChats: React.FC = () => {
         ...doc.data()
       })) as Group[];
       
-      // Filter client-side for simplicity in this demo, usually would use where array-contains
+      // Filter client-side: user must be an owner, member, or Admin/Mod
       const filtered = g.filter(group => 
-        group.members.includes(user.uid) || group.ownerId === user.uid
+        group.members.includes(user.uid) || 
+        group.ownerId === user.uid ||
+        user.isAdmin
       );
       
       setGroups(filtered);
@@ -67,6 +73,10 @@ export const GroupChats: React.FC = () => {
     return () => unsubscribe();
   }, [user]);
 
+  const generateCode = () => {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  };
+
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newGroupName.trim()) return;
@@ -74,6 +84,7 @@ export const GroupChats: React.FC = () => {
     try {
       const groupData = {
         name: newGroupName.trim(),
+        code: generateCode(),
         ownerId: user.uid,
         ownerName: user.username,
         members: [user.uid],
@@ -88,6 +99,45 @@ export const GroupChats: React.FC = () => {
       setNewGroupName('');
       setShowCreateModal(false);
       setSelectedGroup({ ...groupData, id: docRef.id } as Group);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'groups');
+    }
+  };
+
+  const handleJoinGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !joinCode.trim()) return;
+
+    try {
+      const q = query(collection(db, 'groups'), where('code', '==', joinCode.trim().toUpperCase()));
+      const unsubscribe = onSnapshot(q, async (snapshot) => {
+        if (snapshot.empty) {
+          alert('Invalid Sector Code. Transmission rejected.');
+          unsubscribe();
+          return;
+        }
+
+        const groupDoc = snapshot.docs[0];
+        const groupData = groupDoc.data() as Group;
+
+        if (groupData.members.includes(user.uid)) {
+          setSelectedGroup({ ...groupData, id: groupDoc.id } as Group);
+          setJoinCode('');
+          setShowJoinModal(false);
+          unsubscribe();
+          return;
+        }
+
+        const groupRef = doc(db, 'groups', groupDoc.id);
+        await updateDoc(groupRef, {
+          members: [...groupData.members, user.uid]
+        });
+
+        setSelectedGroup({ ...groupData, id: groupDoc.id, members: [...groupData.members, user.uid] } as Group);
+        setJoinCode('');
+        setShowJoinModal(false);
+        unsubscribe();
+      });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'groups');
     }
@@ -120,6 +170,7 @@ export const GroupChats: React.FC = () => {
               <h2 className="font-bold text-sm text-white tracking-tight">{selectedGroup.name}</h2>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[8px] font-black uppercase tracking-widest text-blue-500">Group Transmission</span>
+                <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest">• Sector: {selectedGroup.code}</span>
                 <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest">• {selectedGroup.members.length} Members</span>
               </div>
             </div>
@@ -151,13 +202,22 @@ export const GroupChats: React.FC = () => {
           <h2 className="text-3xl font-black tracking-tighter text-white">Groups.</h2>
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500 mt-2">Private sector networking</p>
         </div>
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl shadow-blue-500/20 active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          Initialize GC
-        </button>
+        <div className="flex gap-4">
+          <button 
+            onClick={() => setShowJoinModal(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-white/5 text-gray-400 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all shadow-2xl active:scale-95"
+          >
+            <Zap className="w-4 h-4" />
+            Join Sector
+          </button>
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl shadow-blue-500/20 active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            Initialize GC
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -214,6 +274,61 @@ export const GroupChats: React.FC = () => {
 
       {/* Create Modal */}
       <AnimatePresence>
+        {showJoinModal && (
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowJoinModal(false)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-md card-subtle p-8 space-y-8 bg-[#0c0c0c] border-white/10"
+            >
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-white">Join Sector</h2>
+                <p className="text-gray-500 text-xs mt-2 font-medium">Enter the unique 6-character code to established a secure link.</p>
+              </div>
+
+              <form onSubmit={handleJoinGroup} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Sector Code</label>
+                  <input 
+                    type="text"
+                    autoFocus
+                    maxLength={6}
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                    placeholder="E.G. XJ9K2L"
+                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-5 py-4 focus:outline-hidden focus:border-blue-500/50 transition-all text-center text-xl font-black tracking-[0.5em] text-blue-500 placeholder:opacity-20 uppercase"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setShowJoinModal(false)}
+                    className="flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors"
+                  >
+                    Abort
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={joinCode.length < 6}
+                    className="flex-1 py-4 bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl shadow-blue-500/20 disabled:opacity-50"
+                  >
+                    Establish Link
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
         {showCreateModal && (
           <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
             <motion.div 

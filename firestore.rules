@@ -104,8 +104,9 @@ service cloud.firestore {
     }
 
     function isValidGroup(data) {
-      return data.keys().hasAll(['name', 'ownerId', 'ownerName', 'members', 'settings', 'createdAt']) &&
+      return data.keys().hasAll(['name', 'code', 'ownerId', 'ownerName', 'members', 'settings', 'createdAt']) &&
              data.name is string && data.name.size() <= 100 &&
+             data.code is string && data.code.size() == 6 &&
              data.ownerId is string &&
              data.members is list &&
              data.settings is map &&
@@ -136,7 +137,11 @@ service cloud.firestore {
 
       match /voice_participants/{userId} {
         allow read: if true;
-        allow write: if true; // Simplified for this environment to allow heartbeat-style management
+        allow write: if true; 
+      }
+
+      match /calls/{userId} {
+        allow read, write: if true; // In Mesh signaling, users write to each other's signaling docs
       }
     }
 

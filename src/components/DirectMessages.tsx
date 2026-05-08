@@ -10,13 +10,16 @@ import {
   doc,
   getDoc,
   setDoc,
-  updateDoc
+  updateDoc,
+  orderBy,
+  limit
 } from 'firebase/firestore';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
-import { Image as ImageIcon, Send, X, User } from 'lucide-react';
+import { Image as ImageIcon, Send, X, User, Bell, Film } from 'lucide-react';
+import { GifPicker } from './GifPicker';
 
 const filter = new Filter();
 
@@ -27,11 +30,65 @@ export const DirectMessages: React.FC = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showGifPicker, setShowGifPicker] = useState(false);
   const [searchName, setSearchName] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(Notification.permission);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastMessageIds = useRef<Record<string, string>>({});
+
+  useEffect(() => {
+    if ("Notification" in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
+  const requestNotificationPermission = async () => {
+    if ("Notification" in window) {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+    }
+  };
+
+  useEffect(() => {
+    if (!user || chats.length === 0) return;
+
+    // Listen for new messages across all chats for notifications
+    const unsubscribes = chats.map(chat => {
+      const q = query(
+        collection(db, 'chats', chat.id, 'messages'),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      );
+
+      return onSnapshot(q, (snapshot) => {
+        if (snapshot.empty) return;
+        const msg = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() as any };
+        
+        // Don't notify for own messages or first load
+        if (msg.senderId !== user.username.toLowerCase()) {
+          const lastId = lastMessageIds.current[chat.id];
+          if (lastId && lastId !== msg.id) {
+            // New message!
+            if (notificationPermission === 'granted' && document.hidden) {
+              const recipient = chat.participants.find((p: string) => p !== user.username.toLowerCase());
+              new Notification(`New message from ${recipient}`, {
+                body: msg.text || (msg.image ? '📷 Image' : '🎬 GIF'),
+                icon: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + recipient
+              });
+            }
+          }
+          lastMessageIds.current[chat.id] = msg.id;
+        } else {
+          lastMessageIds.current[chat.id] = msg.id;
+        }
+      });
+    });
+
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [user, chats, notificationPermission]);
 
   useEffect(() => {
     if (!user) return;
@@ -127,14 +184,15 @@ export const DirectMessages: React.FC = () => {
     }
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !activeChat || (!newMessage.trim() && !selectedImage)) return;
+  const handleSendMessage = async (e: React.FormEvent, gifUrl?: string) => {
+    if (e) e.preventDefault();
+    if (!user || !activeChat || (!newMessage.trim() && !selectedImage && !gifUrl)) return;
 
     const text = filter.isProfane(newMessage) ? filter.clean(newMessage) : newMessage;
     const msgData = {
-      text,
+      text: gifUrl ? "" : text,
       image: selectedImage,
+      gif: gifUrl || null,
       senderId: user.username.toLowerCase(),
       createdAt: serverTimestamp()
     };
@@ -142,7 +200,7 @@ export const DirectMessages: React.FC = () => {
     try {
       await addDoc(collection(db, 'chats', activeChat.id, 'messages'), msgData);
       await updateDoc(doc(db, 'chats', activeChat.id), {
-        lastMessage: selectedImage ? '📷 Image' : text,
+        lastMessage: gifUrl ? '🎬 GIF' : (selectedImage ? '📷 Image' : text),
         updatedAt: serverTimestamp()
       });
       setNewMessage('');
@@ -150,6 +208,11 @@ export const DirectMessages: React.FC = () => {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleSelectGif = async (url: string) => {
+    setShowGifPicker(false);
+    await handleSendMessage(null as any, url);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,7 +246,19 @@ export const DirectMessages: React.FC = () => {
       {/* Sidebar: Chat List */}
       <div className={`w-full md:w-80 border-r border-white/5 flex flex-col bg-black/20 ${activeChat ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-6 border-b border-white/5 space-y-4">
-           <h2 className="font-bold text-lg text-white">Private Threads</h2>
+           <div className="flex items-center justify-between">
+             <h2 className="font-bold text-lg text-white">Private Threads</h2>
+             {notificationPermission !== 'granted' && (
+               <button 
+                 onClick={requestNotificationPermission}
+                 className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500 hover:text-white transition-all flex items-center gap-2 group"
+                 title="Enable Notifications"
+               >
+                 <Bell className="w-3.5 h-3.5 animate-bounce" />
+                 <span className="text-[8px] font-black uppercase tracking-widest hidden group-hover:block">Notify</span>
+               </button>
+             )}
+           </div>
            <form onSubmit={handleStartChat} className="relative group">
             <input 
               type="text"
@@ -282,6 +357,11 @@ export const DirectMessages: React.FC = () => {
                               <img src={msg.image} alt="Upload" className="max-w-full h-auto" />
                            </div>
                         )}
+                        {msg.gif && (
+                           <div className="mb-2 rounded-xl overflow-hidden border border-black/20">
+                              <img src={msg.gif} alt="GIF" className="max-w-full h-auto" />
+                           </div>
+                        )}
                         <p>{msg.text}</p>
                       </div>
                     </motion.div>
@@ -299,7 +379,20 @@ export const DirectMessages: React.FC = () => {
                 className="hidden"
               />
 
-              <AnimatePresence>
+            <AnimatePresence>
+                {showGifPicker && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    className="absolute bottom-20 right-4 left-4 z-50 h-[300px]"
+                  >
+                    <GifPicker 
+                      onSelect={handleSelectGif} 
+                      onClose={() => setShowGifPicker(false)} 
+                    />
+                  </motion.div>
+                )}
                 {selectedImage && (
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.8 }}
@@ -329,6 +422,13 @@ export const DirectMessages: React.FC = () => {
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-hidden focus:border-blue-500/50 transition-all text-white placeholder:text-gray-600"
                   />
                   <div className="absolute right-2 top-1.5 bottom-1.5 flex items-center gap-2">
+                    <button 
+                      type="button"
+                      onClick={() => setShowGifPicker(!showGifPicker)}
+                      className={`p-2 rounded-lg transition-all ${showGifPicker ? 'bg-blue-500 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                      <Film className="w-4 h-4" />
+                    </button>
                     <button 
                       type="button"
                       onClick={() => fileInputRef.current?.click()}

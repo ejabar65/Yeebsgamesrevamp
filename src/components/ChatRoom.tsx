@@ -18,10 +18,23 @@ import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
-import { Send, Trash2, MessageSquare, Shield, User, Zap, Image as ImageIcon, X, CheckCircle2, Star, Phone, Settings } from 'lucide-react';
+import { Send, Trash2, MessageSquare, Shield, User, Zap, Image as ImageIcon, X, CheckCircle2, Star, Phone, Settings, Film } from 'lucide-react';
+import { GifPicker } from './GifPicker';
 import { ADMIN_LIST, MOD_LIST } from '../constants';
 
 const filter = new Filter();
+
+const RemoteAudio: React.FC<{ stream: MediaStream }> = ({ stream }) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.srcObject = stream;
+    }
+  }, [stream]);
+
+  return <audio ref={audioRef} autoPlay playsInline />;
+};
 
 export const ChatRoom: React.FC<{ 
   groupId?: string; 
@@ -39,8 +52,14 @@ export const ChatRoom: React.FC<{
   const [spamCooldown, setSpamCooldown] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
   const [voiceParticipants, setVoiceParticipants] = useState<any[]>([]);
   const [isCalling, setIsCalling] = useState(false);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const remoteStreams = useRef<Map<string, MediaStream>>(new Map());
+  const [remoteStreamsState, setRemoteStreamsState] = useState<number>(0); 
+  const analyserRef = useRef<AnalyserNode | null>(null);
 
   const isOwner = user?.uid === ownerId;
   const spamLimitEnabled = settings ? settings.spamLimit : true;
@@ -56,6 +75,38 @@ export const ChatRoom: React.FC<{
 
     return () => unsubscribe();
   }, [groupId]);
+
+  // Speaking detection
+  useEffect(() => {
+    if (!localStream || !user || !groupId) return;
+
+    const audioContext = new AudioContext();
+    const source = audioContext.createMediaStreamSource(localStream);
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    analyserRef.current = analyser;
+
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    let lastSpeaking = false;
+    let interval = setInterval(() => {
+      analyser.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+      const isSpeaking = average > 30; // Threshold
+
+      if (isSpeaking !== lastSpeaking) {
+        lastSpeaking = isSpeaking;
+        updateDoc(doc(db, `groups/${groupId}/voice_participants`, user.uid), {
+          isSpeaking
+        }).catch(() => {});
+      }
+    }, 200);
+
+    return () => {
+      clearInterval(interval);
+      audioContext.close();
+    };
+  }, [localStream, user, groupId]);
 
   useEffect(() => {
     const colPath = groupId ? `groups/${groupId}/messages` : 'global_messages';
@@ -85,13 +136,13 @@ export const ChatRoom: React.FC<{
     return () => unsubscribe();
   }, [groupId]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendMessage = async (e: React.FormEvent, gifUrl?: string) => {
+    if (e) e.preventDefault();
     if (!user) {
       alert('Please log in to chat.');
       return;
     }
-    if ((!newMessage.trim() && !selectedImage) || (spamCooldown && spamLimitEnabled)) return;
+    if ((!newMessage.trim() && !selectedImage && !gifUrl) || (spamCooldown && spamLimitEnabled)) return;
 
     if (spamLimitEnabled) {
       setSpamCooldown(true);
@@ -103,8 +154,9 @@ export const ChatRoom: React.FC<{
       const colPath = groupId ? `groups/${groupId}/messages` : 'global_messages';
 
       await addDoc(collection(db, colPath), {
-        text: censoredText,
+        text: gifUrl ? "" : censoredText,
         image: selectedImage,
+        gif: gifUrl || null,
         senderId: user.uid,
         senderName: user.username,
         senderAvatar: user.photoURL,
@@ -120,6 +172,11 @@ export const ChatRoom: React.FC<{
     } catch (error) {
        handleFirestoreError(error, OperationType.WRITE, 'global_messages');
     }
+  };
+
+  const handleSelectGif = async (url: string) => {
+    setShowGifPicker(false);
+    await handleSendMessage(null as any, url);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,12 +220,190 @@ export const ChatRoom: React.FC<{
     }
   };
 
+  // Cleanup on unmount or group change
+  useEffect(() => {
+    return () => {
+      stopVoice();
+    };
+  }, [groupId]);
+
+  const stopVoice = async () => {
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+      setLocalStream(null);
+    }
+    peerConnections.current.forEach(pc => pc.close());
+    peerConnections.current.clear();
+    remoteStreams.current.clear();
+    setIsCalling(false);
+    
+    if (user && groupId) {
+      try {
+        await deleteDoc(doc(db, `groups/${groupId}/voice_participants`, user.uid));
+        // Also cleanup signaling docs if they exist
+        await deleteDoc(doc(db, `groups/${groupId}/calls`, user.uid));
+      } catch (e) {
+        console.error("Cleanup error", e);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!groupId || !isCalling || !user) return;
+
+    // Listen for other participants to establish connections
+    const voiceRef = collection(db, `groups/${groupId}/voice_participants`);
+    const unsubscribe = onSnapshot(voiceRef, async (snapshot) => {
+      const participants = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      
+      for (const participant of participants) {
+        if (participant.uid === user.uid) continue;
+        
+        // If we don't have a connection to this participant yet
+        if (!peerConnections.current.has(participant.uid)) {
+          // Rule: Higher UID initiates
+          if (user.uid > participant.uid) {
+            initiateCall(participant.uid);
+          }
+        }
+      }
+      
+      // Cleanup stale connections
+      const pUids = participants.map(p => p.uid);
+      peerConnections.current.forEach((_, uid) => {
+        if (!pUids.includes(uid)) {
+          closeConnection(uid);
+        }
+      });
+    });
+
+    // Listen for incoming offers/answers/ICE candidates for ME
+    const myCallRef = doc(db, `groups/${groupId}/calls`, user.uid);
+    const unsubSignaling = onSnapshot(myCallRef, async (snapshot) => {
+      const data = snapshot.data();
+      if (!data) return;
+
+      // Handle Offers
+      if (data.offers) {
+        for (const [fromUid, offer] of Object.entries(data.offers)) {
+          if (!peerConnections.current.has(fromUid)) {
+            handleOffer(fromUid, offer as RTCSessionDescriptionInit);
+          }
+        }
+      }
+
+      // Handle Answers
+      if (data.answers) {
+        for (const [fromUid, answer] of Object.entries(data.answers)) {
+          const pc = peerConnections.current.get(fromUid);
+          if (pc && pc.signalingState === 'have-local-offer') {
+            await pc.setRemoteDescription(new RTCSessionDescription(answer as RTCSessionDescriptionInit));
+          }
+        }
+      }
+
+      // Handle ICE Candidates
+      if (data.iceCandidates) {
+        for (const [fromUid, candidates] of Object.entries(data.iceCandidates)) {
+          const pc = peerConnections.current.get(fromUid);
+          if (pc) {
+            for (const cand of (candidates as any[])) {
+              await pc.addIceCandidate(new RTCIceCandidate(cand));
+            }
+          }
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      unsubSignaling();
+    };
+  }, [groupId, isCalling, user, localStream]);
+
+  const createPC = (remoteUid: string) => {
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+
+    if (localStream) {
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    }
+
+    pc.ontrack = (event) => {
+      const stream = event.streams[0];
+      remoteStreams.current.set(remoteUid, stream);
+      setRemoteStreamsState(prev => prev + 1);
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate && user && groupId) {
+        const candidateData = event.candidate.toJSON();
+        const remoteCallRef = doc(db, `groups/${groupId}/calls`, remoteUid);
+        updateDoc(remoteCallRef, {
+          [`iceCandidates.${user.uid}`]: (window as any).firebase?.firestore?.FieldValue.arrayUnion(candidateData) || [candidateData]
+        }).catch(() => {
+          // If updateDoc fails because doc doesn't exist, try setDoc
+          setDoc(remoteCallRef, {
+            iceCandidates: { [user.uid]: [candidateData] }
+          }, { merge: true });
+        });
+      }
+    };
+
+    peerConnections.current.set(remoteUid, pc);
+    return pc;
+  };
+
+  const initiateCall = async (remoteUid: string) => {
+    const pc = createPC(remoteUid);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    const remoteCallRef = doc(db, `groups/${groupId}/calls`, remoteUid);
+    await setDoc(remoteCallRef, {
+      offers: { [user!.uid]: { type: offer.type, sdp: offer.sdp } }
+    }, { merge: true });
+  };
+
+  const handleOffer = async (remoteUid: string, offer: RTCSessionDescriptionInit) => {
+    const pc = createPC(remoteUid);
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    const remoteCallRef = doc(db, `groups/${groupId}/calls`, remoteUid);
+    await setDoc(remoteCallRef, {
+      answers: { [user!.uid]: { type: answer.type, sdp: answer.sdp } }
+    }, { merge: true });
+  };
+
+  const closeConnection = (uid: string) => {
+    const pc = peerConnections.current.get(uid);
+    if (pc) {
+      pc.close();
+      peerConnections.current.delete(uid);
+    }
+    remoteStreams.current.delete(uid);
+    setRemoteStreamsState(prev => prev + 1);
+  };
+
   const toggleCall = async () => {
     if (!groupId || !user) return;
     
     try {
       const participantRef = doc(db, `groups/${groupId}/voice_participants`, user.uid);
       if (!isCalling) {
+        // Start Local Stream
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (e) {
+          alert("Microphone access denied or not available.");
+          return;
+        }
+        setLocalStream(stream);
+
         await setDoc(participantRef, {
           uid: user.uid,
           username: user.username,
@@ -178,8 +413,7 @@ export const ChatRoom: React.FC<{
         });
         setIsCalling(true);
       } else {
-        await deleteDoc(participantRef);
-        setIsCalling(false);
+        await stopVoice();
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `groups/${groupId}/voice_participants`);
@@ -347,18 +581,40 @@ export const ChatRoom: React.FC<{
                 className={`flex gap-4 ${msg.senderName === user?.username ? 'flex-row-reverse' : 'flex-row'}`}
               >
                 <div className="flex-shrink-0">
-                  <div className={`w-10 h-10 rounded-xl overflow-hidden border ${msg.senderName === user?.username ? 'border-white/20' : 'border-white/5'} bg-white/5`}>
+                  <div className={`w-10 h-10 rounded-xl overflow-hidden border transition-all duration-500 relative ${
+                    msg.senderName === user?.username ? 'border-white/20' : 'border-white/5'
+                  } ${
+                    voiceParticipants.some(vp => vp.uid === msg.senderId) 
+                      ? 'ring-2 ring-green-500 ring-offset-2 ring-offset-black border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]' 
+                      : ''
+                  } bg-white/5`}>
                     <img 
                       src={msg.senderAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.senderName}`} 
                       alt="" 
                       className="w-full h-full object-cover"
                     />
+                    {voiceParticipants.find(vp => vp.uid === msg.senderId)?.isSpeaking && (
+                      <div className="absolute inset-0 bg-green-500/10 flex items-center justify-center">
+                         <div className="flex gap-0.5">
+                            {[1,2,3].map(i => (
+                              <div 
+                                key={i} 
+                                className="w-0.5 h-3 bg-green-500 rounded-full animate-bounce" 
+                                style={{ animationDelay: `${i * 0.1}s` }} 
+                              />
+                            ))}
+                         </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className={`flex flex-col ${msg.senderName === user?.username ? 'items-end' : 'items-start'}`}>
                   <div className="flex items-center gap-2 mb-2 px-1">
                     {voiceParticipants.some(vp => vp.uid === msg.senderId) && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                      <div className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                        <span className="text-[7px] font-black text-green-500 uppercase tracking-widest">Linked</span>
+                      </div>
                     )}
                     <Link 
                       to={`/profile/${msg.senderName.toLowerCase()}`}
@@ -389,6 +645,11 @@ export const ChatRoom: React.FC<{
                         <img src={msg.image} alt="Transmission Asset" className="max-w-full h-auto opacity-90 hover:opacity-100 transition-opacity" />
                       </div>
                     )}
+                    {msg.gif && (
+                      <div className="mb-3 rounded-lg overflow-hidden border border-white/5 bg-white/5">
+                        <img src={msg.gif} alt="GIF" className="max-w-full h-auto" />
+                      </div>
+                    )}
                     <p className="tracking-tight">{msg.text}</p>
                   </div>
                 </div>
@@ -397,6 +658,22 @@ export const ChatRoom: React.FC<{
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {showGifPicker && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="absolute bottom-24 right-6 left-6 z-50 h-[350px]"
+          >
+            <GifPicker 
+              onSelect={handleSelectGif} 
+              onClose={() => setShowGifPicker(false)} 
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <form onSubmit={handleSendMessage} className="p-6 border-t border-white/5 bg-black">
         {!user ? (
@@ -445,6 +722,13 @@ export const ChatRoom: React.FC<{
                 <div className="absolute right-2 top-1.5 bottom-1.5 flex items-center gap-1.5">
                   <button 
                     type="button"
+                    onClick={() => setShowGifPicker(!showGifPicker)}
+                    className={`p-2 rounded-lg transition-all ${showGifPicker ? 'bg-blue-500 text-white' : 'text-gray-700 hover:text-gray-400'}`}
+                  >
+                    <Film className="w-3.5 h-3.5" />
+                  </button>
+                  <button 
+                    type="button"
                     onClick={() => fileInputRef.current?.click()}
                     className={`p-2 rounded-lg transition-all ${selectedImage ? 'bg-blue-500 text-white' : 'text-gray-700 hover:text-gray-400'}`}
                     disabled={isUploading}
@@ -464,6 +748,13 @@ export const ChatRoom: React.FC<{
           </div>
         )}
       </form>
+
+      {/* Hidden Audio Elements for Mesh Comms */}
+      <div className="hidden">
+        {Array.from(remoteStreams.current.entries()).map(([uid, stream]) => (
+          <RemoteAudio key={uid} stream={stream} />
+        ))}
+      </div>
     </div>
   );
 };
