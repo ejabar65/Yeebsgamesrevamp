@@ -7,7 +7,7 @@ interface GifPickerProps {
   onClose: () => void;
 }
 
-const GIPHY_API_KEY = import.meta.env.VITE_GIPHY_API_KEY;
+const GIPHY_API_KEY = 'fshaPGGhOxUjcTIDKqV4l1iXJVUzcMEN';
 
 export const GifPicker: React.FC<GifPickerProps> = ({ onSelect, onClose }) => {
   const [search, setSearch] = useState('');
