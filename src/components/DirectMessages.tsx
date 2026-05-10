@@ -493,9 +493,9 @@ export const DirectMessages: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-1 bg-[#0c0c0c] overflow-hidden flex-col md:flex-row min-h-[500px]">
+    <div className="flex flex-1 bg-[#0c0c0c] overflow-hidden flex-col md:flex-row h-[75svh] md:h-[600px] border border-white/5 rounded-2xl md:rounded-3xl shadow-2xl relative">
       {/* Sidebar: Chat List */}
-      <div className={`w-full md:w-80 border-r border-white/5 flex flex-col bg-black/20 ${activeChat ? 'hidden md:flex' : 'flex flex-1'}`}>
+      <div className={`w-full md:w-80 border-r border-white/5 flex flex-col bg-black/20 ${activeChat ? 'hidden md:flex' : 'flex h-full'}`}>
         <div className="p-4 md:p-6 border-b border-white/5 space-y-4">
            <div className="flex items-center justify-between">
              <h2 className="font-bold text-lg text-white">Direct Messages</h2>

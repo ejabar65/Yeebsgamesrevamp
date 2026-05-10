@@ -47,6 +47,12 @@ async function startServer() {
     }
     queryParams.set('api_key', TMDB_API_KEY);
     
+    if (pathValue.includes('trending') || pathValue.includes('popular') || pathValue.includes('top_rated')) {
+      if (!queryParams.has('language')) {
+        queryParams.set('language', 'en-US');
+      }
+    }
+
     const url = `https://api.themoviedb.org/3/${pathValue}?${queryParams.toString()}`;
 
     console.log(`[Cinema-Proxy] [${req.method}] ${req.url} -> ${url}`);
@@ -57,7 +63,7 @@ async function startServer() {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'User-Agent': 'YeebsCinema/1.1 (CloudRun; Node)'
+          'User-Agent': 'YeebsCinema/1.2 (CloudRun; Node)'
         }
       });
 
@@ -68,7 +74,7 @@ async function startServer() {
         
         // Forward the specific status code from TMDB
         if (!response.ok) {
-          console.error(`[Cinema-Proxy] TMDB rejection (${response.status}):`, data);
+          console.error(`[Cinema-Proxy] TMDB rejection (${response.status}) at ${pathValue}:`, JSON.stringify(data).substring(0, 500));
           return res.status(response.status).json({ 
             error: 'TMDB Service Error', 
             status: response.status,
@@ -89,7 +95,7 @@ async function startServer() {
           error: 'Invalid response from movie database',
           status: response.status,
           type: contentType,
-          preview: text.substring(0, 100)
+          preview: text.substring(0, 500)
         });
       }
     } catch (error) {

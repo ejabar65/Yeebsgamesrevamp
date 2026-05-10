@@ -13,10 +13,10 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="min-h-screen w-full bg-[#0a0a0a] text-white flex flex-col font-sans">
+    <div className="min-h-svh w-full bg-[#0a0a0a] text-white flex flex-col font-sans overflow-x-hidden selection:bg-blue-500/30">
       <Navbar />
       
-      <main className="flex-1 pt-20 px-4 md:px-8 max-w-7xl mx-auto w-full">
+      <main className="flex-1 pt-14 md:pt-20 px-0 md:px-8 max-w-7xl mx-auto w-full flex flex-col relative">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -24,7 +24,7 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="py-12"
+            className="flex-1 flex flex-col pt-0 pb-16 md:py-12 scroll-m-0"
           >
             {children}
           </motion.div>

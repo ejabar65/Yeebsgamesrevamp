@@ -485,7 +485,7 @@ export const ChatRoom: React.FC<{
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#000] rounded-xl border border-white/5 overflow-hidden relative font-sans">
+    <div className="flex flex-col h-[75svh] md:h-full bg-[#000] rounded-xl border border-white/5 overflow-hidden relative font-sans">
       <div className="px-4 sm:px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-md relative z-20">
         <div className="flex items-center gap-3">
           <div>

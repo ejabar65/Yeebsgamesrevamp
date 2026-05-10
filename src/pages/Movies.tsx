@@ -256,11 +256,11 @@ export default function Movies() {
                         </div>
                         <div className="flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1.5 bg-white/10 backdrop-blur-md rounded-lg border border-white/10">
                           <Star className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-yellow-500 fill-current" />
-                          <span className="text-xs sm:text-sm font-black text-white">{currentHero.vote_average.toFixed(1)}</span>
+                          <span className="text-xs sm:text-sm font-black text-white">{(currentHero.vote_average || 0).toFixed(1)}</span>
                         </div>
                       </div>
-                      <h2 className="text-4xl sm:text-6xl md:text-9xl font-black uppercase italic tracking-tighter leading-[0.9] max-w-4xl text-shadow-xl line-clamp-2 md:line-clamp-none">
-                        {currentHero.title || currentHero.name}
+                      <h2 className="text-[clamp(1.75rem,8vw,7.5rem)] font-black uppercase italic tracking-tighter leading-[0.9] max-w-4xl text-shadow-xl line-clamp-2 md:line-clamp-none">
+                        {currentHero.title || currentHero.name || 'Untitled Content'}
                       </h2>
                       <p className="text-gray-400 font-medium text-xs sm:text-lg md:text-xl max-w-2xl line-clamp-2 md:line-clamp-3">
                         {currentHero.overview}

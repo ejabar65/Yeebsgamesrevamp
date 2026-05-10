@@ -157,7 +157,7 @@ export const GroupChats: React.FC = () => {
 
   if (selectedGroup) {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-[75svh] md:h-full">
         <div className="px-4 md:px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/20">
           <div className="flex items-center gap-2 md:gap-4 truncate">
             <button 

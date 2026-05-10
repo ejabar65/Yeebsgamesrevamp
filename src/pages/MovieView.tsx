@@ -157,7 +157,13 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
     );
   }
 
-  const savedProgress = JSON.parse(localStorage.getItem(`yeebs_progress_${id}`) || 'null');
+  let savedProgress = null;
+  try {
+    savedProgress = JSON.parse(localStorage.getItem(`yeebs_progress_${id}`) || 'null');
+  } catch (e) {
+    console.error("Failed to parse progress", e);
+  }
+  
   const startProgress = savedProgress?.time ? `&progress=${Math.floor(savedProgress.time)}` : '';
   const playerColor = '&color=3b82f6'; // Yeebs Blue
 
@@ -197,10 +203,10 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
         <div className="hidden md:flex items-center gap-8">
            <div className="flex items-center gap-2">
              <Star className="w-4 h-4 text-yellow-500 fill-current" />
-             <span className="font-black text-lg">{media.vote_average.toFixed(1)}</span>
+             <span className="font-black text-lg">{(media.vote_average || 0).toFixed(1)}</span>
            </div>
            <div className="h-4 w-px bg-white/10" />
-           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">{title}</p>
+           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 truncate max-w-[200px]">{title}</p>
         </div>
 
         <button 
@@ -398,7 +404,7 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
                       </div>
                       <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-widest">
                          <span className="text-gray-600 italic">Rating</span>
-                         <span className="text-blue-500">{media.vote_average.toFixed(1)} / 10</span>
+                         <span className="text-blue-500">{(media?.vote_average || 0).toFixed(1)} / 10</span>
                       </div>
                       <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-widest">
                          <span className="text-gray-600 italic">Type</span>
