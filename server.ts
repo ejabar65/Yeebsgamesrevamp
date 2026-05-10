@@ -27,12 +27,12 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
 
   // API Routes
-  app.all('/api/c-data/*', async (req, res) => {
+  app.all('/api/c-data/:subpath(*)', async (req, res) => {
     // Priority: Environment Variable > Hardcoded Fallback
     const TMDB_API_KEY = process.env.TMDB_API_KEY || '15e241bab4affc62f00422929d7efd8a';
     
-    // Extract everything after /api/c-data/
-    let pathValue = req.path.replace(/^\/api\/c-data/, '');
+    // Extract path using parameter
+    const pathValue = req.params.subpath;
     if (pathValue.startsWith('/')) {
       pathValue = pathValue.substring(1);
     }
@@ -109,8 +109,22 @@ async function startServer() {
     }
   });
 
-  app.get('/api/cinema-health', (req, res) => {
-    res.json({ status: 'Online', system: 'Cinema Proxy v2.0' });
+  app.get('/api/cinema-health', async (req, res) => {
+    const TMDB_API_KEY = process.env.TMDB_API_KEY || '15e241bab4affc62f00422929d7efd8a';
+    try {
+      // Test TMDB connection (authentication endpoint is good for checking API key)
+      const testResp = await fetch(`https://api.themoviedb.org/3/authentication?api_key=${TMDB_API_KEY}`);
+      const testData = await testResp.json();
+      res.json({ 
+        status: 'Online', 
+        system: 'Cinema Proxy v2.3', 
+        tmdb: testResp.ok ? 'Connected' : 'Auth Failed',
+        tmdbStatus: testResp.status,
+        timestamp: new Date().toISOString() 
+      });
+    } catch (error) {
+      res.status(500).json({ status: 'Degraded', error: 'TMDB Unreachable' });
+    }
   });
 
   app.get('/api/games', (req, res) => {

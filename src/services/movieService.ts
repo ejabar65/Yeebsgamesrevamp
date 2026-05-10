@@ -16,7 +16,9 @@ const safeFetch = async (url: string) => {
   }
 
   if (!contentType?.includes('application/json')) {
-    throw new Error('Server returned non-JSON response. Check proxy configuration.');
+    const text = await response.text();
+    console.error('Non-JSON response received:', text.substring(0, 200));
+    throw new Error(`Server returned non-JSON response (${response.status}). Check proxy configuration.`);
   }
 
   return response.json();
