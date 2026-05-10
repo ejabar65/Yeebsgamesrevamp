@@ -43,7 +43,7 @@ const MediaCard: React.FC<{ item: any, index: number, type: string, onClick: () 
 
       {item.isCustom && (
         <div className="absolute top-3 left-3 px-2 py-1 bg-blue-500 rounded-md shadow-lg z-10">
-          <span className="text-[8px] font-black text-white uppercase tracking-widest">Linked</span>
+          <span className="text-[8px] font-black text-white uppercase tracking-widest">Linked Asset</span>
         </div>
       )}
     </motion.div>
@@ -138,9 +138,9 @@ export default function Movies() {
             </div>
             <nav className="flex gap-2 bg-white/5 p-1 rounded-2xl backdrop-blur-3xl border border-white/10 shadow-2xl w-fit">
               {[
-                { id: 'movie', label: 'Theater' },
-                { id: 'tv', label: 'Episodes' },
-                { id: 'custom', label: 'Records' }
+                { id: 'movie', label: 'Movies' },
+                { id: 'tv', label: 'TV Shows' },
+                { id: 'custom', label: 'Local' }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -168,7 +168,7 @@ export default function Movies() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="SEARCH CONTENT..."
+              placeholder="Search for movies and shows..."
               className="w-full bg-white/[0.03] border border-white/10 rounded-[1.8rem] py-5 pl-14 pr-8 text-[11px] font-black uppercase tracking-[0.2em] focus:bg-white/[0.07] focus:border-blue-500/40 outline-hidden transition-all placeholder:text-gray-800 backdrop-blur-md shadow-xl"
             />
           </form>
@@ -182,14 +182,14 @@ export default function Movies() {
           >
             <div className="flex items-end justify-between border-b border-white/5 pb-8">
               <div className="space-y-3">
-                <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.5em]">Protocol: Search</p>
-                <h2 className="text-4xl font-black uppercase italic tracking-tighter">Analysis Matrix</h2>
+                <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.5em]">Searching Database...</p>
+                <h2 className="text-4xl font-black uppercase italic tracking-tighter">Search Results</h2>
               </div>
               <button 
                 onClick={() => { setIsSearching(false); setSearchQuery(''); }}
                 className="px-6 py-3 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
               >
-                Terminate
+                Cancel
               </button>
             </div>
             
@@ -206,7 +206,7 @@ export default function Movies() {
                 ))
               ) : (
                 <div className="col-span-full py-40 text-center">
-                  <p className="text-[12px] font-black text-gray-800 uppercase tracking-[0.5em]">No data identified in current sector.</p>
+                  <p className="text-[12px] font-black text-gray-800 uppercase tracking-[0.5em]">No results found for your search.</p>
                 </div>
               )}
             </div>
@@ -252,7 +252,7 @@ export default function Movies() {
                     >
                       <div className="flex items-center gap-4">
                         <div className="px-4 py-1.5 bg-blue-600 rounded-lg shadow-lg shadow-blue-600/30">
-                          <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Featured Selection</span>
+                          <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Trending</span>
                         </div>
                         <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-lg border border-white/10">
                           <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
@@ -273,7 +273,7 @@ export default function Movies() {
                         className="w-full md:w-auto flex items-center justify-center gap-4 px-14 py-6 bg-white text-black rounded-[2rem] font-black text-[13px] uppercase tracking-[0.3em] hover:bg-blue-500 hover:text-white transition-all duration-700 group shadow-[0_20px_50px_rgba(255,255,255,0.1)] hover:shadow-blue-500/30"
                       >
                         <Play className="w-5 h-5 fill-current group-hover:scale-125 transition-transform duration-500" />
-                        Initiate Playback
+                        Watch Now
                       </button>
                       
                       <div className="flex gap-3 bg-white/5 p-2 rounded-2xl backdrop-blur-md border border-white/10">
@@ -295,7 +295,7 @@ export default function Movies() {
                 <section className="space-y-8 animate-in fade-in slide-in-from-bottom duration-700">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-[2px] bg-blue-500" />
-                    <p className="text-[11px] font-black text-blue-500 uppercase tracking-[0.5em]">Active Protocols</p>
+                    <p className="text-[11px] font-black text-blue-500 uppercase tracking-[0.5em]">Resume Watching</p>
                   </div>
                   <div className="flex overflow-x-auto gap-8 pb-8 no-scrollbar scroll-smooth">
                     {continueWatching.map((item, i) => (
@@ -314,7 +314,7 @@ export default function Movies() {
                               <div className="h-full bg-blue-500" style={{ width: `${item.percentage}%` }} />
                            </div>
                            <p className="text-[8px] font-black uppercase tracking-widest text-gray-500 mt-2">
-                             {item.type === 'tv' ? `S${item.season} E${item.episode}` : 'Resume Playback'} • {Math.round(item.percentage)}%
+                             {item.type === 'tv' ? `S${item.season} E${item.episode}` : 'Resume'} • {Math.round(item.percentage)}%
                            </p>
                         </div>
                       </motion.div>
@@ -328,11 +328,11 @@ export default function Movies() {
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-[2px] bg-blue-500" />
-                    <p className="text-[11px] font-black text-blue-500 uppercase tracking-[0.5em]">System.Archive</p>
+                    <p className="text-[11px] font-black text-blue-500 uppercase tracking-[0.5em]">Browse Collections</p>
                   </div>
                   <div className="flex items-end justify-between">
                     <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter leading-none">
-                      {activeTab === 'custom' ? 'Local Records' : `Latest ${activeTab === 'movie' ? 'Releases' : 'Broadcasts'}`}
+                      {activeTab === 'custom' ? 'Custom Local' : `Recent ${activeTab === 'movie' ? 'Movies' : 'TV Shows'}`}
                     </h2>
                     <div className="hidden md:flex gap-4">
                        <Monitor className="w-5 h-5 text-gray-800" />
@@ -355,7 +355,7 @@ export default function Movies() {
                       ) : (
                         <div className="col-span-full py-40 text-center border-2 border-dashed border-white/5 rounded-[3rem] bg-white/[0.01]">
                           <Plus className="w-12 h-12 text-white/5 mx-auto mb-6" />
-                          <p className="text-[10px] font-black text-gray-800 uppercase tracking-[0.4em]">Empty record set detected.</p>
+                          <p className="text-[10px] font-black text-gray-800 uppercase tracking-[0.4em]">No local movies or shows added yet.</p>
                         </div>
                       )
                     ) : (

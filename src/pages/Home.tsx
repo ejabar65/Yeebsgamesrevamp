@@ -80,11 +80,11 @@ export default function Home() {
         
         <div className="max-w-xl">
           <h1 className="text-5xl md:text-8xl font-bold tracking-tighter text-white mb-6">
-            Yeebs
+            YeebsGames
           </h1>
           <p className="text-gray-500 text-lg font-medium leading-relaxed">
-            High-performance web applications and gaming experiences. 
-            Universal connectivity in a clean, understated environment.
+            The best web games in one place.
+            Play without distractions.
           </p>
         </div>
       </div>
@@ -106,7 +106,7 @@ export default function Home() {
                 </div>
                 <div className="w-full px-1">
                   <h3 className="font-bold text-xs truncate w-full text-gray-300 group-hover:text-white transition-colors">{game.name}</h3>
-                  <p className="text-[9px] text-gray-600 uppercase font-bold tracking-widest mt-0.5">Initialize</p>
+                  <p className="text-[9px] text-gray-600 uppercase font-bold tracking-widest mt-0.5">Play Now</p>
                 </div>
               </motion.button>
             ))}
@@ -117,7 +117,7 @@ export default function Home() {
       {/* Main Grid */}
       <div className="space-y-8">
         <div className="flex items-center justify-between border-b border-white/5 pb-4">
-          <h2 className="text-xl font-bold tracking-tight text-white">Library</h2>
+          <h2 className="text-xl font-bold tracking-tight text-white">All Games</h2>
           <div className="flex items-center gap-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
             <button className="hover:text-white transition-colors">All</button>
             <button className="hover:text-white transition-colors">Categories</button>
@@ -134,8 +134,8 @@ export default function Home() {
             <Shield className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-white">Ephemeral Sessions</h3>
-            <p className="text-sm text-gray-500 mt-1">Digital footprints are erased upon termination of current transmission.</p>
+            <h3 className="font-bold text-lg text-white">Privacy First</h3>
+            <p className="text-sm text-gray-500 mt-1">Your data and browsing history are cleared when you close the tab.</p>
           </div>
         </div>
         
@@ -145,12 +145,12 @@ export default function Home() {
               <Globe className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-white">Isolated Instance</h3>
-              <p className="text-sm text-gray-500 mt-1">Launch in a separate, cloaked environment for maximum anonymity.</p>
+              <h3 className="font-bold text-lg text-white">Maximum Stealth</h3>
+              <p className="text-sm text-gray-500 mt-1">Open this app in a new about:blank tab for maximum privacy.</p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-indigo-400 group-hover:text-white transition-colors">
-            Initiate <ExternalLink className="w-3 h-3" />
+            Open Now <ExternalLink className="w-3 h-3" />
           </div>
         </div>
       </div>

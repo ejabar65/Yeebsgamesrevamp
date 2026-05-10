@@ -37,10 +37,10 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
             <h3 className="text-xl font-bold tracking-tight text-white italic">YEEBS<span className="text-blue-500">GAMES</span></h3>
             <div className="flex gap-6 text-[10px] font-black uppercase tracking-widest text-gray-500">
               <Link to="/updates" className="hover:text-blue-500 transition-colors">Updates</Link>
-              <Link to="/legal" className="hover:text-blue-500 transition-colors">Legal</Link>
+              <Link to="/legal" className="hover:text-blue-500 transition-colors">About</Link>
               <Link to="/reviews" className="hover:text-blue-500 transition-colors">Contact</Link>
             </div>
-            <p className="text-[10px] text-gray-600 font-medium">Minimalist entertainment portal. Established 2026.</p>
+            <p className="text-[10px] text-gray-600 font-medium">Entertainment portal. Established 2026.</p>
           </div>
           
           <div className="flex items-center gap-12 text-xs font-medium text-gray-400 uppercase tracking-widest">
@@ -49,8 +49,8 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
               <span className="text-[10px] opacity-40">LOCAL TIME</span>
             </div>
             <div className="flex flex-col items-center">
-              <span>ACTIVE</span>
-              <span className="text-[10px] opacity-40">GRID STATUS</span>
+              <span>ONLINE</span>
+              <span className="text-[10px] opacity-40">SERVER STATUS</span>
             </div>
           </div>
         </div>

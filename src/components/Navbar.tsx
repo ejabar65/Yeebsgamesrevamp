@@ -119,10 +119,10 @@ export default function Navbar() {
 
       <div className="hidden md:flex items-center gap-6">
         {[
-          { name: 'Index', icon: Home, path: '/', sort: 'newest' },
-          { name: 'Cinema', icon: Film, path: '/movies' },
-          { name: 'Comms', icon: MessageSquare, path: '/chat' },
-          { name: 'Academy', icon: Monitor, path: '/tutorials' },
+          { name: 'Games', icon: Home, path: '/', sort: 'newest' },
+          { name: 'Movies', icon: Film, path: '/movies' },
+          { name: 'Chat', icon: MessageSquare, path: '/chat' },
+          { name: 'Tutorials', icon: Monitor, path: '/tutorials' },
           { name: 'Reviews', icon: MessageSquare, path: '/reviews' },
           ...(user?.isAdmin || user?.isMod ? [{ name: 'Admin', icon: Shield, path: '/admin' }] : []),
         ].map((item) => (
@@ -149,7 +149,7 @@ export default function Navbar() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600 group-focus-within:text-blue-500 transition-colors" />
           <input
             type="text"
-            placeholder="System Search..."
+            placeholder="Search Games..."
             value={searchQuery}
             onChange={handleSearchChange}
             className="pl-9 pr-4 py-1.5 rounded-full bg-white/[0.03] border border-white/5 text-[11px] focus:outline-hidden focus:border-blue-500/50 focus:bg-white/[0.05] transition-all w-48 transition-all"
@@ -245,8 +245,8 @@ export default function Navbar() {
                 <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
                   <UserIcon className="w-6 h-6 text-blue-500" />
                 </div>
-                <h2 className="text-xl font-bold">Access Portal</h2>
-                <p className="text-gray-500 text-sm mt-1">Authenticate to synchronize data</p>
+                <h2 className="text-xl font-bold">Login</h2>
+                <p className="text-gray-500 text-sm mt-1">Sign in to your account</p>
               </div>
 
               <form onSubmit={handleLoginSubmit} className="space-y-4">

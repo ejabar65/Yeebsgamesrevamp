@@ -25,7 +25,7 @@ const TUTORIALS = [
     thumbnail: "https://i.ytimg.com/vi/2-777T_zX-E/maxresdefault.jpg",
     embedId: "2-777T_zX-E",
     category: "Infrastructure",
-    desc: "Protocols for synchronizing local development environments with enterprise cloud nodes."
+    desc: "Learn how to deploy your local projects to the cloud."
   },
   {
     title: "The Future of Web Performance",
@@ -33,7 +33,7 @@ const TUTORIALS = [
     thumbnail: "https://i.ytimg.com/vi/zQnBQ4tB3ZA/maxresdefault.jpg",
     embedId: "zQnBQ4tB3ZA",
     category: "Performance",
-    desc: "Optimizing transmission latency and rendering cycles for high-bandwidth digital experiences."
+    desc: "Techniques for building fast, responsive websites."
   }
 ];
 
@@ -43,10 +43,10 @@ export default function Tutorials() {
   return (
     <div className="space-y-16 py-12">
       <div className="max-w-2xl">
-        <h1 className="text-6xl font-bold tracking-tighter text-white mb-6">Execution <span className="text-blue-500">Knowledge</span></h1>
+        <h1 className="text-6xl font-bold tracking-tighter text-white mb-6">Learn & <span className="text-blue-500">Build</span></h1>
         <p className="text-gray-500 text-lg font-medium leading-relaxed">
-          Technical briefings on development, deployment, and digital craftsmanship. 
-          Everything you need to manifest your own digital architecture.
+          Tutorials on web development, design, and performance. 
+          Everything you need to build your own high-performance web apps.
         </p>
       </div>
 
@@ -127,11 +127,11 @@ export default function Tutorials() {
           <Code className="w-8 h-8" />
         </div>
         <div className="flex-1 space-y-2 text-center md:text-left">
-          <h2 className="text-2xl font-bold text-white">Need a custom technical briefing?</h2>
-          <p className="text-gray-500">Submit a request to the operations team for specific documentation or video training.</p>
+          <h2 className="text-2xl font-bold text-white">Want a specific tutorial?</h2>
+          <p className="text-gray-500">Let us know what you'd like to learn next!</p>
         </div>
         <button className="px-8 py-4 rounded-2xl bg-blue-500 text-white font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl shadow-blue-500/20 active:scale-95">
-          Request Briefing
+          Request Tutorial
         </button>
       </div>
     </div>

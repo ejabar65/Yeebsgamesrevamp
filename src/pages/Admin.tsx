@@ -64,7 +64,7 @@ export default function Admin() {
         updatedAt: new Date().toISOString()
       }, { merge: true });
       
-      setStatus({ type: 'success', message: 'Nexus entry established.' });
+      setStatus({ type: 'success', message: 'Movie added successfully!' });
       setMovieFormData({ title: '', description: '', url: '', thumbnail: '', type: 'movie' });
       fetchMovies();
     } catch (error) {
@@ -321,7 +321,7 @@ export default function Admin() {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-white/5">
         <div>
           <h1 className="text-5xl font-bold tracking-tighter text-white mb-2">Admin</h1>
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">{editingId ? 'Updating Resource' : (isModOnly ? 'Moderation Hub' : 'System Oversight')}</p>
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">{editingId ? 'Updating Resource' : (isModOnly ? 'Moderation Hub' : 'System Control')}</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex flex-col items-end">
@@ -336,9 +336,9 @@ export default function Admin() {
 
       <nav className="flex gap-1.5 p-1.5 bg-white/[0.02] border border-white/5 rounded-xl w-fit">
         {[
-          { id: 'games', label: 'Index', icon: Gamepad2 },
-          ...(user?.isAdmin ? [{ id: 'cinema', label: 'Cinema', icon: Play }] : []),
-          { id: 'users', label: 'Network', icon: Users },
+          { id: 'games', label: 'Games', icon: Gamepad2 },
+          ...(user?.isAdmin ? [{ id: 'cinema', label: 'Movies', icon: Play }] : []),
+          { id: 'users', label: 'Users', icon: Users },
         ].map(tab => (
           <button
             key={tab.id}
@@ -362,7 +362,7 @@ export default function Admin() {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-white flex items-center gap-3">
                 <Gamepad2 className="w-5 h-5 text-gray-500" />
-                {editingId ? 'Modify Transmission' : 'Register Entry'}
+                {editingId ? 'Edit Game' : 'Add New Game'}
               </h2>
               {editingId && (
                 <button onClick={cancelEdit} className="text-xs font-bold text-gray-500 hover:text-white uppercase tracking-widest">Abort</button>
@@ -372,7 +372,7 @@ export default function Admin() {
             <form onSubmit={handleSubmit} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Descriptor</label>
+                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Title</label>
                   <input
                     required
                     type="text"
@@ -383,7 +383,7 @@ export default function Admin() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Node Category</label>
+                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Category</label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
@@ -408,7 +408,7 @@ export default function Admin() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Metadata Description</label>
+                <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Description</label>
                 <textarea
                   required
                   rows={2}
@@ -420,7 +420,7 @@ export default function Admin() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Executable Block (Embed)</label>
+                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Embed HTML</label>
                   <textarea
                     rows={3}
                     value={formData.htmlBlock}
@@ -429,7 +429,7 @@ export default function Admin() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Direct Source</label>
+                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Game URL</label>
                   <input
                     type="text"
                     value={formData.url}
@@ -449,7 +449,7 @@ export default function Admin() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-[10px] font-bold text-gray-700 uppercase tracking-widest px-1">Registry Index ({games.length})</h2>
+            <h2 className="text-[10px] font-bold text-gray-700 uppercase tracking-widest px-1">All Games ({games.length})</h2>
             <div className="grid gap-1">
               {games.map((game, i) => (
                 <div key={`${game.id}-${i}`} className="p-3 rounded-lg bg-black border border-white/5 flex items-center justify-between group hover:border-white/10 transition-all font-sans">
@@ -476,13 +476,13 @@ export default function Admin() {
           <section className="card-subtle p-8 space-y-10">
             <h2 className="text-xl font-bold text-white flex items-center gap-3">
               <Play className="w-5 h-5 text-gray-500" />
-              Link Digital Asset
+              Add Movie
             </h2>
 
             <form onSubmit={handleMovieSubmit} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Asset Name</label>
+                  <label className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">Movie Title</label>
                   <input
                     required
                     type="text"
@@ -537,7 +537,7 @@ export default function Admin() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-[10px] font-bold text-gray-700 uppercase tracking-widest px-1">Cinema Registry ({movies.length})</h2>
+            <h2 className="text-[10px] font-bold text-gray-700 uppercase tracking-widest px-1">All Movies ({movies.length})</h2>
             <div className="grid gap-1">
               {movies.map((m, i) => (
                 <div key={`${m.id}-${i}`} className="p-3 rounded-lg bg-black border border-white/5 flex items-center justify-between group hover:border-white/10 transition-all font-sans">
@@ -564,14 +564,14 @@ export default function Admin() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/5 pb-8">
             <h2 className="text-xl font-bold text-white flex items-center gap-3">
               <Users className="w-5 h-5 text-gray-500" />
-              Pulse Graph
+              User List
             </h2>
             <div className="relative w-full md:max-w-xs">
               <input
                 type="text"
                 value={userSearchQuery}
                 onChange={(e) => setUserSearchQuery(e.target.value)}
-                placeholder="Query User..."
+                placeholder="Search Users..."
                 className="w-full px-10 py-2.5 bg-white/[0.02] border border-white/5 rounded-lg focus:border-blue-500/30 outline-hidden transition-all text-xs text-white"
               />
               <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" />
@@ -591,7 +591,7 @@ export default function Admin() {
                     <div className="flex items-center gap-2">
                        <h3 className="font-bold text-gray-400 text-[11px] uppercase tracking-tight">@{u.id}</h3>
                        <div className="flex gap-1">
-                         {u.isAdmin && <span className="bg-blue-500/5 text-blue-500 text-[6px] font-bold px-1 py-0.5 rounded uppercase border border-blue-500/10 tracking-widest">Root</span>}
+                         {u.isAdmin && <span className="bg-blue-500/5 text-blue-500 text-[6px] font-bold px-1 py-0.5 rounded uppercase border border-blue-500/10 tracking-widest">Admin</span>}
                          {u.isMod && <span className="bg-yellow-500/5 text-yellow-500 text-[6px] font-bold px-1 py-0.5 rounded uppercase border border-yellow-500/10 tracking-widest">Mod</span>}
                          {u.isBanned && <span className="bg-red-500/5 text-red-500 text-[6px] font-bold px-1 py-0.5 rounded uppercase border border-red-500/10 tracking-widest">Banned</span>}
                        </div>
@@ -610,7 +610,7 @@ export default function Admin() {
                               u.isAdmin ? 'bg-white text-black border-white' : 'bg-white/[0.02] text-gray-800 border-white/10 hover:text-white'
                             }`}
                           >
-                            {u.isAdmin ? 'Revoke Root' : 'Grant Root'}
+                            {u.isAdmin ? 'Revoke Admin' : 'Grant Admin'}
                           </button>
                           <button
                             onClick={() => handleToggleMod(u.id, !!u.isMod)}
@@ -618,7 +618,7 @@ export default function Admin() {
                               u.isMod ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-white/[0.02] text-gray-800 border-white/10 hover:text-yellow-500 hover:border-yellow-500/50'
                             }`}
                           >
-                            {u.isMod ? 'Revoke Mod' : 'Grant Mod'}
+                            {u.isMod ? 'Revoke Moderator' : 'Grant Moderator'}
                           </button>
                         </>
                       )}

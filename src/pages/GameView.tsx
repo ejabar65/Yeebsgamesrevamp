@@ -44,7 +44,7 @@ export default function GameView() {
     return (
       <div className="p-20 text-center">
         <h1 className="text-2xl font-black uppercase tracking-widest text-gray-700">Not Found</h1>
-        <Link to="/" className="text-xs font-black text-primary uppercase tracking-widest mt-8 inline-block hover:underline">Return</Link>
+        <Link to="/" className="text-xs font-black text-primary uppercase tracking-widest mt-8 inline-block hover:underline">Go Home</Link>
       </div>
     );
   }
@@ -72,7 +72,7 @@ export default function GameView() {
     <main className="p-6 md:p-12 max-w-[1600px] mx-auto min-h-screen">
       <Link to="/" className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 hover:text-white transition-all mb-12 group">
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-        Return to Root
+        Back to Games
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
@@ -104,7 +104,7 @@ export default function GameView() {
                 title="Fullscreen"
               >
                 <Maximize2 className="w-4 h-4" />
-                Scale
+                Fullscreen
               </button>
             </div>
 
@@ -142,7 +142,7 @@ export default function GameView() {
               </span>
             </div>
             <h1 className="text-6xl font-black uppercase tracking-tighter leading-none italic">
-              {game.title}<span className="text-primary">.exe</span>
+              {game.title}
             </h1>
             <p className="text-gray-400 text-lg max-w-3xl font-medium leading-relaxed">
               {game.description}
@@ -154,7 +154,7 @@ export default function GameView() {
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-white">How to Play</h3>
               </div>
               <p className="text-sm text-gray-500 leading-relaxed max-w-2xl">
-                Use standard desktop controls. Most applications respond to WASD, Arrow Keys, and Mouse input. System efficiency is prioritized for smooth rendering.
+                Use standard controls. Most games respond to WASD, Arrow Keys, and Mouse input.
               </p>
             </div>
           </div>

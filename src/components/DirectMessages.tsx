@@ -12,16 +12,44 @@ import {
   setDoc,
   updateDoc,
   orderBy,
-  limit
+  limit,
+  deleteDoc
 } from 'firebase/firestore';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
-import { Image as ImageIcon, Send, X, User, Bell, Film } from 'lucide-react';
+import { Image as ImageIcon, Send, X, User, Bell, Film, Phone, Video, VideoOff, Mic, MicOff } from 'lucide-react';
 import { GifPicker } from './GifPicker';
 
 const filter = new Filter();
+
+const RemoteStream: React.FC<{ stream: MediaStream; username: string }> = ({ stream, username }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hasVideo = stream.getVideoTracks().length > 0;
+  
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
+
+  if (!hasVideo) return <audio ref={videoRef as any} autoPlay playsInline />;
+
+  return (
+    <div className="relative rounded-xl overflow-hidden bg-black aspect-video border border-white/10 group">
+      <video 
+        ref={videoRef} 
+        autoPlay 
+        playsInline 
+        className="w-full h-full object-cover"
+      />
+      <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-md border border-white/10 rounded text-[8px] font-black text-white uppercase tracking-widest transition-opacity group-hover:opacity-100 opacity-60">
+        {username}
+      </div>
+    </div>
+  );
+};
 
 export const DirectMessages: React.FC = () => {
   const { user } = useGames();
@@ -35,6 +63,12 @@ export const DirectMessages: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(Notification.permission);
+  const [isCalling, setIsCalling] = useState(false);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(false);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
+  const [participants, setParticipants] = useState<any[]>([]);
+  const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastMessageIds = useRef<Record<string, string>>({});
@@ -144,6 +178,223 @@ export const DirectMessages: React.FC = () => {
     return () => unsubscribe();
   }, [activeChat]);
 
+  useEffect(() => {
+    if (!activeChat || !user) return;
+    
+    const participantsRef = collection(db, 'chats', activeChat.id, 'call_participants');
+    const unsubscribe = onSnapshot(participantsRef, (snapshot) => {
+      const p = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      setParticipants(p);
+    });
+
+    return () => unsubscribe();
+  }, [activeChat, user]);
+
+  useEffect(() => {
+    if (!activeChat || !isCalling || !user) return;
+
+    // Listen for signaling
+    const myCallRef = doc(db, 'chats', activeChat.id, 'calls', user.username.toLowerCase());
+    const unsubSignaling = onSnapshot(myCallRef, async (snapshot) => {
+      const data = snapshot.data();
+      if (!data) return;
+
+      if (data.offers) {
+        for (const [fromId, offer] of Object.entries(data.offers)) {
+          if (!peerConnections.current.has(fromId)) {
+            handleOffer(fromId, offer as RTCSessionDescriptionInit);
+          }
+        }
+      }
+
+      if (data.answers) {
+        for (const [fromId, answer] of Object.entries(data.answers)) {
+          const pc = peerConnections.current.get(fromId);
+          if (pc && pc.signalingState === 'have-local-offer') {
+            await pc.setRemoteDescription(new RTCSessionDescription(answer as RTCSessionDescriptionInit));
+          }
+        }
+      }
+
+      if (data.iceCandidates) {
+        for (const [fromId, candidates] of Object.entries(data.iceCandidates)) {
+          const pc = peerConnections.current.get(fromId);
+          if (pc) {
+            for (const cand of (candidates as any[])) {
+              await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(console.error);
+            }
+          }
+        }
+      }
+    });
+
+    // Check for other participants to initiate
+    const participantsRef = collection(db, 'chats', activeChat.id, 'call_participants');
+    const unsubParticipants = onSnapshot(participantsRef, (snapshot) => {
+      const p = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      p.forEach(participant => {
+        if (participant.id !== user.username.toLowerCase() && !peerConnections.current.has(participant.id)) {
+          // Higher ID initiates
+          if (user.username.toLowerCase() > participant.id) {
+            initiateCall(participant.id);
+          }
+        }
+      });
+    });
+
+    return () => {
+      unsubSignaling();
+      unsubParticipants();
+    };
+  }, [activeChat, isCalling, user, localStream]);
+
+  const createPC = (remoteId: string) => {
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+
+    if (localStream) {
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    }
+
+    pc.ontrack = (event) => {
+      setRemoteStreams(prev => {
+        const next = new Map(prev);
+        next.set(remoteId, event.streams[0]);
+        return next;
+      });
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate && user && activeChat) {
+        const candidateData = event.candidate.toJSON();
+        const remoteCallRef = doc(db, 'chats', activeChat.id, 'calls', remoteId);
+        updateDoc(remoteCallRef, {
+          [`iceCandidates.${user.username.toLowerCase()}`]: (window as any).firebase?.firestore?.FieldValue.arrayUnion(candidateData) || [candidateData]
+        }).catch(() => {
+          setDoc(remoteCallRef, {
+            iceCandidates: { [user.username.toLowerCase()]: [candidateData] }
+          }, { merge: true });
+        });
+      }
+    };
+
+    peerConnections.current.set(remoteId, pc);
+    return pc;
+  };
+
+  const initiateCall = async (remoteId: string) => {
+    const pc = createPC(remoteId);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    const remoteCallRef = doc(db, 'chats', activeChat.id, 'calls', remoteId);
+    await setDoc(remoteCallRef, {
+      offers: { [user!.username.toLowerCase()]: { type: offer.type, sdp: offer.sdp } }
+    }, { merge: true });
+  };
+
+  const handleOffer = async (remoteId: string, offer: RTCSessionDescriptionInit) => {
+    const pc = createPC(remoteId);
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    const remoteCallRef = doc(db, 'chats', activeChat.id, 'calls', remoteId);
+    await setDoc(remoteCallRef, {
+      answers: { [user!.username.toLowerCase()]: { type: answer.type, sdp: answer.sdp } }
+    }, { merge: true });
+  };
+
+  const stopCall = async () => {
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+      setLocalStream(null);
+    }
+    peerConnections.current.forEach(pc => pc.close());
+    peerConnections.current.clear();
+    setRemoteStreams(new Map());
+    setIsCalling(false);
+    setIsVideoEnabled(false);
+
+    if (user && activeChat) {
+      try {
+        await deleteDoc(doc(db, 'chats', activeChat.id, 'call_participants', user.username.toLowerCase()));
+        await deleteDoc(doc(db, 'chats', activeChat.id, 'calls', user.username.toLowerCase()));
+      } catch (e) {}
+    }
+  };
+
+  const toggleCall = async (withVideo = false) => {
+    if (!activeChat || !user) return;
+
+    if (isCalling) {
+      await stopCall();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: withVideo ? { width: 1280, height: 720 } : false
+      });
+      setLocalStream(stream);
+      setIsVideoEnabled(withVideo);
+      setIsCalling(true);
+
+      const participantRef = doc(db, 'chats', activeChat.id, 'call_participants', user.username.toLowerCase());
+      await setDoc(participantRef, {
+        username: user.username,
+        photoURL: user.photoURL,
+        videoEnabled: withVideo,
+        joinedAt: serverTimestamp()
+      });
+    } catch (e) {
+      alert("Media access denied.");
+    }
+  };
+
+  const toggleVideo = async () => {
+    if (!localStream) return;
+
+    if (isVideoEnabled) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.stop();
+        localStream.removeTrack(videoTrack);
+      }
+      setIsVideoEnabled(false);
+      if (user && activeChat) {
+        await updateDoc(doc(db, 'chats', activeChat.id, 'call_participants', user.username.toLowerCase()), {
+          videoEnabled: false
+        });
+      }
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+        const videoTrack = stream.getVideoTracks()[0];
+        localStream.addTrack(videoTrack);
+        
+        peerConnections.current.forEach(pc => {
+          const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+          if (sender) {
+            sender.replaceTrack(videoTrack);
+          } else {
+            pc.addTrack(videoTrack, localStream);
+          }
+        });
+
+        setIsVideoEnabled(true);
+        if (user && activeChat) {
+          await updateDoc(doc(db, 'chats', activeChat.id, 'call_participants', user.username.toLowerCase()), {
+            videoEnabled: true
+          });
+        }
+      } catch (e) {
+        alert("Camera access denied.");
+      }
+    }
+  };
   const handleStartChat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !searchName.trim()) return;
@@ -236,7 +487,7 @@ export const DirectMessages: React.FC = () => {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center h-[600px] p-8 text-center">
-        <p className="text-xs font-bold uppercase tracking-widest text-gray-600">Login required for messages</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-600">Please log in to use direct messages.</p>
       </div>
     );
   }
@@ -247,7 +498,7 @@ export const DirectMessages: React.FC = () => {
       <div className={`w-full md:w-80 border-r border-white/5 flex flex-col bg-black/20 ${activeChat ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-6 border-b border-white/5 space-y-4">
            <div className="flex items-center justify-between">
-             <h2 className="font-bold text-lg text-white">Private Threads</h2>
+             <h2 className="font-bold text-lg text-white">Direct Messages</h2>
              {notificationPermission !== 'granted' && (
                <button 
                  onClick={requestNotificationPermission}
@@ -331,8 +582,25 @@ export const DirectMessages: React.FC = () => {
                     >
                       {activeChat.participants.find((p: string) => p !== user.username.toLowerCase())}
                     </Link>
-                    <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">Secure Channel</p>
+                    <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">Private Chat</p>
                   </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center bg-white/5 border border-white/10 rounded-lg p-0.5">
+                   <button 
+                     onClick={() => toggleCall(false)}
+                     className={`p-2 rounded-md transition-all ${isCalling && !isVideoEnabled ? 'bg-green-500 text-white' : 'text-gray-500 hover:text-white'}`}
+                   >
+                     <Phone className="w-3.5 h-3.5" />
+                   </button>
+                   <button 
+                     onClick={() => isCalling ? toggleVideo() : toggleCall(true)}
+                     className={`p-2 rounded-md transition-all ${isCalling && isVideoEnabled ? 'bg-blue-500 text-white' : 'text-gray-500 hover:text-white'}`}
+                   >
+                     <Video className="w-3.5 h-3.5" />
+                   </button>
                 </div>
               </div>
             </div>
@@ -341,6 +609,68 @@ export const DirectMessages: React.FC = () => {
               ref={scrollRef}
               className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide relative z-10"
             >
+              {/* FaceTime UI Overlay */}
+              <AnimatePresence>
+                {(isCalling || participants.length > 1) && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className={`absolute inset-x-6 top-6 z-20 transition-all duration-500 ${isVideoEnabled || participants.some(p => p.videoEnabled) ? 'h-2/3' : 'h-24'}`}
+                  >
+                    <div className="w-full h-full bg-black/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-4 shadow-2xl flex flex-col gap-4 overflow-hidden">
+                       <div className="flex items-center justify-between px-2">
+                          <div className="flex items-center gap-3">
+                             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                             <span className="text-[10px] font-black uppercase tracking-widest text-white">
+                                {isVideoEnabled || participants.some(p => p.videoEnabled) ? 'FaceTime Call' : 'Voice Call'}
+                             </span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                             <button onClick={toggleVideo} className={`p-2 rounded-xl transition-all ${isVideoEnabled ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'}`}>
+                                {isVideoEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+                             </button>
+                             <button onClick={stopCall} className="px-6 py-2 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all">
+                                End
+                             </button>
+                          </div>
+                       </div>
+
+                       <div className={`flex-1 overflow-hidden grid gap-4 ${isVideoEnabled || participants.some(p => p.videoEnabled) ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2'}`}>
+                          {/* Local Stream */}
+                          {isVideoEnabled && localStream && (
+                            <div className="relative rounded-2xl overflow-hidden bg-black aspect-video border border-blue-500/50 group">
+                              <video 
+                                autoPlay 
+                                muted 
+                                playsInline 
+                                ref={(el) => { if (el) el.srcObject = localStream; }} 
+                                className="w-full h-full object-cover scale-x-[-1]" 
+                              />
+                            </div>
+                          )}
+
+                          {/* Remote Streams */}
+                          {Array.from(remoteStreams.entries()).map(([id, stream]) => (
+                            <RemoteStream key={id} stream={stream} username={id} />
+                          ))}
+
+                          {/* Voice mode simple avatars */}
+                          {!(isVideoEnabled || participants.some(p => p.videoEnabled)) && participants.map(p => (
+                             <div key={p.id} className="flex items-center gap-3 bg-white/5 rounded-2xl p-3 border border-white/5">
+                                <img src={p.photoURL} className="w-10 h-10 rounded-xl object-cover border border-white/10" />
+                                <div>
+                                   <p className="text-[10px] font-bold text-white uppercase">{p.username}</p>
+                                   <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest">In Call</p>
+                                </div>
+                             </div>
+                          ))}
+                       </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <AnimatePresence>
                 {messages.map((msg, i) => {
                   const isOwn = msg.senderId === user.username.toLowerCase();
@@ -418,7 +748,7 @@ export const DirectMessages: React.FC = () => {
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder={selectedImage ? "Add description..." : "Type a message..."}
+                    placeholder={selectedImage ? "Add a caption..." : "Type a message..."}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-hidden focus:border-blue-500/50 transition-all text-white placeholder:text-gray-600"
                   />
                   <div className="absolute right-2 top-1.5 bottom-1.5 flex items-center gap-2">
@@ -451,10 +781,17 @@ export const DirectMessages: React.FC = () => {
           </>
         ) : (
           <div className="text-center opacity-10">
-            <h3 className="font-bold text-3xl text-white uppercase tracking-widest mb-2">Select a Thread</h3>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Connect with verified users</p>
+            <h3 className="font-bold text-3xl text-white uppercase tracking-widest mb-2">Select a Chat</h3>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Start a conversation with anyone.</p>
           </div>
         )}
+      </div>
+
+      {/* Hidden Audio/Video for Comms */}
+      <div className="hidden">
+        {Array.from(remoteStreams.entries()).map(([id, stream]) => (
+          <RemoteStream key={id} stream={stream} username={id} />
+        ))}
       </div>
     </div>
   );

@@ -166,7 +166,7 @@ export default function Profile() {
             </h1>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
               <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest px-2 py-1 bg-blue-500/10 rounded-md border border-blue-500/20">
-                {profileData.isAdmin ? 'Administrator' : 'Verified Member'}
+                {profileData.isAdmin ? 'Administrator' : 'Community Member'}
               </span>
               <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
                 ID {profileData.uid?.slice(0, 8) || 'PUBLIC'}
@@ -344,10 +344,10 @@ export default function Profile() {
                    />
                 </div>
                 <h3 className="text-2xl font-bold text-white mt-8 mb-2 capitalize">
-                  {useCustomUrl ? 'External Identity' : avatarForm.style.replace('-', ' ')}
+                  {useCustomUrl ? 'External Avatar' : avatarForm.style.replace('-', ' ')}
                 </h3>
                 <p className="text-gray-500 text-[10px] uppercase font-bold tracking-widest">
-                  {useCustomUrl ? 'Synchronized via URL' : `Seed: ${avatarForm.seed}`}
+                  {useCustomUrl ? 'Loaded from URL' : `Seed: ${avatarForm.seed}`}
                 </p>
              </div>
 12345: 
@@ -357,7 +357,7 @@ export default function Profile() {
                     onClick={() => setUseCustomUrl(false)}
                     className={`flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${!useCustomUrl ? 'bg-blue-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-400'}`}
                   >
-                    Generator
+                    Generate
                   </button>
                   <button 
                     onClick={() => setUseCustomUrl(true)}
@@ -409,7 +409,7 @@ export default function Profile() {
                     </div>
 
                     <div className="space-y-6">
-                       <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-500">Identity Seed</h4>
+                       <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-500">Seed Value</h4>
                        <div className="relative">
                           <input 
                             type="text"
@@ -464,7 +464,7 @@ export default function Profile() {
                   }}
                   className="w-full py-4 rounded-xl bg-blue-500 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
                 >
-                   Commit Avatar Update
+                   Save Avatar
                 </button>
              </div>
           </motion.section>
@@ -498,8 +498,8 @@ export default function Profile() {
                   {/* Compact Mode */}
                   <div className="p-6 rounded-2xl bg-white/2 border border-white/5 flex items-center justify-between hover:bg-white/5 transition-all">
                      <div className="space-y-1">
-                        <h4 className="font-bold text-sm text-white">High Density Layout</h4>
-                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Optimized for power users</p>
+                        <h4 className="font-bold text-sm text-white">Compact Mode</h4>
+                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Use a denser interface layout.</p>
                      </div>
                      <button 
                        onClick={() => setSettingsForm({ ...settingsForm, compactMode: !settingsForm.compactMode })}
@@ -515,8 +515,8 @@ export default function Profile() {
                   {/* Private Profile */}
                   <div className="p-6 rounded-2xl bg-white/2 border border-white/5 flex items-center justify-between hover:bg-white/5 transition-all">
                      <div className="space-y-1">
-                        <h4 className="font-bold text-sm text-white">Privacy Mode</h4>
-                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Restrict profile visibility</p>
+                        <h4 className="font-bold text-sm text-white">Private Profile</h4>
+                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Hide your profile from others.</p>
                      </div>
                      <button 
                        onClick={() => setSettingsForm({ ...settingsForm, privateProfile: !settingsForm.privateProfile })}
@@ -533,8 +533,8 @@ export default function Profile() {
                {/* Tab Cloaking */}
                <div className="space-y-6 pt-10 border-t border-white/5">
                   <div className="space-y-1">
-                     <h4 className="text-xl font-bold text-white">Tab Disguise</h4>
-                     <p className="text-[10px] text-gray-600 uppercase font-bold tracking-widest">Stealth Browser Integration</p>
+                     <h4 className="text-xl font-bold text-white">Tab Cloaking</h4>
+                     <p className="text-[10px] text-gray-600 uppercase font-bold tracking-widest">Disguise this tab in your browser.</p>
                   </div>
 
                   <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -557,8 +557,8 @@ export default function Profile() {
                      <div className="flex-1 space-y-4 text-center md:text-left">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                            <div>
-                              <h4 className="font-bold text-lg text-white leading-none">About:Blank Stealth</h4>
-                              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-1">Full isolation environment</p>
+                              <h4 className="font-bold text-lg text-white leading-none">Stealth Mode</h4>
+                              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-1">Open this site in a clean, blank tab.</p>
                            </div>
                            <button 
                              onClick={() => launchAboutBlank()}
@@ -574,8 +574,8 @@ export default function Profile() {
                {/* Panic Button */}
                <div className="card-subtle p-8 bg-black/40 border border-red-500/20 space-y-8">
                     <div>
-                       <h4 className="text-xl font-bold text-red-500 leading-none">Emergency Configuration</h4>
-                       <p className="text-[10px] text-gray-700 uppercase font-bold tracking-widest mt-1">Panic button protocol</p>
+                       <h4 className="text-xl font-bold text-red-500 leading-none">Emergency Redirect</h4>
+                       <p className="text-[10px] text-gray-700 uppercase font-bold tracking-widest mt-1">Setup a key to quickly hide this site.</p>
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -604,7 +604,7 @@ export default function Profile() {
                         onClick={handlePanicSave}
                         className="w-full py-4 rounded-xl border border-red-500/30 text-red-500 font-bold text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg active:scale-95"
                     >
-                        Commit Emergency Protocol
+                        Save Emergency Redirect
                     </button>
                </div>
 
@@ -612,7 +612,7 @@ export default function Profile() {
                  onClick={handleSaveSettings}
                  className="w-full py-5 rounded-2xl bg-blue-500 text-white font-bold text-sm uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
                >
-                  Sync System Settings
+                  Save Settings
                </button>
             </div>
           </motion.section>

@@ -1,6 +1,6 @@
 {
   "name": "YeebsGames",
   "description": "A high-performance, minimalistic entertainment hub for web applications, gaming, and cinema.",
-  "requestFramePermissions": ["fullscreen", "picture-in-picture", "microphone"],
+  "requestFramePermissions": ["fullscreen", "picture-in-picture", "microphone", "camera"],
   "majorCapabilities": []
 }

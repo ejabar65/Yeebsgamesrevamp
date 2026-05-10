@@ -18,22 +18,37 @@ import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
-import { Send, Trash2, MessageSquare, Shield, User, Zap, Image as ImageIcon, X, CheckCircle2, Star, Phone, Settings, Film } from 'lucide-react';
+import { Send, Trash2, MessageSquare, Shield, User, Zap, Image as ImageIcon, X, CheckCircle2, Star, Phone, Video, VideoOff, Mic, MicOff, Settings, Film } from 'lucide-react';
 import { GifPicker } from './GifPicker';
 import { ADMIN_LIST, MOD_LIST } from '../constants';
 
 const filter = new Filter();
 
-const RemoteAudio: React.FC<{ stream: MediaStream }> = ({ stream }) => {
-  const audioRef = useRef<HTMLAudioElement>(null);
+const RemoteStream: React.FC<{ stream: MediaStream; username: string }> = ({ stream, username }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hasVideo = stream.getVideoTracks().length > 0;
   
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.srcObject = stream;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
     }
   }, [stream]);
 
-  return <audio ref={audioRef} autoPlay playsInline />;
+  if (!hasVideo) return <audio ref={videoRef as any} autoPlay playsInline />;
+
+  return (
+    <div className="relative rounded-xl overflow-hidden bg-black aspect-video border border-white/10 group">
+      <video 
+        ref={videoRef} 
+        autoPlay 
+        playsInline 
+        className="w-full h-full object-cover"
+      />
+      <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-md border border-white/10 rounded text-[8px] font-black text-white uppercase tracking-widest transition-opacity group-hover:opacity-100 opacity-60">
+        {username}
+      </div>
+    </div>
+  );
 };
 
 export const ChatRoom: React.FC<{ 
@@ -55,6 +70,7 @@ export const ChatRoom: React.FC<{
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [voiceParticipants, setVoiceParticipants] = useState<any[]>([]);
   const [isCalling, setIsCalling] = useState(false);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
   const remoteStreams = useRef<Map<string, MediaStream>>(new Map());
@@ -388,7 +404,7 @@ export const ChatRoom: React.FC<{
     setRemoteStreamsState(prev => prev + 1);
   };
 
-  const toggleCall = async () => {
+  const toggleCall = async (withVideo = false) => {
     if (!groupId || !user) return;
     
     try {
@@ -397,19 +413,24 @@ export const ChatRoom: React.FC<{
         // Start Local Stream
         let stream;
         try {
-          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: true,
+            video: withVideo ? { width: 1280, height: 720 } : false
+          });
         } catch (e) {
-          alert("Microphone access denied or not available.");
+          alert("Media access denied or not available.");
           return;
         }
         setLocalStream(stream);
+        setIsVideoEnabled(withVideo);
 
         await setDoc(participantRef, {
           uid: user.uid,
           username: user.username,
           photoURL: user.photoURL,
           joinedAt: serverTimestamp(),
-          isSpeaking: false
+          isSpeaking: false,
+          videoEnabled: withVideo
         });
         setIsCalling(true);
       } else {
@@ -420,26 +441,77 @@ export const ChatRoom: React.FC<{
     }
   };
 
+  const toggleVideo = async () => {
+    if (!localStream) return;
+    
+    if (isVideoEnabled) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.stop();
+        localStream.removeTrack(videoTrack);
+      }
+      setIsVideoEnabled(false);
+      if (user && groupId) {
+        await updateDoc(doc(db, `groups/${groupId}/voice_participants`, user.uid), {
+          videoEnabled: false
+        }).catch(() => {});
+      }
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+        const videoTrack = stream.getVideoTracks()[0];
+        localStream.addTrack(videoTrack);
+        
+        // Update all peer connections
+        peerConnections.current.forEach(pc => {
+          const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+          if (sender) {
+            sender.replaceTrack(videoTrack);
+          } else {
+            pc.addTrack(videoTrack, localStream);
+          }
+        });
+
+        setIsVideoEnabled(true);
+        if (user && groupId) {
+          await updateDoc(doc(db, `groups/${groupId}/voice_participants`, user.uid), {
+            videoEnabled: true
+          }).catch(() => {});
+        }
+      } catch (e) {
+        alert("Camera access denied.");
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#000] rounded-xl border border-white/5 overflow-hidden relative font-sans">
       <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-md relative z-20">
         <div className="flex items-center gap-3">
           <div>
-            <h2 className="font-bold text-xs text-white tracking-tight">{groupId ? 'Sector Comms' : 'Global Comms'}</h2>
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-700 mt-0.5">{groupId ? 'Secure Branch' : 'Network active'}</p>
+            <h2 className="font-bold text-xs text-white tracking-tight">{groupId ? 'Group Chat' : 'Global Chat'}</h2>
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-700 mt-0.5">{groupId ? 'Private Room' : 'Online'}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {groupId && (
             <>
-              <button 
-                onClick={toggleCall}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${isCalling ? 'bg-green-500 border-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
-              >
-                <div className={`w-1.5 h-1.5 rounded-full ${isCalling ? 'bg-white animate-pulse' : 'bg-gray-700'}`} />
-                <Phone className="w-3 h-3" />
-                <span className="text-[8px] font-black uppercase tracking-widest">{isCalling ? 'Disconnect' : 'Connect Voice'}</span>
-              </button>
+              <div className="flex items-center bg-white/5 border border-white/10 rounded-lg p-0.5">
+                <button 
+                  onClick={() => toggleCall(false)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all ${isCalling && !isVideoEnabled ? 'bg-green-500 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                >
+                  <Phone className="w-3 h-3" />
+                  <span className="text-[8px] font-black uppercase tracking-widest">{isCalling && !isVideoEnabled ? 'In Call' : 'Audio'}</span>
+                </button>
+                <button 
+                  onClick={() => isCalling ? toggleVideo() : toggleCall(true)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all ${isCalling && isVideoEnabled ? 'bg-blue-500 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                >
+                  <Video className="w-3 h-3" />
+                  <span className="text-[8px] font-black uppercase tracking-widest">{isCalling && isVideoEnabled ? 'FaceTime' : 'Video'}</span>
+                </button>
+              </div>
               
               {isOwner && (
                 <button 
@@ -454,7 +526,7 @@ export const ChatRoom: React.FC<{
           {!groupId && (
             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/5 border border-blue-500/10 rounded-full">
               <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
-              <span className="text-[8px] text-blue-500 font-bold tracking-widest uppercase">Operational</span>
+              <span className="text-[8px] text-blue-500 font-bold tracking-widest uppercase">Online</span>
             </div>
           )}
         </div>
@@ -477,11 +549,11 @@ export const ChatRoom: React.FC<{
                   <div className={`absolute top-1 bottom-1 w-3 rounded-full bg-white transition-all ${spamLimitEnabled ? 'right-1' : 'left-1'}`} />
                 </button>
                 <div>
-                  <h4 className="text-[9px] font-black text-white uppercase tracking-widest">Spam Protocol</h4>
-                  <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{spamLimitEnabled ? 'Throttled' : 'Unrestricted'}</p>
+                  <h4 className="text-[9px] font-black text-white uppercase tracking-widest">Slow Mode</h4>
+                  <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{spamLimitEnabled ? 'Enabled' : 'Disabled'}</p>
                 </div>
               </div>
-
+ 
               <div className="flex items-center gap-3">
                 <button 
                   onClick={() => handleUpdateSetting('filterEnabled', !filterEnabled)}
@@ -490,8 +562,8 @@ export const ChatRoom: React.FC<{
                   <div className={`absolute top-1 bottom-1 w-3 rounded-full bg-white transition-all ${filterEnabled ? 'right-1' : 'left-1'}`} />
                 </button>
                 <div>
-                  <h4 className="text-[9px] font-black text-white uppercase tracking-widest">Integrity Filter</h4>
-                  <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{filterEnabled ? 'Enabled' : 'Bypassed'}</p>
+                  <h4 className="text-[9px] font-black text-white uppercase tracking-widest">Word Filter</h4>
+                  <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{filterEnabled ? 'Active' : 'Off'}</p>
                 </div>
               </div>
             </div>
@@ -503,27 +575,70 @@ export const ChatRoom: React.FC<{
       <AnimatePresence>
         {(isCalling || voiceParticipants.length > 0) && groupId && (
           <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="absolute top-20 right-6 z-30 w-56 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl p-5 shadow-2xl flex flex-col gap-4"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className={`absolute ${isVideoEnabled || voiceParticipants.some(v => v.videoEnabled) ? 'inset-6 bottom-32' : 'top-20 right-6 w-56'} z-30 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl p-5 shadow-2xl flex flex-col gap-4 overflow-hidden`}
           >
             <div className="flex items-center justify-between">
               <span className="text-[8px] font-black uppercase tracking-widest text-green-500 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                Sync Channel
+                {isVideoEnabled || voiceParticipants.some(v => v.videoEnabled) ? 'FaceTime Room' : 'Voice Room'}
               </span>
-              <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">{voiceParticipants.length} Linked</span>
+              <div className="flex items-center gap-3">
+                <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">{voiceParticipants.length} Connected</span>
+                <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-white transition-colors">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
             </div>
             
-            <div className="space-y-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-              {voiceParticipants.map((p) => (
+            <div className={`flex-1 overflow-y-auto pr-2 custom-scrollbar ${isVideoEnabled || voiceParticipants.some(v => v.videoEnabled) ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}`}>
+              {/* Local Stream for Video */}
+              {isVideoEnabled && localStream && (
+                <div className="relative rounded-xl overflow-hidden bg-black aspect-video border border-blue-500 shadow-lg shadow-blue-500/20 group">
+                  <video 
+                    autoPlay 
+                    muted 
+                    playsInline 
+                    ref={(el) => { if (el) el.srcObject = localStream; }} 
+                    className="w-full h-full object-cover scale-x-[-1]" 
+                  />
+                  <div className="absolute bottom-2 left-2 px-2 py-1 bg-blue-500/80 backdrop-blur-md rounded text-[8px] font-black text-white uppercase tracking-widest">
+                    You (Me)
+                  </div>
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <button onClick={toggleVideo} className="p-1.5 bg-black/40 rounded-lg hover:bg-red-500 transition-colors">
+                      <Video className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Remote Streams */}
+              {Array.from(remoteStreams.current.entries()).map(([uid, stream]) => {
+                const participant = voiceParticipants.find(p => p.uid === uid);
+                return (
+                  <RemoteStream 
+                    key={uid} 
+                    stream={stream} 
+                    username={participant?.username || 'User'} 
+                  />
+                );
+              })}
+
+              {!isVideoEnabled && voiceParticipants.map((p) => (
                 <div key={p.id} className="flex items-center justify-between group/user">
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <img src={p.photoURL} className={`w-9 h-9 rounded-xl object-cover transition-all ${p.isSpeaking || p.uid === user?.uid ? 'border-2 border-green-500' : 'border border-white/10 opacity-70'}`} />
                       {(p.isSpeaking || p.uid === user?.uid) && (
                         <div className="absolute inset-0 bg-green-500/20 rounded-xl animate-ping opacity-20" />
+                      )}
+                      {p.videoEnabled && (
+                        <div className="absolute -top-1 -right-1 bg-blue-500 p-0.5 rounded shadow-lg">
+                          <Video className="w-2 h-2 text-white" />
+                        </div>
                       )}
                     </div>
                     <div>
@@ -545,14 +660,24 @@ export const ChatRoom: React.FC<{
               ))}
             </div>
 
-            {isCalling && (
-              <button 
-                onClick={toggleCall}
-                className="w-full py-2.5 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-xl shadow-red-500/20 active:scale-95"
-              >
-                Terminate Link
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {isCalling && (
+                <>
+                  <button 
+                    onClick={toggleVideo}
+                    className={`flex-1 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${isVideoEnabled ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-gray-500 hover:text-white'}`}
+                  >
+                    {isVideoEnabled ? 'Disable Camera' : 'Enable Camera'}
+                  </button>
+                  <button 
+                    onClick={() => stopVoice()}
+                    className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-xl shadow-red-500/20 active:scale-95"
+                  >
+                    Disconnect
+                  </button>
+                </>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -564,12 +689,12 @@ export const ChatRoom: React.FC<{
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <div className="w-4 h-4 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin" />
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-800">Syncing Frequency</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-800">Loading Messages...</p>
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center text-gray-900 py-10 flex flex-col items-center gap-4">
             <MessageSquare className="w-8 h-8 opacity-5" />
-            <p className="text-[9px] font-bold uppercase tracking-[0.3em] opacity-10">No data transmitted</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.3em] opacity-10">No messages yet</p>
           </div>
         ) : (
           <div className="flex flex-col gap-8">
@@ -613,7 +738,7 @@ export const ChatRoom: React.FC<{
                     {voiceParticipants.some(vp => vp.uid === msg.senderId) && (
                       <div className="flex items-center gap-1">
                         <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                        <span className="text-[7px] font-black text-green-500 uppercase tracking-widest">Linked</span>
+                        <span className="text-[7px] font-black text-green-500 uppercase tracking-widest">In Voice</span>
                       </div>
                     )}
                     <Link 
@@ -678,7 +803,7 @@ export const ChatRoom: React.FC<{
       <form onSubmit={handleSendMessage} className="p-6 border-t border-white/5 bg-black">
         {!user ? (
           <div className="text-center py-4 bg-white/[0.02] rounded-lg border border-dashed border-white/5">
-            <p className="text-[9px] text-gray-700 font-bold uppercase tracking-widest">Authorization required for broadcast</p>
+            <p className="text-[9px] text-gray-700 font-bold uppercase tracking-widest">Log in to chat</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -715,7 +840,7 @@ export const ChatRoom: React.FC<{
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder={selectedImage ? "Add metadata..." : "Enter transmission..."}
+                  placeholder={selectedImage ? "Add a caption..." : "Type a message..."}
                   className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 pb-3 pr-24 focus:outline-hidden focus:border-white/20 transition-all text-[13px] text-white"
                   maxLength={200}
                 />
@@ -740,7 +865,7 @@ export const ChatRoom: React.FC<{
                     disabled={(!newMessage.trim() && !selectedImage) || spamCooldown || isUploading}
                     className="px-4 h-full bg-white text-black rounded-lg hover:bg-gray-200 transition-all disabled:opacity-5 disabled:bg-white/10 font-bold text-[10px] uppercase tracking-widest"
                   >
-                    {spamCooldown ? 'Wait' : 'Push'}
+                    {spamCooldown ? 'Wait' : 'Send'}
                   </button>
                 </div>
               </div>
@@ -752,7 +877,7 @@ export const ChatRoom: React.FC<{
       {/* Hidden Audio Elements for Mesh Comms */}
       <div className="hidden">
         {Array.from(remoteStreams.current.entries()).map(([uid, stream]) => (
-          <RemoteAudio key={uid} stream={stream} />
+          <RemoteStream key={uid} stream={stream} username={voiceParticipants.find(p => p.uid === uid)?.username || 'User'} />
         ))}
       </div>
     </div>
