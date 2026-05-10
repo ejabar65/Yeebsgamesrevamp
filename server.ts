@@ -27,19 +27,26 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
 
   // API Routes
-  app.all('/api/c-data/:subpath(*)', async (req, res) => {
+  app.all('/api/c-data*', async (req, res) => {
     // Priority: Environment Variable > Hardcoded Fallback
     const TMDB_API_KEY = process.env.TMDB_API_KEY || '15e241bab4affc62f00422929d7efd8a';
     
-    // Extract path using parameter
-    const pathValue = req.params.subpath;
-    if (pathValue.startsWith('/')) {
-      pathValue = pathValue.substring(1);
-    }
+    // Extract subpath from the full path
+    // Using req.originalUrl split by '?' to ignore query params
+    const fullUrl = req.originalUrl.split('?')[0];
+    let pathValue = fullUrl.replace(/^\/api\/c-data/, '');
     
-    // If no path provided, return simple status
-    if (!pathValue) {
-      return res.json({ status: 'Proxy ready', info: 'TMDB API Gateway v2.1' });
+    // Cleanup leading/trailing slashes
+    pathValue = pathValue.replace(/^\/+/, '').replace(/\/+$/, '');
+    
+    // If no path provided, return status
+    if (!pathValue || pathValue === '') {
+      return res.json({ 
+        status: 'Proxy ready', 
+        info: 'TMDB API Gateway v2.5',
+        methods: ['GET', 'POST', 'PUT', 'DELETE'],
+        endpoint: 'https://api.themoviedb.org/3'
+      });
     }
     
     // Construct the TMDB URL
@@ -51,6 +58,7 @@ async function startServer() {
     }
     queryParams.set('api_key', TMDB_API_KEY);
     
+    // Standard defaults for TMDB
     if (pathValue.includes('trending') || pathValue.includes('popular') || pathValue.includes('top_rated')) {
       if (!queryParams.has('language')) {
         queryParams.set('language', 'en-US');
@@ -59,7 +67,7 @@ async function startServer() {
 
     const url = `https://api.themoviedb.org/3/${pathValue}?${queryParams.toString()}`;
 
-    console.log(`[Cinema-Proxy] [${req.method}] ${pathValue} -> ${url.split('api_key=')[0]}api_key=***`);
+    console.log(`[Cinema-Proxy] [${req.method}] ${pathValue} -> ID:${TMDB_API_KEY.substring(0,4)}...`);
 
     try {
       const response = await fetch(url, {
@@ -74,9 +82,8 @@ async function startServer() {
       if (contentType && contentType.includes('application/json')) {
         const data = await response.json();
         
-        // Forward the specific status code from TMDB
         if (!response.ok) {
-          console.error(`[Cinema-Proxy] TMDB rejection (${response.status}) at ${pathValue}:`, JSON.stringify(data).substring(0, 500));
+          console.error(`[Cinema-Proxy] TMDB rejection (${response.status}) at ${pathValue}:`, JSON.stringify(data).substring(0, 200));
           return res.status(response.status).json({ 
             error: 'TMDB Service Error', 
             status: response.status,
@@ -84,7 +91,6 @@ async function startServer() {
           });
         }
         
-        // Cache control for trending/popular
         if (pathValue.includes('trending') || pathValue.includes('popular')) {
           res.setHeader('Cache-Control', 'public, max-age=3600');
         }
@@ -92,18 +98,18 @@ async function startServer() {
         return res.json(data);
       } else {
         const text = await response.text();
-        console.error(`[Cinema-Proxy] Protocol violation from TMDB: Received ${contentType} instead of JSON (${response.status}) at ${url}`);
+        console.error(`[Cinema-Proxy] Internal Protocol Error: Received ${contentType} from API at ${pathValue}`);
         return res.status(502).json({ 
-          error: 'Invalid response from movie database',
+          error: 'The movie database returned an invalid response format (Expected JSON)',
           status: response.status,
           type: contentType,
-          preview: text.substring(0, 500)
+          preview: text.substring(0, 200)
         });
       }
     } catch (error) {
-      console.error(`[Cinema-Proxy] Fetch failure to ${url}:`, error);
+      console.error(`[Cinema-Proxy] Fatal Upstream Error:`, error);
       return res.status(503).json({ 
-        error: 'Cinema proxy upstream connection failure', 
+        error: 'The cinema proxy could not reach the movie database', 
         details: error instanceof Error ? error.message : String(error) 
       });
     }

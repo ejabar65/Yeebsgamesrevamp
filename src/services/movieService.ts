@@ -17,8 +17,9 @@ const safeFetch = async (url: string) => {
 
   if (!contentType?.includes('application/json')) {
     const text = await response.text();
-    console.error('Non-JSON response received:', text.substring(0, 200));
-    throw new Error(`Server returned non-JSON response (${response.status}). Check proxy configuration.`);
+    const snippet = text.substring(0, 100).replace(/<[^>]*>/g, '');
+    console.error('Non-JSON response received:', text.substring(0, 500));
+    throw new Error(`Proxy configuration error: Received ${contentType || 'no content type'} instead of JSON. (Snippet: ${snippet}...)`);
   }
 
   return response.json();
