@@ -28,10 +28,15 @@ async function startServer() {
 
   // API Routes
   app.all('/api/movie-proxy/*', async (req, res) => {
-    const TMDB_API_KEY = '15e241bab4affc62f00422929d7efd8a';
+    // Priority: Environment Variable > Hardcoded Fallback
+    const TMDB_API_KEY = process.env.TMDB_API_KEY || '15e241bab4affc62f00422929d7efd8a';
     
     // Extract everything after /api/movie-proxy/
-    const pathValue = req.path.replace(/^\/api\/movie-proxy\//, '');
+    // Path might come in without a trailing slash depending on how it was routed
+    let pathValue = req.path.replace(/^\/api\/movie-proxy/, '');
+    if (pathValue.startsWith('/')) {
+      pathValue = pathValue.substring(1);
+    }
     
     // Construct the TMDB URL
     const queryParams = new URLSearchParams();
@@ -51,7 +56,8 @@ async function startServer() {
         method: req.method,
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'YeebsCinema/1.1'
+          'Content-Type': 'application/json',
+          'User-Agent': 'YeebsCinema/1.1 (CloudRun; Node)'
         }
       });
 
@@ -59,29 +65,37 @@ async function startServer() {
       
       if (contentType && contentType.includes('application/json')) {
         const data = await response.json();
+        
+        // Forward the specific status code from TMDB
         if (!response.ok) {
           console.error(`[Cinema-Proxy] TMDB rejection (${response.status}):`, data);
           return res.status(response.status).json({ 
-            error: 'TMDB reported an issue', 
+            error: 'TMDB Service Error', 
             status: response.status,
             details: data 
           });
         }
+        
+        // Cache control for trending/popular
+        if (pathValue.includes('trending') || pathValue.includes('popular')) {
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+        }
+        
         return res.json(data);
       } else {
         const text = await response.text();
-        console.error(`[Cinema-Proxy] Protocol violation: Received non-JSON response (${response.status}) from ${url}`);
-        console.error(`[Cinema-Proxy] Snapshot: ${text.substring(0, 100)}...`);
+        console.error(`[Cinema-Proxy] Protocol violation from TMDB: Received ${contentType} instead of JSON (${response.status}) at ${url}`);
         return res.status(502).json({ 
-          error: 'The downstream provider returned an invalid format (HTML)', 
+          error: 'Invalid response from movie database',
           status: response.status,
-          preview: text.substring(0, 50)
+          type: contentType,
+          preview: text.substring(0, 100)
         });
       }
     } catch (error) {
-      console.error(`[Cinema-Proxy] Connection failure to ${url}:`, error);
+      console.error(`[Cinema-Proxy] Fetch failure to ${url}:`, error);
       return res.status(503).json({ 
-        error: 'Cinema proxy link failure', 
+        error: 'Cinema proxy upstream connection failure', 
         details: error instanceof Error ? error.message : String(error) 
       });
     }

@@ -493,7 +493,7 @@ export const DirectMessages: React.FC = () => {
   }
 
   return (
-    <div className="flex h-[600px] md:h-[600px] bg-[#0c0c0c] overflow-hidden flex-col md:flex-row">
+    <div className="flex flex-1 bg-[#0c0c0c] overflow-hidden flex-col md:flex-row min-h-[500px]">
       {/* Sidebar: Chat List */}
       <div className={`w-full md:w-80 border-r border-white/5 flex flex-col bg-black/20 ${activeChat ? 'hidden md:flex' : 'flex flex-1'}`}>
         <div className="p-4 md:p-6 border-b border-white/5 space-y-4">
@@ -748,31 +748,32 @@ export const DirectMessages: React.FC = () => {
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder={selectedImage ? "Add a caption..." : "Type a message..."}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-hidden focus:border-blue-500/50 transition-all text-white placeholder:text-gray-600"
+                    placeholder={selectedImage ? "Add caption..." : "Message..."}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-28 sm:pr-32 text-xs sm:text-sm focus:outline-hidden focus:border-blue-500/50 transition-all text-white placeholder:text-gray-700"
                   />
-                  <div className="absolute right-2 top-1.5 bottom-1.5 flex items-center gap-2">
+                  <div className="absolute right-1.5 top-1.5 bottom-1.5 flex items-center gap-1 sm:gap-2">
                     <button 
                       type="button"
                       onClick={() => setShowGifPicker(!showGifPicker)}
-                      className={`p-2 rounded-lg transition-all ${showGifPicker ? 'bg-blue-500 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                      className={`p-1.5 sm:p-2 rounded-lg transition-all ${showGifPicker ? 'bg-blue-500 text-white' : 'text-gray-700 hover:text-white'}`}
                     >
-                      <Film className="w-4 h-4" />
+                      <Film className="w-3.5 h-3.5" />
                     </button>
                     <button 
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className={`p-2 rounded-lg transition-all ${selectedImage ? 'bg-blue-500 text-white' : 'text-gray-500 hover:text-blue-500'}`}
+                      className={`p-1.5 sm:p-2 rounded-lg transition-all ${selectedImage ? 'bg-blue-500 text-white' : 'text-gray-700 hover:text-blue-500'}`}
                       disabled={isUploading}
                     >
-                      <ImageIcon className="w-4 h-4" />
+                      <ImageIcon className="w-3.5 h-3.5" />
                     </button>
                     <button 
                       type="submit"
                       disabled={(!newMessage.trim() && !selectedImage) || isUploading}
-                      className="px-6 h-full bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all disabled:opacity-30 font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-500/20"
+                      className="px-3 sm:px-5 h-full bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all disabled:opacity-10 font-bold text-[9px] sm:text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20"
                     >
-                      Send
+                      <Send className="w-3.5 h-3.5 sm:hidden" />
+                      <span className="hidden sm:inline">Send</span>
                     </button>
                   </div>
                 </div>

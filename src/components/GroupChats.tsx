@@ -158,25 +158,25 @@ export const GroupChats: React.FC = () => {
   if (selectedGroup) {
     return (
       <div className="flex flex-col h-full">
-        <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/20">
-          <div className="flex items-center gap-4">
+        <div className="px-4 md:px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/20">
+          <div className="flex items-center gap-2 md:gap-4 truncate">
             <button 
               onClick={() => setSelectedGroup(null)}
-              className="p-2 -ml-2 rounded-lg hover:bg-white/5 text-gray-500 transition-colors"
+              className="p-2 -ml-2 rounded-lg hover:bg-white/5 text-gray-500 transition-colors shrink-0"
             >
               <Plus className="w-4 h-4 rotate-45" />
             </button>
-            <div>
-              <h2 className="font-bold text-sm text-white tracking-tight">{selectedGroup.name}</h2>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[8px] font-black uppercase tracking-widest text-blue-500">Group Transmission</span>
-                <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest">• Sector: {selectedGroup.code}</span>
-                <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest">• {selectedGroup.members.length} Members</span>
+            <div className="min-w-0">
+              <h2 className="font-bold text-xs md:text-sm text-white tracking-tight truncate">{selectedGroup.name}</h2>
+              <div className="flex items-center gap-1 md:gap-2 mt-0.5 whitespace-nowrap overflow-x-auto no-scrollbar">
+                <span className="text-[7px] md:text-[8px] font-black uppercase tracking-widest text-blue-500">Group</span>
+                <span className="text-[7px] md:text-[8px] text-gray-600 font-bold uppercase tracking-widest">• {selectedGroup.code}</span>
+                <span className="text-[7px] md:text-[8px] text-gray-600 font-bold uppercase tracking-widest">• {selectedGroup.members.length} Users</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/5 border border-green-500/10 rounded-full">
+          <div className="flex items-center gap-3 shrink-0">
+             <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-green-500/5 border border-green-500/10 rounded-full">
                 <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-[8px] text-green-500 font-bold tracking-widest uppercase">Sync Active</span>
              </div>
@@ -196,26 +196,26 @@ export const GroupChats: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full p-8 font-sans">
-      <div className="flex items-center justify-between mb-12">
+    <div className="flex flex-col h-full p-4 md:p-8 font-sans">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 md:mb-12 gap-6">
         <div>
-          <h2 className="text-3xl font-black tracking-tighter text-white">Groups.</h2>
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500 mt-2">Private sector networking</p>
+          <h2 className="text-2xl md:text-3xl font-black tracking-tighter text-white uppercase italic">Groups.</h2>
+          <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500 mt-2">Private sector networking</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-2 w-full md:w-auto">
           <button 
             onClick={() => setShowJoinModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-white/5 text-gray-400 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all shadow-2xl active:scale-95"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-6 py-3 bg-white/5 text-gray-400 border border-white/10 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all shadow-2xl active:scale-95"
           >
             <Zap className="w-4 h-4" />
-            Join Sector
+            Join
           </button>
           <button 
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl shadow-blue-500/20 active:scale-95"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-6 py-3 bg-blue-500 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl shadow-blue-500/20 active:scale-95"
           >
             <Plus className="w-4 h-4" />
-            Initialize GC
+            Initialize
           </button>
         </div>
       </div>
@@ -287,24 +287,24 @@ export const GroupChats: React.FC = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-md card-subtle p-8 space-y-8 bg-[#0c0c0c] border-white/10"
+              className="relative w-full max-w-md card-subtle p-6 sm:p-8 space-y-6 sm:space-y-8 bg-[#0c0c0c] border-white/10"
             >
               <div>
-                <h2 className="text-2xl font-black tracking-tight text-white">Join Sector</h2>
-                <p className="text-gray-500 text-xs mt-2 font-medium">Enter the unique 6-character code to established a secure link.</p>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white uppercase italic">Join Sector</h2>
+                <p className="text-gray-500 text-[10px] sm:text-xs mt-2 font-medium uppercase tracking-widest">Enter the unique 6-character code.</p>
               </div>
 
               <form onSubmit={handleJoinGroup} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Sector Code</label>
+                  <label className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-600">Sector Code</label>
                   <input 
                     type="text"
                     autoFocus
                     maxLength={6}
                     value={joinCode}
                     onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                    placeholder="E.G. XJ9K2L"
-                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-5 py-4 focus:outline-hidden focus:border-blue-500/50 transition-all text-center text-xl font-black tracking-[0.5em] text-blue-500 placeholder:opacity-20 uppercase"
+                    placeholder="XJ9K2L"
+                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-5 py-4 focus:outline-hidden focus:border-blue-500/50 transition-all text-center text-xl sm:text-2xl font-black tracking-[0.5em] text-blue-500 placeholder:opacity-10 uppercase"
                   />
                 </div>
 
@@ -321,7 +321,7 @@ export const GroupChats: React.FC = () => {
                     disabled={joinCode.length < 6}
                     className="flex-1 py-4 bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl shadow-blue-500/20 disabled:opacity-50"
                   >
-                    Establish Link
+                    Connect
                   </button>
                 </div>
               </form>
@@ -342,23 +342,23 @@ export const GroupChats: React.FC = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-md card-subtle p-8 space-y-8 bg-[#0c0c0c] border-white/10"
+              className="relative w-full max-w-md card-subtle p-6 sm:p-8 space-y-6 sm:space-y-8 bg-[#0c0c0c] border-white/10"
             >
               <div>
-                <h2 className="text-2xl font-black tracking-tight text-white">New Communication Sector</h2>
-                <p className="text-gray-500 text-xs mt-2 font-medium">Define the identifier for your private grid branch.</p>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white uppercase italic">New Comms Sector</h2>
+                <p className="text-gray-500 text-[10px] sm:text-xs mt-2 font-medium uppercase tracking-widest">Define your private grid branch.</p>
               </div>
 
               <form onSubmit={handleCreateGroup} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Sector Name</label>
+                  <label className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-600">Sector Name</label>
                   <input 
                     type="text"
                     autoFocus
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
-                    placeholder="e.g. ALPHA SQUAD"
-                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-5 py-4 focus:outline-hidden focus:border-blue-500/50 transition-all text-sm font-medium text-white"
+                    placeholder="ALPHA SQUAD"
+                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-5 py-4 focus:outline-hidden focus:border-blue-500/50 transition-all text-xs sm:text-sm font-medium text-white placeholder:opacity-20 uppercase"
                   />
                 </div>
 

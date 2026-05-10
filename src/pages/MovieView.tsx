@@ -88,9 +88,9 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
     window.scrollTo(0, 0);
   }, [id, type]);
 
-  const title = media.title || media.name;
-  const date = media.release_date || media.first_air_date;
-  const backdrop = media.isCustom ? media.thumbnail : movieService.getBackdropUrl(media.backdrop_path, 'original');
+  const title = media?.title || media?.name;
+  const date = media?.release_date || media?.first_air_date;
+  const backdrop = media?.isCustom ? media?.thumbnail : (media ? movieService.getBackdropUrl(media.backdrop_path, 'original') : '');
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -105,7 +105,7 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
               duration: data.data.duration,
               percentage: data.data.progress,
               updatedAt: Date.now(),
-              title: media.title || media.name,
+              title: media?.title || media?.name,
               backdrop: backdrop,
               season: season,
               episode: episode
