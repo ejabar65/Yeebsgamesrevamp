@@ -80,6 +80,12 @@ export default function Movies() {
       setLoading(true);
       setError(null);
       try {
+        // Check proxy health first
+        const isHealthy = await movieService.checkHealth();
+        if (!isHealthy) {
+          throw new Error('Cinema Proxy is offline. Please restart the server.');
+        }
+
         if (activeTab === 'custom') {
           const snapshot = await getDocs(collection(db, 'custom_movies'));
           setCustomMovies(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), isCustom: true })));
@@ -87,12 +93,12 @@ export default function Movies() {
           setPopular([]);
         } else {
           const [trendingData, popularData] = await Promise.all([
-            movieService.getTrending(activeTab),
-            movieService.getPopular(activeTab)
+            movieService.getTrending(activeTab === 'custom' ? 'movie' : activeTab),
+            movieService.getPopular(activeTab === 'custom' ? 'movie' : activeTab)
           ]);
           
           if (trendingData.length === 0 && popularData.length === 0) {
-            throw new Error(`No ${activeTab === 'movie' ? 'movies' : 'shows'} found from provider.`);
+            throw new Error(`The provider effectively returned zero ${activeTab === 'movie' ? 'movies' : 'series'}. This usually indicates the API relay is under maintenance or rate-limited.`);
           }
 
           setTrending(trendingData);

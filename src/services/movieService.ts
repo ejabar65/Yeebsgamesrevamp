@@ -40,23 +40,13 @@ export interface MediaContent {
 
 export const movieService = {
   getTrending: async (type: 'movie' | 'tv' = 'movie'): Promise<MediaContent[]> => {
-    try {
-      const data = await safeFetch(`${BASE_URL}/trending/${type}/week`);
-      return data.results || [];
-    } catch (error) {
-      console.error(`Error fetching trending ${type}:`, error);
-      return [];
-    }
+    const data = await safeFetch(`${BASE_URL}/trending/${type}/week`);
+    return data.results || [];
   },
 
   getPopular: async (type: 'movie' | 'tv' = 'movie'): Promise<MediaContent[]> => {
-    try {
-      const data = await safeFetch(`${BASE_URL}/${type}/popular`);
-      return data.results || [];
-    } catch (error) {
-      console.error(`Error fetching popular ${type}:`, error);
-      return [];
-    }
+    const data = await safeFetch(`${BASE_URL}/${type}/popular`);
+    return data.results || [];
   },
 
   checkHealth: async () => {
@@ -70,32 +60,17 @@ export const movieService = {
 
   searchMedia: async (query: string, type: 'movie' | 'tv' = 'movie'): Promise<MediaContent[]> => {
     if (!query) return [];
-    try {
-      const data = await safeFetch(`${BASE_URL}/search/${type}?query=${encodeURIComponent(query)}`);
-      return data.results || [];
-    } catch (error) {
-      console.error(`Error searching ${type}:`, error);
-      return [];
-    }
+    const data = await safeFetch(`${BASE_URL}/search/${type}?query=${encodeURIComponent(query)}`);
+    return data.results || [];
   },
 
   getDetails: async (id: string, type: 'movie' | 'tv' = 'movie'): Promise<MediaContent | null> => {
-    try {
-      const data = await safeFetch(`${BASE_URL}/${type}/${id}`);
-      return data;
-    } catch (error) {
-      console.error(`Error fetching ${type} details:`, error);
-      return null;
-    }
+    const data = await safeFetch(`${BASE_URL}/${type}/${id}`);
+    return data;
   },
 
   getSeasonDetails: async (tvId: string, seasonNumber: number) => {
-    try {
-      return await safeFetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}`);
-    } catch (error) {
-      console.error('Error fetching season details:', error);
-      return null;
-    }
+    return await safeFetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}`);
   },
 
   getPosterUrl: (path: string, size: 'small' | 'medium' | 'large' | 'original' = 'medium') => {
