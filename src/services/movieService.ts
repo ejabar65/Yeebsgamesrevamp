@@ -7,7 +7,10 @@ const safeFetch = async (url: string) => {
   if (!response.ok) {
     if (contentType?.includes('application/json')) {
       const errorData = await response.json();
-      throw new Error(errorData.error || `Server returned ${response.status}`);
+      const message = errorData.error === 'TMDB Service Error' 
+        ? `TMDB Error: ${errorData.details?.status_message || 'Access Denied'}`
+        : errorData.error || `Server returned ${response.status}`;
+      throw new Error(message);
     }
     throw new Error(`Server returned ${response.status}`);
   }

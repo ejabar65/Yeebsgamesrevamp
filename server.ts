@@ -29,7 +29,7 @@ async function startServer() {
   // API Routes
   app.all('/api/c-data/*', async (req, res) => {
     // Priority: Environment Variable > Hardcoded Fallback
-    const TMDB_API_KEY = process.env.TMDB_API_KEY || '3fd2be6f0c70a2a598f084dd57544c85';
+    const TMDB_API_KEY = process.env.TMDB_API_KEY || '15e241bab4affc62f00422929d7efd8a';
     
     // Extract everything after /api/c-data/
     let pathValue = req.path.replace(/^\/api\/c-data/, '');
