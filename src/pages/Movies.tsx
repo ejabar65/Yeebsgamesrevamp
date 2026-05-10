@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { movieService, MediaContent } from '../services/movieService';
 import { useNavigate } from 'react-router-dom';
-import { Search, Play, Star, ChevronRight, ChevronLeft, TrendingUp, Monitor, Film, Plus } from 'lucide-react';
+import { Search, Play, Star, ChevronRight, ChevronLeft, TrendingUp, Monitor, Film, Plus, Activity } from 'lucide-react';
 import { db, collection, getDocs } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 import { MASCOT_URL } from '../constants';
@@ -16,7 +16,7 @@ const MediaCard: React.FC<{ item: any, index: number, type: string, onClick: () 
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: index * 0.03 }}
-      className="group relative cursor-pointer aspect-[2/3] rounded-2xl overflow-hidden bg-white/5 border border-white/5 shadow-lg shadow-black/40 hover:shadow-blue-500/10 transition-all duration-500"
+      className="group relative cursor-pointer aspect-[2/3] rounded-xl sm:rounded-2xl overflow-hidden bg-white/5 border border-white/5 shadow-lg shadow-black/40 hover:shadow-blue-500/10 transition-all duration-500"
       onClick={onClick}
     >
       <img 
@@ -64,13 +64,21 @@ export default function Movies() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const list = JSON.parse(localStorage.getItem('yeebs_continue_watching') || '[]');
-    setContinueWatching(list);
+    try {
+      const list = JSON.parse(localStorage.getItem('yeebs_continue_watching') || '[]');
+      setContinueWatching(Array.isArray(list) ? list : []);
+    } catch (e) {
+      console.error('Failed to parse continue watching list:', e);
+      setContinueWatching([]);
+    }
   }, []);
+
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
+      setError(null);
       try {
         if (activeTab === 'custom') {
           const snapshot = await getDocs(collection(db, 'custom_movies'));
@@ -82,11 +90,17 @@ export default function Movies() {
             movieService.getTrending(activeTab),
             movieService.getPopular(activeTab)
           ]);
+          
+          if (trendingData.length === 0 && popularData.length === 0) {
+            throw new Error(`No ${activeTab === 'movie' ? 'movies' : 'shows'} found from provider.`);
+          }
+
           setTrending(trendingData);
           setPopular(popularData);
         }
       } catch (error) {
         console.error(error);
+        setError(error instanceof Error ? error.message : 'Connection to movie database failed');
       }
       setLoading(false);
     };
@@ -113,18 +127,42 @@ export default function Movies() {
     setSearchResults(results);
   };
 
+  if (loading && trending.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-svh bg-[#020202] gap-8">
+        <div className="relative">
+          <div className="w-20 h-20 border-b-2 border-blue-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Film className="w-6 h-6 text-blue-500 animate-pulse" />
+          </div>
+        </div>
+        <div className="text-center space-y-4">
+          <div className="space-y-2">
+            <p className="text-[11px] font-black uppercase tracking-[0.5em] text-blue-500 animate-pulse">Initializing Cinema</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400">Connecting to Orbital Relay...</p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-white/5 border border-white/10 rounded-full text-[8px] font-black uppercase tracking-widest text-gray-600 hover:text-white transition-all"
+          >
+            Timed Out? Refresh
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const currentHero = trending[heroIndex];
 
   return (
-    <div className="min-h-screen bg-[#020202] text-white font-sans selection:bg-blue-500 selection:text-white pb-24">
-      {/* Background Atmosphere */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-0 right-0 w-[80vw] h-[80vh] bg-blue-900/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-[60vw] h-[60vh] bg-purple-900/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] contrast-150" />
+    <div className="min-h-svh bg-[#020202] text-white font-sans selection:bg-blue-500 selection:text-white pb-24 relative overflow-x-hidden">
+      {/* Dynamic Background Noise/Aura */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 left-1/4 w-full h-full bg-blue-600/5 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-full h-full bg-purple-600/5 blur-[120px] rounded-full animate-pulse delay-1000" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 space-y-16">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 space-y-12 sm:space-y-16">
         {/* Navigation & Search */}
         <header className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-center lg:items-center justify-between">
           <div className="space-y-6 w-full lg:w-auto">
@@ -221,9 +259,26 @@ export default function Movies() {
               transition={{ duration: 0.5 }}
               className="space-y-12 sm:space-y-20"
             >
+              {/* Error State */}
+              {error && (
+                <div className="py-20 text-center space-y-8 bg-red-500/5 rounded-[3rem] border border-red-500/10">
+                  <Activity className="w-16 h-16 text-red-500/20 mx-auto" />
+                  <div className="space-y-4">
+                    <h3 className="text-3xl font-black uppercase italic tracking-tighter">Database Unreachable</h3>
+                    <p className="text-gray-500 text-xs font-black uppercase tracking-widest max-w-md mx-auto">{error}</p>
+                  </div>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="px-8 py-3 bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all"
+                  >
+                    Retry Connection
+                  </button>
+                </div>
+              )}
+
               {/* Hero Section */}
-              {!loading && currentHero && activeTab !== 'custom' && (
-                <section className="relative h-[60vh] sm:h-[75vh] w-full rounded-[2.5rem] sm:rounded-[4rem] overflow-hidden group shadow-3xl border border-white/5 animate-in fade-in zoom-in duration-1000">
+              {!loading && !error && trending.length > 0 && activeTab !== 'custom' && (
+                <section className="relative h-[55svh] sm:h-[75vh] w-full rounded-2xl sm:rounded-[3rem] md:rounded-[4rem] overflow-hidden group shadow-3xl border border-white/5 animate-in fade-in zoom-in duration-1000">
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={currentHero.id}
@@ -234,9 +289,12 @@ export default function Movies() {
                       className="absolute inset-0"
                     >
                       <img 
-                        src={movieService.getBackdropUrl(currentHero.backdrop_path, 'original')} 
+                        src={movieService.getBackdropUrl(currentHero.backdrop_path || currentHero.poster_path, 'original')} 
                         alt={currentHero.title || currentHero.name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=80&w=1280';
+                        }}
                       />
                       <div className="absolute inset-0 bg-linear-to-t from-[#020202] via-[#020202]/40 to-transparent" />
                       <div className="absolute inset-0 bg-linear-to-r from-[#020202] via-transparent to-transparent opacity-60" />
@@ -259,7 +317,7 @@ export default function Movies() {
                           <span className="text-xs sm:text-sm font-black text-white">{(currentHero.vote_average || 0).toFixed(1)}</span>
                         </div>
                       </div>
-                      <h2 className="text-[clamp(1.75rem,8vw,7.5rem)] font-black uppercase italic tracking-tighter leading-[0.9] max-w-4xl text-shadow-xl line-clamp-2 md:line-clamp-none">
+                      <h2 className="text-[clamp(1.75rem,8vw,7.5rem)] font-black uppercase italic tracking-tighter leading-[0.9] max-w-4xl text-shadow-xl line-clamp-2 md:line-clamp-none group-hover:scale-[1.02] transition-transform duration-1000">
                         {currentHero.title || currentHero.name || 'Untitled Content'}
                       </h2>
                       <p className="text-gray-400 font-medium text-xs sm:text-lg md:text-xl max-w-2xl line-clamp-2 md:line-clamp-3">
@@ -341,10 +399,10 @@ export default function Movies() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-8">
                   {loading ? (
                     Array(12).fill(0).map((_, i) => (
-                      <div key={i} className="aspect-[2/3] bg-white/[0.03] rounded-[2rem] animate-pulse border border-white/5" />
+                      <div key={i} className="aspect-[2/3] bg-white/[0.03] rounded-xl sm:rounded-[2rem] animate-pulse border border-white/5" />
                     ))
                   ) : (
                     activeTab === 'custom' ? (
@@ -353,15 +411,22 @@ export default function Movies() {
                           <MediaCard key={item.id} item={item} index={i} type={item.type || 'Custom'} onClick={() => navigate(`/media/custom/${item.id}`)} />
                         ))
                       ) : (
-                        <div className="col-span-full py-40 text-center border-2 border-dashed border-white/5 rounded-[3rem] bg-white/[0.01]">
+                        <div className="col-span-full py-40 text-center border-2 border-dashed border-white/5 rounded-2xl sm:rounded-[3rem] bg-white/[0.01]">
                           <Plus className="w-12 h-12 text-white/5 mx-auto mb-6" />
-                          <p className="text-[10px] font-black text-gray-800 uppercase tracking-[0.4em]">No local movies or shows added yet.</p>
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em]">No local movies or shows added yet.</p>
                         </div>
                       )
                     ) : (
-                      popular.map((item, i) => (
-                        <MediaCard key={item.id} item={item} index={i} type={activeTab} onClick={() => navigate(`/media/${activeTab}/${item.id}`)} />
-                      ))
+                      popular.length > 0 ? (
+                        popular.map((item, i) => (
+                          <MediaCard key={item.id} item={item} index={i} type={activeTab} onClick={() => navigate(`/media/${activeTab}/${item.id}`)} />
+                        ))
+                      ) : (
+                        <div className="col-span-full py-40 text-center border-2 border-dashed border-white/5 rounded-2xl sm:rounded-[3rem] bg-white/[0.01]">
+                          <Activity className="w-12 h-12 text-white/5 mx-auto mb-6" />
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em]">No content available in this sector.</p>
+                        </div>
+                      )
                     )
                   )}
                 </div>

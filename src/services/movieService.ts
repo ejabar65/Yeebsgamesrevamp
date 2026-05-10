@@ -1,4 +1,4 @@
-const BASE_URL = '/api/movie-proxy';
+const BASE_URL = '/api/c-data';
 
 const safeFetch = async (url: string) => {
   const response = await fetch(url);
@@ -56,6 +56,15 @@ export const movieService = {
     } catch (error) {
       console.error(`Error fetching popular ${type}:`, error);
       return [];
+    }
+  },
+
+  checkHealth: async () => {
+    try {
+      const resp = await fetch('/api/cinema-health');
+      return resp.ok;
+    } catch {
+      return false;
     }
   },
 

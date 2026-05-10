@@ -27,13 +27,13 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
 
   // API Routes
-  app.all('/api/movie-proxy/*', async (req, res) => {
+  app.all('/api/c-data/*', async (req, res) => {
     // Priority: Environment Variable > Hardcoded Fallback
     const TMDB_API_KEY = process.env.TMDB_API_KEY || '15e241bab4affc62f00422929d7efd8a';
     
-    // Extract everything after /api/movie-proxy/
+    // Extract everything after /api/c-data/
     // Path might come in without a trailing slash depending on how it was routed
-    let pathValue = req.path.replace(/^\/api\/movie-proxy/, '');
+    let pathValue = req.path.replace(/^\/api\/c-data/, '');
     if (pathValue.startsWith('/')) {
       pathValue = pathValue.substring(1);
     }
