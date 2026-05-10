@@ -126,17 +126,17 @@ export default function Movies() {
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 space-y-16">
         {/* Navigation & Search */}
-        <header className="flex flex-col lg:flex-row gap-12 items-start lg:items-center justify-between">
-          <div className="space-y-6">
-            <div className="flex items-center gap-6 animate-in fade-in slide-in-from-left duration-1000">
-              <div className="w-16 h-16 md:w-24 md:h-24 rounded-3xl overflow-hidden shadow-2xl shadow-blue-500/20 border border-white/10 shrink-0">
+        <header className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-center lg:items-center justify-between">
+          <div className="space-y-6 w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row items-center gap-6 animate-in fade-in slide-in-from-left duration-1000">
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-3xl overflow-hidden shadow-2xl shadow-blue-500/20 border border-white/10 shrink-0">
                 <img src={MASCOT_URL} alt="Logo" className="w-full h-full object-cover" />
               </div>
-              <h1 className="text-7xl md:text-9xl font-black tracking-[calc(-0.06em)] uppercase italic leading-[0.75]">
-                Yeebs<span className="text-blue-500 block text-5xl md:text-7xl not-italic mt-2 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">Cinema™</span>
+              <h1 className="text-5xl sm:text-7xl md:text-9xl font-black tracking-[calc(-0.06em)] uppercase italic leading-[0.75] text-center sm:text-left">
+                Yeebs<span className="text-blue-500 block text-3xl sm:text-5xl md:text-7xl not-italic mt-2 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">Cinema™</span>
               </h1>
             </div>
-            <nav className="flex gap-2 bg-white/5 p-1 rounded-2xl backdrop-blur-3xl border border-white/10 shadow-2xl w-fit">
+            <nav className="flex overflow-x-auto gap-2 bg-white/5 p-1 rounded-2xl backdrop-blur-3xl border border-white/10 shadow-2xl w-full sm:w-fit no-scrollbar">
               {[
                 { id: 'movie', label: 'Movies' },
                 { id: 'tv', label: 'TV Shows' },
@@ -149,7 +149,7 @@ export default function Movies() {
                     setIsSearching(false);
                     setSearchQuery('');
                   }}
-                  className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${
+                  className={`flex-1 sm:flex-none px-6 sm:px-8 py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 whitespace-nowrap ${
                     activeTab === tab.id 
                       ? 'bg-white text-black scale-100 shadow-[0_0_20px_rgba(255,255,255,0.2)]' 
                       : 'text-gray-500 hover:text-white hover:bg-white/5 scale-95'
@@ -168,8 +168,8 @@ export default function Movies() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for movies and shows..."
-              className="w-full bg-white/[0.03] border border-white/10 rounded-[1.8rem] py-5 pl-14 pr-8 text-[11px] font-black uppercase tracking-[0.2em] focus:bg-white/[0.07] focus:border-blue-500/40 outline-hidden transition-all placeholder:text-gray-800 backdrop-blur-md shadow-xl"
+              placeholder="Search library..."
+              className="w-full bg-white/[0.03] border border-white/10 rounded-[1.8rem] py-4 sm:py-5 pl-14 pr-8 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] focus:bg-white/[0.07] focus:border-blue-500/40 outline-hidden transition-all placeholder:text-gray-800 backdrop-blur-md shadow-xl"
             />
           </form>
         </header>
@@ -183,17 +183,17 @@ export default function Movies() {
             <div className="flex items-end justify-between border-b border-white/5 pb-8">
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.5em]">Searching Database...</p>
-                <h2 className="text-4xl font-black uppercase italic tracking-tighter">Search Results</h2>
+                <h2 className="text-3xl sm:text-4xl font-black uppercase italic tracking-tighter">Search Results</h2>
               </div>
               <button 
                 onClick={() => { setIsSearching(false); setSearchQuery(''); }}
-                className="px-6 py-3 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                className="px-4 py-2 sm:px-6 sm:py-3 bg-red-500/10 text-red-500 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
               >
                 Cancel
               </button>
             </div>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-8">
               {searchResults.length > 0 ? (
                 searchResults.map((item, i) => (
                   <MediaCard 
@@ -205,8 +205,8 @@ export default function Movies() {
                   />
                 ))
               ) : (
-                <div className="col-span-full py-40 text-center">
-                  <p className="text-[12px] font-black text-gray-800 uppercase tracking-[0.5em]">No results found for your search.</p>
+                <div className="col-span-full py-24 sm:py-40 text-center">
+                  <p className="text-[10px] sm:text-[12px] font-black text-gray-800 uppercase tracking-[0.5em]">No results found.</p>
                 </div>
               )}
             </div>
@@ -219,11 +219,11 @@ export default function Movies() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.5 }}
-              className="space-y-20"
+              className="space-y-12 sm:space-y-20"
             >
               {/* Hero Section */}
               {!loading && currentHero && activeTab !== 'custom' && (
-                <section className="relative h-[75vh] w-full rounded-[4rem] overflow-hidden group shadow-3xl border border-white/5 animate-in fade-in zoom-in duration-1000">
+                <section className="relative h-[60vh] sm:h-[75vh] w-full rounded-[2.5rem] sm:rounded-[4rem] overflow-hidden group shadow-3xl border border-white/5 animate-in fade-in zoom-in duration-1000">
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={currentHero.id}
@@ -243,45 +243,45 @@ export default function Movies() {
                     </motion.div>
                   </AnimatePresence>
 
-                  <div className="absolute inset-0 flex flex-col justify-end p-10 md:p-20 space-y-10">
+                  <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-10 md:p-20 space-y-6 sm:space-y-10">
                     <motion.div
                       initial={{ opacity: 0, y: 40 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.5, duration: 0.8 }}
-                      className="space-y-6"
+                      className="space-y-4 sm:space-y-6"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="px-4 py-1.5 bg-blue-600 rounded-lg shadow-lg shadow-blue-600/30">
-                          <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Trending</span>
+                        <div className="px-3 py-1 sm:px-4 sm:py-1.5 bg-blue-600 rounded-lg shadow-lg shadow-blue-600/30">
+                          <span className="text-[8px] sm:text-[10px] font-black text-white uppercase tracking-[0.2em]">Trending</span>
                         </div>
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-lg border border-white/10">
-                          <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
-                          <span className="text-sm font-black text-white">{currentHero.vote_average.toFixed(1)}</span>
+                        <div className="flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1.5 bg-white/10 backdrop-blur-md rounded-lg border border-white/10">
+                          <Star className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-yellow-500 fill-current" />
+                          <span className="text-xs sm:text-sm font-black text-white">{currentHero.vote_average.toFixed(1)}</span>
                         </div>
                       </div>
-                      <h2 className="text-6xl md:text-9xl font-black uppercase italic tracking-tighter leading-[0.8] max-w-4xl text-shadow-xl">
+                      <h2 className="text-4xl sm:text-6xl md:text-9xl font-black uppercase italic tracking-tighter leading-[0.9] max-w-4xl text-shadow-xl line-clamp-2 md:line-clamp-none">
                         {currentHero.title || currentHero.name}
                       </h2>
-                      <p className="text-gray-400 font-medium text-lg md:text-xl max-w-2xl line-clamp-2 md:line-clamp-3">
+                      <p className="text-gray-400 font-medium text-xs sm:text-lg md:text-xl max-w-2xl line-clamp-2 md:line-clamp-3">
                         {currentHero.overview}
                       </p>
                     </motion.div>
 
-                    <div className="flex flex-col md:flex-row items-center gap-8">
+                    <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-8">
                       <button 
                         onClick={() => navigate(`/media/${activeTab}/${currentHero.id}`)}
-                        className="w-full md:w-auto flex items-center justify-center gap-4 px-14 py-6 bg-white text-black rounded-[2rem] font-black text-[13px] uppercase tracking-[0.3em] hover:bg-blue-500 hover:text-white transition-all duration-700 group shadow-[0_20px_50px_rgba(255,255,255,0.1)] hover:shadow-blue-500/30"
+                        className="w-full md:w-auto flex items-center justify-center gap-3 sm:gap-4 px-8 sm:px-14 py-4 sm:py-6 bg-white text-black rounded-[1.5rem] sm:rounded-[2rem] font-black text-[11px] sm:text-[13px] uppercase tracking-[0.2em] sm:tracking-[0.3em] hover:bg-blue-500 hover:text-white transition-all duration-700 group shadow-[0_20px_50px_rgba(255,255,255,0.1)] hover:shadow-blue-500/30"
                       >
-                        <Play className="w-5 h-5 fill-current group-hover:scale-125 transition-transform duration-500" />
+                        <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current group-hover:scale-125 transition-transform duration-500" />
                         Watch Now
                       </button>
                       
-                      <div className="flex gap-3 bg-white/5 p-2 rounded-2xl backdrop-blur-md border border-white/10">
+                      <div className="flex gap-2 sm:gap-3 bg-white/5 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl backdrop-blur-md border border-white/10">
                          {trending.slice(0, 5).map((_, i) => (
                            <button 
                              key={i} 
                              onClick={() => setHeroIndex(i)}
-                             className={`h-2 rounded-full transition-all duration-700 ${heroIndex === i ? 'w-16 bg-white' : 'w-2 bg-white/20 hover:bg-white/40'}`}
+                             className={`h-1.5 sm:h-2 rounded-full transition-all duration-700 ${heroIndex === i ? 'w-10 sm:w-16 bg-white' : 'w-1.5 sm:w-2 bg-white/20 hover:bg-white/40'}`}
                            />
                          ))}
                       </div>

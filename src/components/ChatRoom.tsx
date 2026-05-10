@@ -486,30 +486,34 @@ export const ChatRoom: React.FC<{
 
   return (
     <div className="flex flex-col h-full bg-[#000] rounded-xl border border-white/5 overflow-hidden relative font-sans">
-      <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-md relative z-20">
+      <div className="px-4 sm:px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-md relative z-20">
         <div className="flex items-center gap-3">
           <div>
-            <h2 className="font-bold text-xs text-white tracking-tight">{groupId ? 'Group Chat' : 'Global Chat'}</h2>
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-700 mt-0.5">{groupId ? 'Private Room' : 'Online'}</p>
+            <h2 className="font-bold text-[10px] sm:text-xs text-white tracking-tight">{groupId ? 'Group Chat' : 'Global Chat'}</h2>
+            <p className="text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.2em] text-gray-700 mt-0.5">{groupId ? 'Private Room' : 'Online'}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {groupId && (
             <>
               <div className="flex items-center bg-white/5 border border-white/10 rounded-lg p-0.5">
                 <button 
                   onClick={() => toggleCall(false)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all ${isCalling && !isVideoEnabled ? 'bg-green-500 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-md transition-all ${isCalling && !isVideoEnabled ? 'bg-green-500 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
                 >
                   <Phone className="w-3 h-3" />
-                  <span className="text-[8px] font-black uppercase tracking-widest">{isCalling && !isVideoEnabled ? 'In Call' : 'Audio'}</span>
+                  <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest">{isCalling && !isVideoEnabled ? 'In Call' : (
+                    <span className="hidden sm:inline">Audio</span>
+                  )}</span>
                 </button>
                 <button 
                   onClick={() => isCalling ? toggleVideo() : toggleCall(true)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all ${isCalling && isVideoEnabled ? 'bg-blue-500 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-md transition-all ${isCalling && isVideoEnabled ? 'bg-blue-500 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
                 >
                   <Video className="w-3 h-3" />
-                  <span className="text-[8px] font-black uppercase tracking-widest">{isCalling && isVideoEnabled ? 'FaceTime' : 'Video'}</span>
+                  <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest">{isCalling && isVideoEnabled ? 'On' : (
+                    <span className="hidden sm:inline">FaceTime</span>
+                  )}</span>
                 </button>
               </div>
               
@@ -524,9 +528,9 @@ export const ChatRoom: React.FC<{
             </>
           )}
           {!groupId && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/5 border border-blue-500/10 rounded-full">
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/5 border border-blue-500/10 rounded-full">
               <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
-              <span className="text-[8px] text-blue-500 font-bold tracking-widest uppercase">Online</span>
+              <span className="text-[7px] sm:text-[8px] text-blue-500 font-bold tracking-widest uppercase">Online</span>
             </div>
           )}
         </div>
@@ -540,7 +544,7 @@ export const ChatRoom: React.FC<{
             exit={{ height: 0, opacity: 0 }}
             className="bg-blue-500/5 border-b border-blue-500/10 overflow-hidden relative z-10"
           >
-            <div className="p-6 flex flex-wrap gap-8">
+            <div className="p-4 sm:p-6 flex flex-wrap gap-4 sm:gap-8">
               <div className="flex items-center gap-3">
                 <button 
                   onClick={() => handleUpdateSetting('spamLimit', !spamLimitEnabled)}
@@ -549,8 +553,8 @@ export const ChatRoom: React.FC<{
                   <div className={`absolute top-1 bottom-1 w-3 rounded-full bg-white transition-all ${spamLimitEnabled ? 'right-1' : 'left-1'}`} />
                 </button>
                 <div>
-                  <h4 className="text-[9px] font-black text-white uppercase tracking-widest">Slow Mode</h4>
-                  <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{spamLimitEnabled ? 'Enabled' : 'Disabled'}</p>
+                  <h4 className="text-[8px] sm:text-[9px] font-black text-white uppercase tracking-widest">Slow Mode</h4>
+                  <p className="text-[7px] sm:text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{spamLimitEnabled ? 'Enabled' : 'Disabled'}</p>
                 </div>
               </div>
  
@@ -562,8 +566,8 @@ export const ChatRoom: React.FC<{
                   <div className={`absolute top-1 bottom-1 w-3 rounded-full bg-white transition-all ${filterEnabled ? 'right-1' : 'left-1'}`} />
                 </button>
                 <div>
-                  <h4 className="text-[9px] font-black text-white uppercase tracking-widest">Word Filter</h4>
-                  <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{filterEnabled ? 'Active' : 'Off'}</p>
+                  <h4 className="text-[8px] sm:text-[9px] font-black text-white uppercase tracking-widest">Word Filter</h4>
+                  <p className="text-[7px] sm:text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{filterEnabled ? 'Active' : 'Off'}</p>
                 </div>
               </div>
             </div>
@@ -578,25 +582,25 @@ export const ChatRoom: React.FC<{
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className={`absolute ${isVideoEnabled || voiceParticipants.some(v => v.videoEnabled) ? 'inset-6 bottom-32' : 'top-20 right-6 w-56'} z-30 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl p-5 shadow-2xl flex flex-col gap-4 overflow-hidden`}
+            className={`absolute ${isVideoEnabled || voiceParticipants.some(v => v.videoEnabled) ? 'inset-4 sm:inset-6 bottom-24 sm:bottom-32' : 'top-20 right-4 sm:right-6 w-48 sm:w-56'} z-30 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col gap-4 overflow-hidden`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[8px] font-black uppercase tracking-widest text-green-500 flex items-center gap-2">
+              <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-green-500 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 {isVideoEnabled || voiceParticipants.some(v => v.videoEnabled) ? 'FaceTime Room' : 'Voice Room'}
               </span>
               <div className="flex items-center gap-3">
-                <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">{voiceParticipants.length} Connected</span>
-                <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-white transition-colors">
+                <span className="text-[7px] sm:text-[9px] font-bold text-gray-600 uppercase tracking-widest">{voiceParticipants.length} Connected</span>
+                <button onClick={() => isCalling ? stopVoice() : null} className="text-gray-500 hover:text-white transition-colors">
                   <X className="w-3 h-3" />
                 </button>
               </div>
             </div>
             
-            <div className={`flex-1 overflow-y-auto pr-2 custom-scrollbar ${isVideoEnabled || voiceParticipants.some(v => v.videoEnabled) ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}`}>
+            <div className={`flex-1 overflow-y-auto pr-2 custom-scrollbar ${isVideoEnabled || voiceParticipants.some(v => v.videoEnabled) ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4' : 'space-y-3 sm:space-y-4'}`}>
               {/* Local Stream for Video */}
               {isVideoEnabled && localStream && (
-                <div className="relative rounded-xl overflow-hidden bg-black aspect-video border border-blue-500 shadow-lg shadow-blue-500/20 group">
+                <div className="relative rounded-xl overflow-hidden bg-black aspect-video border border-blue-500 shadow-lg shadow-blue-500/20 group shrink-0">
                   <video 
                     autoPlay 
                     muted 
@@ -604,13 +608,8 @@ export const ChatRoom: React.FC<{
                     ref={(el) => { if (el) el.srcObject = localStream; }} 
                     className="w-full h-full object-cover scale-x-[-1]" 
                   />
-                  <div className="absolute bottom-2 left-2 px-2 py-1 bg-blue-500/80 backdrop-blur-md rounded text-[8px] font-black text-white uppercase tracking-widest">
+                  <div className="absolute bottom-2 left-2 px-2 py-1 bg-blue-500/80 backdrop-blur-md rounded text-[7px] sm:text-[8px] font-black text-white uppercase tracking-widest">
                     You (Me)
-                  </div>
-                  <div className="absolute top-2 right-2 flex gap-1">
-                    <button onClick={toggleVideo} className="p-1.5 bg-black/40 rounded-lg hover:bg-red-500 transition-colors">
-                      <Video className="w-3 h-3" />
-                    </button>
                   </div>
                 </div>
               )}
@@ -631,7 +630,7 @@ export const ChatRoom: React.FC<{
                 <div key={p.id} className="flex items-center justify-between group/user">
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <img src={p.photoURL} className={`w-9 h-9 rounded-xl object-cover transition-all ${p.isSpeaking || p.uid === user?.uid ? 'border-2 border-green-500' : 'border border-white/10 opacity-70'}`} />
+                      <img src={p.photoURL} className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover transition-all ${p.isSpeaking || p.uid === user?.uid ? 'border-2 border-green-500' : 'border border-white/10 opacity-70'}`} />
                       {(p.isSpeaking || p.uid === user?.uid) && (
                         <div className="absolute inset-0 bg-green-500/20 rounded-xl animate-ping opacity-20" />
                       )}
@@ -642,12 +641,12 @@ export const ChatRoom: React.FC<{
                       )}
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-white uppercase tracking-tight">{p.username}</p>
+                      <p className="text-[9px] sm:text-[10px] font-bold text-white uppercase tracking-tight">{p.username}</p>
                       <div className="flex gap-0.5 mt-1">
                         {[1,2,3].map(i => (
                           <div 
                             key={i} 
-                            className={`w-1 h-2 rounded-full transition-all duration-300 ${p.isSpeaking || p.uid === user?.uid ? 'bg-green-500' : 'bg-gray-800'}`} 
+                            className={`w-1 h-1.5 sm:h-2 rounded-full transition-all duration-300 ${p.isSpeaking || p.uid === user?.uid ? 'bg-green-500' : 'bg-gray-800'}`} 
                             style={{ 
                               animation: (p.isSpeaking || p.uid === user?.uid) ? `bounce 0.8s ease-in-out infinite ${i * 0.1}s` : 'none' 
                             }} 
@@ -660,20 +659,20 @@ export const ChatRoom: React.FC<{
               ))}
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {isCalling && (
                 <>
                   <button 
                     onClick={toggleVideo}
-                    className={`flex-1 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${isVideoEnabled ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-gray-500 hover:text-white'}`}
+                    className={`flex-1 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-widest transition-all ${isVideoEnabled ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-gray-500 hover:text-white'}`}
                   >
-                    {isVideoEnabled ? 'Disable Camera' : 'Enable Camera'}
+                    {isVideoEnabled ? 'Cam Off' : 'Cam On'}
                   </button>
                   <button 
                     onClick={() => stopVoice()}
-                    className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-xl shadow-red-500/20 active:scale-95"
+                    className="flex-1 py-2 sm:py-2.5 bg-red-500 text-white rounded-lg sm:rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-xl shadow-red-500/20 active:scale-95"
                   >
-                    Disconnect
+                    Leave
                   </button>
                 </>
               )}
@@ -684,7 +683,7 @@ export const ChatRoom: React.FC<{
 
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide relative"
+        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8 scrollbar-hide relative"
       >
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -697,16 +696,16 @@ export const ChatRoom: React.FC<{
             <p className="text-[9px] font-bold uppercase tracking-[0.3em] opacity-10">No messages yet</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-6 sm:gap-8">
             {messages.map((msg, i) => (
               <motion.div 
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 key={`${msg.id}-${i}`} 
-                className={`flex gap-4 ${msg.senderName === user?.username ? 'flex-row-reverse' : 'flex-row'}`}
+                className={`flex gap-3 sm:gap-4 ${msg.senderName === user?.username ? 'flex-row-reverse' : 'flex-row'}`}
               >
                 <div className="flex-shrink-0">
-                  <div className={`w-10 h-10 rounded-xl overflow-hidden border transition-all duration-500 relative ${
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl overflow-hidden border transition-all duration-500 relative ${
                     msg.senderName === user?.username ? 'border-white/20' : 'border-white/5'
                   } ${
                     voiceParticipants.some(vp => vp.uid === msg.senderId) 
@@ -718,37 +717,24 @@ export const ChatRoom: React.FC<{
                       alt="" 
                       className="w-full h-full object-cover"
                     />
-                    {voiceParticipants.find(vp => vp.uid === msg.senderId)?.isSpeaking && (
-                      <div className="absolute inset-0 bg-green-500/10 flex items-center justify-center">
-                         <div className="flex gap-0.5">
-                            {[1,2,3].map(i => (
-                              <div 
-                                key={i} 
-                                className="w-0.5 h-3 bg-green-500 rounded-full animate-bounce" 
-                                style={{ animationDelay: `${i * 0.1}s` }} 
-                              />
-                            ))}
-                         </div>
-                      </div>
-                    )}
                   </div>
                 </div>
-                <div className={`flex flex-col ${msg.senderName === user?.username ? 'items-end' : 'items-start'}`}>
-                  <div className="flex items-center gap-2 mb-2 px-1">
-                    {voiceParticipants.some(vp => vp.uid === msg.senderId) && (
-                      <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                        <span className="text-[7px] font-black text-green-500 uppercase tracking-widest">In Voice</span>
-                      </div>
-                    )}
+                <div className={`flex flex-col max-w-[80%] sm:max-w-[70%] ${msg.senderName === user?.username ? 'items-end' : 'items-start'}`}>
+                  <div className="flex items-center gap-2 mb-1.5 px-1 flex-wrap">
                     <Link 
                       to={`/profile/${msg.senderName.toLowerCase()}`}
-                      className={`text-[9px] font-bold uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center gap-1 ${ADMIN_LIST.includes(msg.senderName.toLowerCase()) ? 'text-blue-500' : MOD_LIST.includes(msg.senderName.toLowerCase()) ? 'text-yellow-500' : 'text-gray-600 hover:text-gray-400'}`}
+                      className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center gap-1 ${ADMIN_LIST.includes(msg.senderName.toLowerCase()) ? 'text-blue-500' : MOD_LIST.includes(msg.senderName.toLowerCase()) ? 'text-yellow-500' : 'text-gray-600 hover:text-gray-400'}`}
                     >
                       {msg.senderName}
                       {ADMIN_LIST.includes(msg.senderName.toLowerCase()) && <CheckCircle2 className="w-2.5 h-2.5" />}
                       {MOD_LIST.includes(msg.senderName.toLowerCase()) && <Star className="w-2.5 h-2.5 fill-current" />}
                     </Link>
+                    {voiceParticipants.some(vp => vp.uid === msg.senderId) && (
+                      <div className="flex items-center gap-1">
+                        <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                        <span className="text-[6px] sm:text-[7px] font-black text-green-500 uppercase tracking-widest">In Room</span>
+                      </div>
+                    )}
                     {user?.isAdmin && (
                       <button 
                         onClick={() => handleDeleteMessage(msg.id)}
@@ -759,23 +745,23 @@ export const ChatRoom: React.FC<{
                     )}
                   </div>
                   <div 
-                    className={`max-w-[100%] px-4 py-3 rounded-xl text-[13px] leading-relaxed relative ${
+                    className={`px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-[12px] sm:text-[13px] leading-relaxed relative ${
                       msg.senderName === user?.username 
-                        ? 'bg-white text-black font-medium' 
-                        : 'bg-white/[0.02] text-gray-300 border border-white/5'
+                        ? 'bg-white text-black font-medium shadow-lg shadow-white/5' 
+                        : 'bg-white/[0.03] text-gray-300 border border-white/10'
                     }`}
                   >
                     {msg.image && (
-                      <div className="mb-3 rounded-lg overflow-hidden border border-white/5 bg-white/5">
-                        <img src={msg.image} alt="Transmission Asset" className="max-w-full h-auto opacity-90 hover:opacity-100 transition-opacity" />
+                      <div className="mb-2 sm:mb-3 rounded-lg overflow-hidden border border-white/5 bg-white/10">
+                        <img src={msg.image} alt="Transmission Asset" className="max-w-full h-auto opacity-95" />
                       </div>
                     )}
                     {msg.gif && (
-                      <div className="mb-3 rounded-lg overflow-hidden border border-white/5 bg-white/5">
+                      <div className="mb-2 sm:mb-3 rounded-lg overflow-hidden border border-white/5 bg-white/10">
                         <img src={msg.gif} alt="GIF" className="max-w-full h-auto" />
                       </div>
                     )}
-                    <p className="tracking-tight">{msg.text}</p>
+                    <p className="tracking-tight whitespace-pre-wrap break-words">{msg.text}</p>
                   </div>
                 </div>
               </motion.div>
@@ -790,7 +776,7 @@ export const ChatRoom: React.FC<{
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-24 right-6 left-6 z-50 h-[350px]"
+            className="absolute bottom-20 sm:bottom-24 inset-x-4 sm:inset-x-6 z-50 h-[300px] sm:h-[350px]"
           >
             <GifPicker 
               onSelect={handleSelectGif} 
@@ -800,7 +786,7 @@ export const ChatRoom: React.FC<{
         )}
       </AnimatePresence>
 
-      <form onSubmit={handleSendMessage} className="p-6 border-t border-white/5 bg-black">
+      <form onSubmit={handleSendMessage} className="p-4 sm:p-6 border-t border-white/5 bg-black">
         {!user ? (
           <div className="text-center py-4 bg-white/[0.02] rounded-lg border border-dashed border-white/5">
             <p className="text-[9px] text-gray-700 font-bold uppercase tracking-widest">Log in to chat</p>
@@ -815,7 +801,7 @@ export const ChatRoom: React.FC<{
                   exit={{ opacity: 0, scale: 0.95 }}
                   className="relative inline-block"
                 >
-                  <img src={selectedImage} alt="Input Buffer" className="w-16 h-16 object-cover rounded-lg border border-white/10" />
+                  <img src={selectedImage} alt="Input Buffer" className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg border border-white/10" />
                   <button 
                     onClick={() => setSelectedImage(null)}
                     className="absolute -top-2 -right-2 p-1 bg-white text-black rounded-full shadow-lg hover:bg-gray-200 transition-colors"
@@ -840,22 +826,22 @@ export const ChatRoom: React.FC<{
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder={selectedImage ? "Add a caption..." : "Type a message..."}
-                  className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 pb-3 pr-24 focus:outline-hidden focus:border-white/20 transition-all text-[13px] text-white"
+                  placeholder={selectedImage ? "Add caption..." : "Message..."}
+                  className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 sm:py-3 pr-20 sm:pr-24 focus:outline-hidden focus:border-white/20 transition-all text-xs sm:text-[13px] text-white"
                   maxLength={200}
                 />
-                <div className="absolute right-2 top-1.5 bottom-1.5 flex items-center gap-1.5">
+                <div className="absolute right-1.5 top-1.5 bottom-1.5 flex items-center gap-1 sm:gap-1.5">
                   <button 
                     type="button"
                     onClick={() => setShowGifPicker(!showGifPicker)}
-                    className={`p-2 rounded-lg transition-all ${showGifPicker ? 'bg-blue-500 text-white' : 'text-gray-700 hover:text-gray-400'}`}
+                    className={`p-1.5 sm:p-2 rounded-lg transition-all ${showGifPicker ? 'bg-blue-500 text-white' : 'text-gray-700 hover:text-gray-400'}`}
                   >
                     <Film className="w-3.5 h-3.5" />
                   </button>
                   <button 
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className={`p-2 rounded-lg transition-all ${selectedImage ? 'bg-blue-500 text-white' : 'text-gray-700 hover:text-gray-400'}`}
+                    className={`p-1.5 sm:p-2 rounded-lg transition-all ${selectedImage ? 'bg-blue-500 text-white' : 'text-gray-700 hover:text-gray-400'}`}
                     disabled={isUploading}
                   >
                     <ImageIcon className="w-3.5 h-3.5" />
@@ -863,9 +849,14 @@ export const ChatRoom: React.FC<{
                   <button 
                     type="submit"
                     disabled={(!newMessage.trim() && !selectedImage) || spamCooldown || isUploading}
-                    className="px-4 h-full bg-white text-black rounded-lg hover:bg-gray-200 transition-all disabled:opacity-5 disabled:bg-white/10 font-bold text-[10px] uppercase tracking-widest"
+                    className="px-2.5 sm:px-4 h-full bg-white text-black rounded-lg hover:bg-gray-200 transition-all disabled:opacity-5 disabled:bg-white/10 font-bold text-[9px] sm:text-[10px] uppercase tracking-widest"
                   >
-                    {spamCooldown ? 'Wait' : 'Send'}
+                    {spamCooldown ? '...' : (
+                      <span className="flex items-center gap-1.5">
+                        <Send className="w-3 h-3 sm:hidden" />
+                        <span className="hidden sm:inline">Send</span>
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>

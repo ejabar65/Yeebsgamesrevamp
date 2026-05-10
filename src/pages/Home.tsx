@@ -37,7 +37,7 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-16 font-sans">
       {/* Header */}
-      <div className="flex flex-col md:flex-row gap-12 items-start md:items-center">
+      <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 items-center lg:items-center py-8 lg:py-16">
         <motion.div 
           ref={mascotRef}
           initial={{ opacity: 0, scale: 0.9 }}
@@ -46,7 +46,7 @@ export default function Home() {
           onMouseMove={handleMouseMove}
           onMouseEnter={() => setIsHovering(true)}
           onMouseLeave={() => setIsHovering(false)}
-          className="relative w-32 h-32 md:w-64 md:h-64 rounded-[3rem] overflow-hidden shrink-0 border border-white/5 shadow-2xl shadow-blue-500/20 group cursor-none"
+          className="relative w-48 h-48 sm:w-64 sm:h-64 rounded-[3rem] overflow-hidden shrink-0 border border-white/5 shadow-2xl shadow-blue-500/20 group cursor-none"
         >
           {/* Grayscale Base */}
           <img 
@@ -78,11 +78,11 @@ export default function Home() {
           />
         </motion.div>
         
-        <div className="max-w-xl">
-          <h1 className="text-5xl md:text-8xl font-bold tracking-tighter text-white mb-6">
-            YeebsGames
+        <div className="text-center lg:text-left space-y-4 max-w-2xl">
+          <h1 className="text-6xl sm:text-7xl lg:text-[10rem] font-bold tracking-tighter text-white leading-[0.8] uppercase italic">
+            Yeebs<span className="text-blue-500">Games</span>
           </h1>
-          <p className="text-gray-500 text-lg font-medium leading-relaxed">
+          <p className="text-gray-500 text-sm sm:text-lg font-medium leading-relaxed max-w-md mx-auto lg:mx-0">
             The best web games in one place.
             Play without distractions.
           </p>

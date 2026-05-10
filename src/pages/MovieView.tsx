@@ -183,15 +183,15 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
       </div>
 
       {/* Floating Header */}
-      <header className="fixed top-0 inset-x-0 h-24 flex items-center justify-between px-10 z-50 backdrop-blur-md border-b border-white/5 bg-black/20">
+      <header className="fixed top-0 inset-x-0 h-16 sm:h-24 flex items-center justify-between px-4 sm:px-10 z-50 backdrop-blur-md border-b border-white/5 bg-black/20">
         <button 
           onClick={() => navigate('/movies')}
           className="flex items-center gap-3 group"
         >
-          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
-            <X className="w-4 h-4" />
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
+            <X className="w-3.5 h-3.5" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 group-hover:text-white transition-colors">Back</span>
+          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 group-hover:text-white transition-colors">Back</span>
         </button>
 
         <div className="hidden md:flex items-center gap-8">
@@ -205,60 +205,61 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
 
         <button 
           onClick={() => window.open(playerUrl, '_blank')}
-          className="flex items-center gap-3 px-6 py-2.5 rounded-xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20"
+          className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-blue-600 text-white font-black text-[9px] sm:text-[10px] uppercase tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20"
         >
           <ExternalLink className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Open Direct</span>
+          <span className="sm:hidden">Open</span>
         </button>
       </header>
 
       {/* Hero Banner Section (Hidden when player is active) */}
       {!showPlayer && (
-        <section className="relative h-[90vh] flex flex-col justify-end px-12 pb-24 max-w-7xl mx-auto z-10 w-full">
+        <section className="relative min-h-[90vh] flex flex-col justify-end px-6 sm:px-12 pb-24 max-w-7xl mx-auto z-10 w-full pt-24 sm:pt-0">
            <motion.div
              initial={{ opacity: 0, y: 30 }}
              animate={{ opacity: 1, y: 0 }}
-             className="space-y-8"
+             className="space-y-6 sm:space-y-8"
            >
              <div className="space-y-4">
                 <div className="flex items-center gap-4">
                    <div className="w-12 h-1 bg-blue-500" />
-                   <p className="text-[11px] font-black text-blue-500 uppercase tracking-[0.6em]">{media.isCustom ? 'LOCAL ASSET' : type === 'movie' ? 'MOVIE' : 'SERIES'}</p>
+                   <p className="text-[10px] sm:text-[11px] font-black text-blue-500 uppercase tracking-[0.6em]">{media.isCustom ? 'LOCAL ASSET' : type === 'movie' ? 'MOVIE' : 'SERIES'}</p>
                 </div>
-                <h1 className="text-7xl md:text-[10rem] font-black uppercase italic tracking-[calc(-0.04em)] leading-[0.75] text-white">
+                <h1 className="text-5xl sm:text-7xl md:text-[10rem] font-black uppercase italic tracking-[calc(-0.04em)] leading-[0.85] sm:leading-[0.75] text-white">
                   {title}
                 </h1>
              </div>
 
-             <div className="flex flex-wrap items-center gap-10 text-gray-500 font-black text-[12px] uppercase tracking-[0.3em]">
+             <div className="flex flex-wrap items-center gap-6 sm:gap-10 text-gray-500 font-black text-[10px] sm:text-[12px] uppercase tracking-[0.3em]">
                <div className="flex items-center gap-2">
-                 <Calendar className="w-4 h-4" />
+                 <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                  <span>{date?.split('-')[0]}</span>
                </div>
                {!media.isCustom && media.runtime && (
                  <div className="flex items-center gap-2">
-                   <Timer className="w-4 h-4" />
+                   <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                    <span>{Math.floor(media.runtime / 60)}h {media.runtime % 60}m</span>
                  </div>
                )}
                {media.genres && (
                  <div className="flex gap-4">
-                   {media.genres.slice(0, 3).map((g: any) => (
+                   {media.genres.slice(0, 2).map((g: any) => (
                      <span key={g.id} className="text-white/40">{g.name}</span>
                    ))}
                  </div>
                )}
              </div>
 
-             <p className="text-xl md:text-2xl text-gray-400 font-medium leading-relaxed max-w-3xl">
+             <p className="text-lg sm:text-2xl text-gray-400 font-medium leading-relaxed max-w-3xl line-clamp-4 sm:line-clamp-none">
                {media.overview}
              </p>
 
              <button 
                onClick={() => setShowPlayer(true)}
-               className="group flex items-center gap-6 px-16 py-8 bg-white text-black rounded-[2.5rem] font-black text-[14px] uppercase tracking-[0.4em] hover:bg-blue-500 hover:text-white transition-all duration-700 shadow-2xl shadow-blue-500/20"
+               className="group flex items-center justify-center gap-4 sm:gap-6 px-10 sm:px-16 py-6 sm:py-8 bg-white text-black rounded-[2rem] sm:rounded-[2.5rem] font-black text-[12px] sm:text-[14px] uppercase tracking-[0.3em] sm:tracking-[0.4em] hover:bg-blue-500 hover:text-white transition-all duration-700 shadow-2xl shadow-blue-500/20 w-full sm:w-auto"
              >
-               <Play className="w-6 h-6 fill-current group-hover:scale-125 transition-transform duration-500" />
+               <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-current group-hover:scale-125 transition-transform duration-500" />
                Watch Now
              </button>
            </motion.div>
@@ -267,19 +268,19 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
 
       {/* Immersive Player Section */}
       {showPlayer && (
-        <section className="relative z-10 pt-32 px-6 max-w-7xl mx-auto w-full space-y-12">
+        <section className="relative z-10 pt-20 sm:pt-32 px-4 sm:px-6 max-w-7xl mx-auto w-full space-y-8 sm:space-y-12">
           {/* Controls Bar */}
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col md:flex-row items-center justify-between gap-8 bg-white/[0.03] p-4 rounded-[2rem] border border-white/10 backdrop-blur-3xl shadow-2xl"
+            className="flex flex-col items-center justify-between gap-6 sm:gap-8 bg-white/[0.03] p-4 rounded-[1.5rem] sm:rounded-[2rem] border border-white/10 backdrop-blur-3xl shadow-2xl"
           >
-            <div className="flex flex-wrap justify-center gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto w-full no-scrollbar pb-2 sm:pb-0 justify-start sm:justify-center">
                {SOURCES.map(source => (
                  <button
                    key={source.id}
                    onClick={() => setActiveSource(source)}
-                   className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 ${
+                   className={`px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-500 whitespace-nowrap ${
                      activeSource.id === source.id 
                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/40' 
                        : 'text-gray-500 hover:text-white hover:bg-white/5'
@@ -291,13 +292,13 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
             </div>
 
             {type === 'tv' && media.seasons && (
-              <div className="flex items-center gap-4">
+              <div className="flex flex-row items-center gap-4 w-full sm:w-auto justify-between sm:justify-center">
                  <div className="relative">
                    <button 
                      onClick={() => setShowSeasonDropdown(!showSeasonDropdown)}
-                     className="px-6 py-2.5 bg-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:border-white/20 transition-all flex items-center gap-3"
+                     className="px-4 sm:px-6 py-2 sm:py-2.5 bg-white/5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest border border-white/10 hover:border-white/20 transition-all flex items-center gap-3"
                    >
-                     Season {season} <ChevronRight className={`w-3 h-3 transition-transform ${showSeasonDropdown ? 'rotate-90' : ''}`} />
+                     S{season} <ChevronRight className={`w-3 h-3 transition-transform ${showSeasonDropdown ? 'rotate-90' : ''}`} />
                    </button>
                    <AnimatePresence>
                      {showSeasonDropdown && (
@@ -326,14 +327,14 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
                    </AnimatePresence>
                  </div>
                  
-                 <div className="flex items-center gap-4 bg-white/5 px-6 py-2.5 rounded-xl border border-white/10">
-                   <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Episode</span>
+                 <div className="flex items-center gap-4 bg-white/5 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl border border-white/10">
+                   <span className="text-[9px] sm:text-[10px] font-black text-gray-600 uppercase tracking-widest">Ep</span>
                    <input 
                      type="number" 
                      min="1"
                      value={episode}
                      onChange={(e) => setEpisode(parseInt(e.target.value) || 1)}
-                     className="w-12 bg-transparent text-white font-black text-center text-sm outline-hidden focus:text-blue-500 transition-colors"
+                     className="w-8 sm:w-12 bg-transparent text-white font-black text-center text-sm outline-hidden focus:text-blue-500 transition-colors"
                    />
                  </div>
               </div>
@@ -343,7 +344,7 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
           {/* Video Containment */}
           <motion.div 
             layoutId="player-container"
-            className="aspect-video w-full rounded-[3rem] overflow-hidden bg-black border border-white/10 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] relative group"
+            className="aspect-video w-full rounded-2xl sm:rounded-[3rem] overflow-hidden bg-black border border-white/10 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] relative group"
           >
              <iframe 
                src={playerUrl} 

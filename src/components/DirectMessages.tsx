@@ -493,10 +493,10 @@ export const DirectMessages: React.FC = () => {
   }
 
   return (
-    <div className="flex h-[600px] bg-[#0c0c0c] overflow-hidden">
+    <div className="flex h-[600px] md:h-[600px] bg-[#0c0c0c] overflow-hidden flex-col md:flex-row">
       {/* Sidebar: Chat List */}
-      <div className={`w-full md:w-80 border-r border-white/5 flex flex-col bg-black/20 ${activeChat ? 'hidden md:flex' : 'flex'}`}>
-        <div className="p-6 border-b border-white/5 space-y-4">
+      <div className={`w-full md:w-80 border-r border-white/5 flex flex-col bg-black/20 ${activeChat ? 'hidden md:flex' : 'flex flex-1'}`}>
+        <div className="p-4 md:p-6 border-b border-white/5 space-y-4">
            <div className="flex items-center justify-between">
              <h2 className="font-bold text-lg text-white">Direct Messages</h2>
              {notificationPermission !== 'granted' && (
@@ -563,31 +563,31 @@ export const DirectMessages: React.FC = () => {
       <div className={`flex-1 flex flex-col bg-black/10 relative ${!activeChat ? 'hidden md:flex items-center justify-center p-8' : 'flex'}`}>
         {activeChat ? (
           <>
-            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-black/20 backdrop-blur-md relative z-10">
-              <div className="flex items-center gap-4">
+            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-black/20 backdrop-blur-md relative z-10 gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <button 
                   onClick={() => setActiveChat(null)} 
-                  className="md:hidden p-2 text-gray-500 hover:text-white"
+                  className="md:hidden p-2 text-gray-500 hover:text-white shrink-0"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 font-bold text-lg">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 font-bold text-sm md:text-lg shrink-0">
                     {activeChat.participants.find((p: string) => p !== user.username.toLowerCase())?.[0]?.toUpperCase()}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <Link 
                       to={`/profile/${activeChat.participants.find((p: string) => p !== user.username.toLowerCase())}`}
-                      className="font-bold text-white hover:text-blue-400 transition-colors"
+                      className="font-bold text-sm md:text-base text-white hover:text-blue-400 transition-colors truncate block"
                     >
                       {activeChat.participants.find((p: string) => p !== user.username.toLowerCase())}
                     </Link>
-                    <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">Private Chat</p>
+                    <p className="text-[8px] md:text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5 truncate">Private Chat</p>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <div className="flex items-center bg-white/5 border border-white/10 rounded-lg p-0.5">
                    <button 
                      onClick={() => toggleCall(false)}

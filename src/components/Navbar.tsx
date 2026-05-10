@@ -44,23 +44,21 @@ export default function Navbar() {
   const [isCloakOpen, setIsCloakOpen] = useState(false);
   const [currentCloak, setCurrentCloak] = useState(getSavedCloak());
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const handleCloakChange = (cloakName: string) => {
     applyCloak(cloakName);
     setCurrentCloak(cloakName);
     setIsCloakOpen(false);
   };
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    const success = await login(username, password);
-    if (success) {
-      setShowLoginModal(false);
-      setUsername('');
-      setPassword('');
-    }
-    setIsSubmitting(false);
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleNavClick = (path: string, sort?: string) => {
+    if (sort) setSortBy(sort);
+    navigate(path);
   };
 
   const handleLogout = async () => {
@@ -70,21 +68,26 @@ export default function Navbar() {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
-    if (location.pathname !== '/') {
-      navigate('/');
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    const success = await login(username, password);
+    setIsSubmitting(false);
+    if (success) {
+      setShowLoginModal(false);
     }
   };
 
-  const handleNavClick = (path: string, sort?: string) => {
-    if (sort) {
-      setSortBy(sort);
-    } else {
-      setSortBy('newest'); // default
-    }
-    if (location.pathname !== '/') {
-      navigate('/');
-    }
-  };
+  const navItems = [
+    { name: 'Games', icon: Home, path: '/', sort: 'newest' },
+    { name: 'Movies', icon: Film, path: '/movies' },
+    { name: 'Chat', icon: MessageSquare, path: '/chat' },
+    { name: 'Tutorials', icon: Monitor, path: '/tutorials' },
+    { name: 'Reviews', icon: MessageSquare, path: '/reviews' },
+    ...(user?.isAdmin || user?.isMod ? [{ name: 'Admin', icon: Shield, path: '/admin' }] : []),
+  ];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass h-16 px-4 md:px-8 flex items-center justify-between">
@@ -95,7 +98,7 @@ export default function Navbar() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-20 left-1/2 -translate-x-1/2 w-full max-w-sm px-4"
+            className="absolute top-20 left-1/2 -translate-x-1/2 w-full max-w-sm px-4 z-100"
           >
             <div className="bg-blue-500 text-white rounded-xl px-4 py-3 shadow-lg flex items-center gap-3">
               <MessageSquare className="w-4 h-4 shrink-0" />
@@ -108,24 +111,27 @@ export default function Navbar() {
         )}
       </AnimatePresence>
 
-      <Link to="/" onClick={() => handleNavClick('/')} className="flex items-center gap-3 group">
-        <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105 active:scale-95 border border-white/10">
-          <img src={MASCOT_URL} alt="Mascot" className="w-full h-full object-cover" />
-        </div>
-        <span className="font-bold text-sm tracking-tight text-white uppercase tracking-widest">
-          Yeebs<span className="text-blue-500 opacity-80">Games</span>
-        </span>
-      </Link>
+      <div className="flex items-center gap-4">
+        {/* Mobile Menu Toggle */}
+        <button 
+          onClick={toggleMobileMenu}
+          className="md:hidden p-2 text-gray-500 hover:text-white transition-colors"
+        >
+          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Bug className="w-6 h-6" />}
+        </button>
+
+        <Link to="/" onClick={() => { handleNavClick('/'); setIsMobileMenuOpen(false); }} className="flex items-center gap-3 group">
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105 active:scale-95 border border-white/10">
+            <img src={MASCOT_URL} alt="Mascot" className="w-full h-full object-cover" />
+          </div>
+          <span className="font-bold text-sm tracking-tight text-white uppercase tracking-widest hidden sm:inline">
+            Yeebs<span className="text-blue-500 opacity-80">Games</span>
+          </span>
+        </Link>
+      </div>
 
       <div className="hidden md:flex items-center gap-6">
-        {[
-          { name: 'Games', icon: Home, path: '/', sort: 'newest' },
-          { name: 'Movies', icon: Film, path: '/movies' },
-          { name: 'Chat', icon: MessageSquare, path: '/chat' },
-          { name: 'Tutorials', icon: Monitor, path: '/tutorials' },
-          { name: 'Reviews', icon: MessageSquare, path: '/reviews' },
-          ...(user?.isAdmin || user?.isMod ? [{ name: 'Admin', icon: Shield, path: '/admin' }] : []),
-        ].map((item) => (
+        {navItems.map((item) => (
           <button
             key={item.name}
             onClick={() => {
@@ -152,7 +158,7 @@ export default function Navbar() {
             placeholder="Search Games..."
             value={searchQuery}
             onChange={handleSearchChange}
-            className="pl-9 pr-4 py-1.5 rounded-full bg-white/[0.03] border border-white/5 text-[11px] focus:outline-hidden focus:border-blue-500/50 focus:bg-white/[0.05] transition-all w-48 transition-all"
+            className="pl-9 pr-4 py-1.5 rounded-full bg-white/[0.03] border border-white/5 text-[11px] focus:outline-hidden focus:border-blue-500/50 focus:bg-white/[0.05] transition-all w-48"
           />
         </div>
 
@@ -194,7 +200,7 @@ export default function Navbar() {
         </div>
 
         {user ? (
-          <div className="flex items-center gap-4 pl-4 border-l border-white/10">
+          <div className="flex gap-2 items-center">
             <Link 
               to="/profile" 
               className="w-8 h-8 rounded-full overflow-hidden border border-white/10 hover:border-blue-500 transition-all"
@@ -203,7 +209,7 @@ export default function Navbar() {
             </Link>
             <button 
               onClick={handleLogout}
-              className="p-2 text-gray-500 hover:text-red-500 transition-colors"
+              className="hidden sm:flex p-2 text-gray-500 hover:text-red-500 transition-colors"
             >
               <LogOut className="w-5 h-5" />
             </button>
@@ -211,12 +217,101 @@ export default function Navbar() {
         ) : (
           <button 
             onClick={() => setShowLoginModal(true)}
-            className="px-4 py-2 rounded-lg bg-blue-500 text-white font-bold text-xs uppercase tracking-widest hover:bg-white hover:text-blue-500 transition-all shadow-lg shadow-blue-500/20"
+            className="px-4 py-2 rounded-lg bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest hover:bg-white hover:text-blue-500 transition-all shadow-lg shadow-blue-500/20"
           >
             Login
           </button>
         )}
       </div>
+
+      {/* Mobile Drawer */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 z-100 bg-black/60 backdrop-blur-sm md:hidden"
+            />
+            <motion.div 
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              className="fixed top-0 left-0 bottom-0 w-3/4 max-w-sm z-101 bg-[#050505] border-r border-white/5 p-8 flex flex-col md:hidden"
+            >
+              <div className="flex items-center justify-between mb-12">
+                <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/10">
+                    <img src={MASCOT_URL} alt="Mascot" className="w-full h-full object-cover" />
+                  </div>
+                  <span className="font-bold text-sm text-white uppercase tracking-widest">YeebsGames</span>
+                </Link>
+                <button onClick={() => setIsMobileMenuOpen(false)}>
+                  <X className="w-6 h-6 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="relative mb-8">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
+                <input
+                  type="text"
+                  placeholder="Search Games..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/[0.03] border border-white/5 text-xs text-white outline-hidden focus:border-blue-500/50"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {navItems.map((item) => (
+                  <button
+                    key={item.name}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      if (['/chat', '/movies', '/admin', '/tutorials', '/reviews'].includes(item.path)) {
+                        navigate(item.path);
+                      } else {
+                        handleNavClick(item.path, item.sort);
+                      }
+                    }}
+                    className={`flex items-center gap-4 p-4 rounded-xl font-bold uppercase tracking-widest text-[11px] transition-all
+                      ${location.pathname === item.path ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-white/5'}`}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    {item.name}
+                  </button>
+                ))}
+              </div>
+
+              {user && (
+                <div className="mt-auto pt-8 border-t border-white/5 flex flex-col gap-4">
+                  <Link 
+                    to="/profile" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10"
+                  >
+                    <img src={user.photoURL || undefined} alt="" className="w-10 h-10 rounded-full object-cover" />
+                    <div>
+                      <p className="text-xs font-bold text-white uppercase">@{user.username}</p>
+                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Profile Settings</p>
+                    </div>
+                  </Link>
+                  <button 
+                    onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
+                    className="flex items-center justify-center gap-3 p-4 rounded-xl bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-[0.2em]"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout System
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
 
       <AnimatePresence>
         {showLoginModal && (
