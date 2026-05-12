@@ -2,7 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useGames } from '../context/GameContext';
 import { db, doc, setDoc, increment } from '../lib/firebase';
-import { ArrowLeft, RotateCw, Maximize2, Heart, Share2, Flag, Play, Info } from 'lucide-react';
+import { ArrowLeft, RotateCw, Maximize2, Heart, Share2, Flag, Play, Info, Swords } from 'lucide-react';
 
 export default function GameView() {
   const { id } = useParams();
@@ -116,6 +116,17 @@ export default function GameView() {
                 <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${favorite ? 'fill-current' : ''}`} />
                 <span className="hidden sm:inline">{favorite ? 'Liked' : 'Like'}</span>
               </button>
+              
+              {game.isMultiplayer && (
+                <button 
+                  onClick={() => (window as any).triggerInvite?.(game.id)}
+                  className="flex items-center gap-2 px-4 sm:px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20"
+                >
+                  <Swords className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Invite Player</span>
+                </button>
+              )}
+
               <button 
                 onClick={shareGame}
                 className="flex items-center gap-2 px-4 sm:px-6 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all"

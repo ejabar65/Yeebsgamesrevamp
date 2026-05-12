@@ -23,6 +23,8 @@ import { useGames } from './context/GameContext';
 
 import OSShell from './components/OSShell';
 import { MiniChat } from './components/MiniChat';
+import MusicPlayer from './components/MusicPlayer';
+import MultiplayerManager from './components/MultiplayerManager';
 
 function ThemeWrapper({ children }: { children: React.ReactNode }) {
   const { user } = useGames();
@@ -90,6 +92,8 @@ export default function App() {
               <Route path="/profile/:username" element={<Profile />} />
             </Routes>
             <MiniChat />
+            <MusicPlayer />
+            <MultiplayerManager />
           </OSShell>
         </ThemeWrapper>
       </GameProvider>

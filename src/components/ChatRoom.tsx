@@ -20,6 +20,7 @@ import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
 import { Send, Trash2, MessageSquare, Shield, User, Zap, Image as ImageIcon, X, CheckCircle2, Star, Phone, Video, VideoOff, Mic, MicOff, Settings, Film } from 'lucide-react';
 import { GifPicker } from './GifPicker';
+import UserPresence from './UserPresence';
 import { ADMIN_LIST, MOD_LIST } from '../constants';
 
 const filter = new Filter();
@@ -723,12 +724,18 @@ export const ChatRoom: React.FC<{
                   <div className="flex items-center gap-2 mb-1.5 px-1 flex-wrap">
                     <Link 
                       to={`/profile/${msg.senderName.toLowerCase()}`}
-                      className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center gap-1 ${ADMIN_LIST.includes(msg.senderName.toLowerCase()) ? 'text-blue-500' : MOD_LIST.includes(msg.senderName.toLowerCase()) ? 'text-yellow-500' : 'text-gray-600 hover:text-gray-400'}`}
+                      className={`text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center gap-1.5 ${ADMIN_LIST.includes(msg.senderName.toLowerCase()) ? 'text-blue-500' : MOD_LIST.includes(msg.senderName.toLowerCase()) ? 'text-yellow-500' : 'text-gray-600 hover:text-gray-400'}`}
                     >
+                      <UserPresence username={msg.senderName} />
                       {msg.senderName}
                       {ADMIN_LIST.includes(msg.senderName.toLowerCase()) && <CheckCircle2 className="w-2.5 h-2.5" />}
                       {MOD_LIST.includes(msg.senderName.toLowerCase()) && <Star className="w-2.5 h-2.5 fill-current" />}
                     </Link>
+                    {msg.createdAt && (
+                      <span className="text-[7px] font-black text-gray-800 uppercase tracking-widest bg-white/5 px-1.5 py-0.5 rounded-sm">
+                        {new Date(msg.createdAt?.toDate?.() || msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
                     {voiceParticipants.some(vp => vp.uid === msg.senderId) && (
                       <div className="flex items-center gap-1">
                         <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />

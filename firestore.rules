@@ -62,7 +62,17 @@ service cloud.firestore {
              (data.get('favoriteGameIds', []) is list) &&
              (data.get('settings', {}) is map) &&
              (data.get('tabs', []) is list) &&
-             (data.get('history', []) is list);
+             (data.get('history', []) is list) &&
+             (data.get('status', 'online') in ['online', 'offline', 'away']) &&
+             (data.get('lastSeen', '') is string);
+    }
+
+    function isValidGameInvite(data) {
+      return data.keys().hasAll(['from', 'to', 'gameId', 'status', 'createdAt']) &&
+             data.from is string && data.to is string &&
+             data.gameId is string && data.gameTitle is string &&
+             data.status in ['pending', 'accepted', 'declined'] &&
+             data.createdAt is string; // Using string ISO format as per app code
     }
 
     function isValidGlobalMessage(data) {
@@ -150,9 +160,17 @@ service cloud.firestore {
       allow list: if true; 
       allow create: if !exists(/databases/$(database)/documents/users/$(username)) && isValidUserCreate(incoming());
       allow update: if isValidUserUpdate(incoming()) && (
-        (isPasswordOwner(username) && incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'settings', 'history', 'isAdmin', 'bio', 'avatarConfig', 'tabs'])) ||
-        (isAdmin() && incoming().diff(existing()).affectedKeys().hasAny(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'isBanned', 'isAdmin', 'settings', 'history', 'bio', 'avatarConfig', 'tabs']))
+        (isPasswordOwner(username) && incoming().diff(existing()).affectedKeys().hasOnly(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'settings', 'history', 'isAdmin', 'bio', 'avatarConfig', 'tabs', 'status', 'lastSeen'])) ||
+        (isAdmin() && incoming().diff(existing()).affectedKeys().hasAny(['photoURL', 'favoriteGameIds', 'uid', 'lastMessageAt', 'isBanned', 'isAdmin', 'settings', 'history', 'bio', 'avatarConfig', 'tabs', 'status', 'lastSeen']))
       );
+      allow delete: if isAdmin();
+    }
+
+    match /game_invites/{inviteId} {
+      allow read: if true; // Simple read for invites
+      allow create: if isValidGameInvite(incoming());
+      allow update: if isValidGameInvite(incoming()) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['status']);
       allow delete: if isAdmin();
     }
     

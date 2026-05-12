@@ -4,6 +4,10 @@
       "schema": "User",
       "description": "User profiles indexed by lowercase username"
     },
+    "game_invites/{inviteId}": {
+      "schema": "GameInvite",
+      "description": "Multiplayer game invitations"
+    },
     "chats/{chatId}": {
       "schema": "Chat",
       "description": "DM sessions"
@@ -39,9 +43,25 @@
         "isBanned": { "type": "boolean" },
         "avatarConfig": { "type": "object" },
         "settings": { "type": "object" },
-        "tabs": { "type": "array" }
+        "tabs": { "type": "array" },
+        "status": { "type": "string", "enum": ["online", "offline", "away"] },
+        "lastSeen": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "username", "password"]
+    },
+    "GameInvite": {
+      "title": "Game Invite",
+      "description": "Invite to a multiplayer game",
+      "type": "object",
+      "properties": {
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "gameId": { "type": "string" },
+        "gameTitle": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "declined"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["from", "to", "gameId", "status"]
     },
     "Chat": {
       "title": "Chat",

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Game } from '../types';
+import { Game, AuthUser, UserSettings, AvatarConfig } from '../types';
 import { getGames } from '../services/gameService';
 import { ADMIN_LIST, MOD_LIST } from '../constants';
 import { 
@@ -18,38 +18,6 @@ import {
   signInAnonymously,
   signOut
 } from '../lib/firebase';
-
-export interface UserSettings {
-  compactMode: boolean;
-  showChatPreview: boolean;
-  customTheme?: string;
-  soundsEnabled?: boolean;
-  privateProfile?: boolean;
-}
-
-export interface AvatarConfig {
-  style: string;
-  seed: string;
-  backgroundColor?: string;
-  rotate?: number;
-}
-
-export interface AuthUser {
-  uid: string;
-  username: string;
-  isAdmin: boolean;
-  isMod: boolean;
-  banLimitInfo?: {
-    count: number;
-    lastReset: string;
-  };
-  photoURL?: string;
-  avatarConfig?: AvatarConfig;
-  settings?: UserSettings;
-  history?: string[];
-  bio?: string;
-  tabs?: { id: string; title: string; path: string; }[];
-}
 
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 
@@ -92,7 +60,31 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const savedUsername = localStorage.getItem('yeebsgames_username');
     const savedPassword = localStorage.getItem('yeebsgames_password');
     
+    // Heartbeat for online status
+    let interval: any;
+    
+    const updatePresence = async (status: 'online' | 'offline') => {
+      const username = localStorage.getItem('yeebsgames_username');
+      if (username) {
+        try {
+          const userRef = doc(db, 'users', username.toLowerCase());
+          await updateDoc(userRef, { 
+            status, 
+            lastSeen: new Date().toISOString() 
+          });
+        } catch (e) {
+          // Ignore presence errors to avoid loop/quota issues
+        }
+      }
+    };
+
     const initialize = async () => {
+      // Set to online initially
+      if (savedUsername) {
+        updatePresence('online');
+        interval = setInterval(() => updatePresence('online'), 2 * 60 * 1000); // Pulse every 2 mins
+      }
+
       if (savedUsername && savedPassword) {
         // Try to used cached user data first
         const cachedUser = localStorage.getItem('yeebsgames_user_cache');
@@ -175,6 +167,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
     };
 
     initialize();
+
+    // Cleanup presence on tab close
+    const handleBeforeUnload = () => {
+      updatePresence('offline');
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      if (interval) clearInterval(interval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      updatePresence('offline');
+    };
   }, []);
 
   const login = async (username: string, password?: string): Promise<boolean> => {

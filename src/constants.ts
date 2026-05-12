@@ -14,6 +14,39 @@ export const CLOAK_OPTIONS = [
 
 export const GAMES = [
   {
+    id: 'sketchful',
+    title: 'Sketchful.io',
+    description: 'Multiplayer drawing and guessing game.',
+    category: 'Multiplayer',
+    thumbnail: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&q=80&w=400',
+    url: 'https://sketchful.io/',
+    playCount: 15600,
+    rating: 4.8,
+    isMultiplayer: true
+  },
+  {
+    id: '8ballpool',
+    title: '8 Ball Pool',
+    description: 'The world\'s #1 pool game. Play with friends!',
+    category: 'Multiplayer',
+    thumbnail: 'https://images.unsplash.com/photo-1544652478-6653e09f18a2?auto=format&fit=crop&q=80&w=400',
+    url: 'https://8ballpool.com/',
+    playCount: 22400,
+    rating: 4.9,
+    isMultiplayer: true
+  },
+  {
+    id: 'shell-shockers',
+    title: 'Shell Shockers',
+    description: 'The world\'s most popular egg-based shooter.',
+    category: 'Multiplayer',
+    thumbnail: 'https://images.unsplash.com/photo-1590483734748-361be956427a?auto=format&fit=crop&q=80&w=400',
+    url: 'https://shellshock.io/',
+    playCount: 31200,
+    rating: 4.7,
+    isMultiplayer: true
+  },
+  {
     id: 'little-runmo',
     title: 'Little RunMo',
     description: 'The legendary platformer adventure.',
