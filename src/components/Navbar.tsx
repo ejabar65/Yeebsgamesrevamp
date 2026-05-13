@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { onSnapshotWithFallback } from '../lib/dbFallback';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
+import { supabase } from '../lib/supabase';
 
 import { MASCOT_URL, CLOAK_OPTIONS } from '../constants';
 import { applyCloak, getSavedCloak } from '../cloakUtils';

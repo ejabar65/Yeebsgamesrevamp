@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { Film, Tv, Search, Info, ExternalLink, Play, Clock, Star } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Film, Tv, Search, Info, ExternalLink, Play, Clock, Star, X, Loader2 } from 'lucide-react';
+import { movieService, MediaContent } from '../services/movieService';
 
 interface MoviePlayerProps {
   id?: string;
@@ -9,10 +10,25 @@ interface MoviePlayerProps {
 export default function VideoPortal({ id }: MoviePlayerProps) {
   const [mediaType, setMediaType] = useState<'movie' | 'tv'>('movie');
   const [tmdbId, setTmdbId] = useState('1078605'); // Default: Oppenheimer
+  const [mediaDetails, setMediaDetails] = useState<MediaContent | null>(null);
   const [season, setSeason] = useState('1');
   const [episode, setEpisode] = useState('1');
   const [isPlaying, setIsPlaying] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<MediaContent[]>([]);
+  const [isLoadingResults, setIsLoadingResults] = useState(false);
+
+  React.useEffect(() => {
+    const fetchDetails = async () => {
+      try {
+        const details = await movieService.getDetails(tmdbId, mediaType);
+        setMediaDetails(details);
+      } catch (err) {
+        console.error("Failed to fetch details:", err);
+      }
+    };
+    fetchDetails();
+  }, [tmdbId, mediaType]);
 
   const getEmbedUrl = () => {
     if (mediaType === 'movie') {
@@ -21,18 +37,38 @@ export default function VideoPortal({ id }: MoviePlayerProps) {
     return `https://www.vidking.net/embed/tv/${tmdbId}/${season}/${episode}?color=007AFF&autoPlay=true&nextEpisode=true&episodeSelector=true`;
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      // Basic heuristic: if it's a number, assume it's a TMDB ID
-      if (!isNaN(Number(searchQuery))) {
-        setTmdbId(searchQuery);
-        setIsPlaying(true);
-      } else {
-        // Fallback to searching (in a real app we'd fetch from TMDB API)
-        alert("Enter a TMDB ID to watch. Searching by name requires TMDB API integration.");
+    if (!searchQuery.trim()) return;
+
+    // Check if it's a TMDB ID
+    if (!isNaN(Number(searchQuery))) {
+      setTmdbId(searchQuery);
+      setSearchResults([]);
+      setIsPlaying(true);
+    } else {
+      setIsLoadingResults(true);
+      try {
+        const results = await movieService.searchMedia(searchQuery, mediaType);
+        setSearchResults(results);
+      } catch (err) {
+        console.error("Search failed:", err);
+        alert("Search failed. Please try again.");
+      } finally {
+        setIsLoadingResults(false);
       }
     }
+  };
+
+  const handleSelectResult = (item: MediaContent) => {
+    setTmdbId(item.id.toString());
+    setSearchResults([]);
+    setSearchQuery('');
+    if (mediaType === 'tv') {
+      setSeason('1');
+      setEpisode('1');
+    }
+    setIsPlaying(true);
   };
 
   if (isPlaying) {
@@ -113,23 +149,81 @@ export default function VideoPortal({ id }: MoviePlayerProps) {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Identification Key (TMDB ID)</label>
-              <form onSubmit={handleSearch} className="flex gap-2">
-                <input 
-                  type="text" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Enter ID (e.g. 1078605)"
-                  className="flex-1 bg-black border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                />
+            <div className="space-y-2 relative">
+              <label className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Identification Key (TMDB ID or Name)</label>
+              <form onSubmit={handleSearch} className="flex gap-2 relative z-50">
+                <div className="relative flex-1">
+                  <input 
+                    type="text" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Enter ID or Movie Name..."
+                    className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 pl-10 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  {searchQuery && (
+                    <button 
+                      type="button"
+                      onClick={() => { setSearchQuery(''); setSearchResults([]); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
                 <button 
                   type="submit"
-                  className="p-3 bg-white text-black rounded-xl hover:bg-blue-500 hover:text-white transition-all active:scale-95"
+                  disabled={isLoadingResults}
+                  className="px-6 bg-white text-black rounded-xl hover:bg-blue-500 hover:text-white transition-all active:scale-95 disabled:opacity-50 disabled:hover:bg-white disabled:hover:text-black"
                 >
-                  <Search className="w-5 h-5" />
+                  {isLoadingResults ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
                 </button>
               </form>
+
+              {/* Search Results Dropdown/Overlay */}
+              <AnimatePresence>
+                {searchResults.length > 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[100] max-h-[400px] overflow-y-auto scrollbar-none"
+                  >
+                    <div className="p-4 border-b border-white/5 flex items-center justify-between sticky top-0 bg-zinc-900 z-10">
+                      <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Sector Scan Results</span>
+                      <button onClick={() => setSearchResults([])} className="p-1 hover:bg-white/10 rounded-md">
+                        <X className="w-4 h-4 text-gray-500" />
+                      </button>
+                    </div>
+                    <div className="p-2 grid grid-cols-1 gap-1">
+                      {searchResults.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => handleSelectResult(item)}
+                          className="flex items-center gap-4 p-3 hover:bg-white/5 rounded-xl transition-all text-left group"
+                        >
+                          <div className="w-12 h-18 rounded-lg overflow-hidden shrink-0 border border-white/5">
+                            <img 
+                              src={movieService.getPosterUrl(item.poster_path, 'small')} 
+                              alt="" 
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-bold text-white truncate">{item.title || item.name}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                              <span className="text-[10px] font-mono text-gray-400">{item.vote_average?.toFixed(1) || '0.0'}</span>
+                              <span className="text-[10px] font-mono text-blue-500">ID: {item.id}</span>
+                            </div>
+                            <p className="text-[10px] text-gray-500 mt-1 line-clamp-1">{item.overview}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {mediaType === 'tv' && (
@@ -159,7 +253,9 @@ export default function VideoPortal({ id }: MoviePlayerProps) {
           <div className="flex flex-col h-full bg-black/40 rounded-2xl border border-white/5 p-6 space-y-6">
             <div className="relative aspect-video rounded-xl overflow-hidden group cursor-pointer" onClick={() => setIsPlaying(true)}>
               <img 
-                src={mediaType === 'movie' ? `https://image.tmdb.org/t/p/w500/8Gxv0mYmUpeD9uS3M3zS6j7PZob.jpg` : `https://image.tmdb.org/t/p/w500/dfS6B-M-f67f-H-j6G-U-D-X-H-j-U-D.jpg`} 
+                src={mediaDetails?.backdrop_path 
+                  ? movieService.getBackdropUrl(mediaDetails.backdrop_path) 
+                  : (mediaType === 'movie' ? `https://image.tmdb.org/t/p/w500/8Gxv0mYmUpeD9uS3M3zS6j7PZob.jpg` : `https://image.tmdb.org/t/p/w500/dfS6B-M-f67f-H-j6G-U-D-X-H-j-U-D.jpg`)} 
                 className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" 
                 alt="Preview"
               />
@@ -171,7 +267,7 @@ export default function VideoPortal({ id }: MoviePlayerProps) {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-xl font-bold italic uppercase leading-none">Initialization Ready</h3>
+              <h3 className="text-xl font-bold italic uppercase leading-none truncate">{mediaDetails?.title || mediaDetails?.name || 'Initialization Ready'}</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-white/5 rounded-xl border border-white/5">
                   <span className="block text-[9px] text-gray-500 font-mono uppercase tracking-widest">Source</span>
