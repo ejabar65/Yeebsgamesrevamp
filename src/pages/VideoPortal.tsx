@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Film, Tv, Search, Info, ExternalLink, Play, Clock, Star } from 'lucide-react';
-import NeonCurlyArrow from '../components/NeonCurlyArrow';
 
 interface MoviePlayerProps {
   id?: string;
@@ -52,16 +51,13 @@ export default function VideoPortal({ id }: MoviePlayerProps) {
               <span className="text-[10px] text-blue-500 font-mono">ID: {tmdbId} {mediaType === 'tv' && `(S${season} E${episode})`}</span>
             </div>
           </div>
-          <div className="flex items-center gap-4 relative">
-            <NeonCurlyArrow className="hidden lg:flex absolute -left-32 top-1/2 -translate-y-1/2 scale-110" />
-            <button 
-              onClick={() => window.open(getEmbedUrl(), '_blank')}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-medium text-gray-300 transition-all border border-white/10"
-            >
-              <ExternalLink className="w-3 h-3" />
-              External
-            </button>
-          </div>
+          <button 
+            onClick={() => window.open(getEmbedUrl(), '_blank')}
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-medium text-gray-300 transition-all border border-white/10"
+          >
+            <ExternalLink className="w-3 h-3" />
+            External
+          </button>
         </div>
         
         <div className="flex-1 w-full relative group">
@@ -69,8 +65,7 @@ export default function VideoPortal({ id }: MoviePlayerProps) {
             src={getEmbedUrl()} 
             className="w-full h-full border-none"
             allowFullScreen 
-            allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope; clipboard-write; payment; geolocation"
-            sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation"
+            allow="autoplay; encrypted-media"
             title="Vidking Player"
           />
         </div>

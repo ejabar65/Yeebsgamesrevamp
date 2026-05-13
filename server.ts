@@ -194,31 +194,6 @@ async function startServer() {
     }
   });
 
-  app.get('/api/tmdb-search', async (req, res) => {
-    const { query, type = 'movie' } = req.query;
-    if (!query) return res.status(400).json({ error: 'Query is required' });
-
-    const TMDB_API_KEY = process.env.TMDB_API_KEY || '15e241bab4affc62f00422929d7efd8a';
-    const url = `https://api.themoviedb.org/3/search/${type}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query as string)}`;
-
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.status_message || 'TMDB Search Failed');
-
-      const results = (data.results || []).map((item: any) => ({
-        id: item.id,
-        title: item.title || item.name,
-        release_date: item.release_date || item.first_air_date,
-        type: type
-      }));
-
-      res.json({ results });
-    } catch (error) {
-      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
-    }
-  });
-
   // Vite middleware
   const isProd = process.env.NODE_ENV === 'production' || fs.existsSync(path.join(__dirname, 'dist'));
   
