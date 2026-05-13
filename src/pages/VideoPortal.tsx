@@ -49,18 +49,8 @@ export default function VideoPortal({ id }: MoviePlayerProps) {
     } else {
       setIsLoadingResults(true);
       try {
-        // Try searching in both types to be more resilient
-        const [movieResults, tvResults] = await Promise.all([
-          movieService.searchMedia(searchQuery, 'movie'),
-          movieService.searchMedia(searchQuery, 'tv')
-        ]);
-        
-        const combined = [
-          ...movieResults.map(m => ({ ...m, type: 'movie' })),
-          ...tvResults.map(t => ({ ...t, type: 'tv' }))
-        ].sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
-
-        setSearchResults(combined as any);
+        const results = await movieService.searchMedia(searchQuery, mediaType);
+        setSearchResults(results);
       } catch (err) {
         console.error("Search failed:", err);
         alert("Search failed. Please try again.");
@@ -70,12 +60,11 @@ export default function VideoPortal({ id }: MoviePlayerProps) {
     }
   };
 
-  const handleSelectResult = (item: any) => {
-    setMediaType(item.type || mediaType);
+  const handleSelectResult = (item: MediaContent) => {
     setTmdbId(item.id.toString());
     setSearchResults([]);
     setSearchQuery('');
-    if (item.type === 'tv' || (!item.type && mediaType === 'tv')) {
+    if (mediaType === 'tv') {
       setSeason('1');
       setEpisode('1');
     }
@@ -107,12 +96,12 @@ export default function VideoPortal({ id }: MoviePlayerProps) {
           </button>
         </div>
         
-        <div className="flex-1 w-full relative group bg-black">
+        <div className="flex-1 w-full relative group">
           <iframe 
             src={getEmbedUrl()} 
-            className="absolute inset-0 w-full h-full border-none"
+            className="w-full h-full border-none"
             allowFullScreen 
-            allow="autoplay; encrypted-media; picture-in-picture"
+            allow="autoplay; encrypted-media"
             title="Vidking Player"
           />
         </div>
