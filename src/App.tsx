@@ -19,6 +19,7 @@ import Reviews from './pages/Reviews';
 import Legal from './pages/Legal';
 import Updates from './pages/Updates';
 import VideoPortal from './pages/VideoPortal';
+import TMDBLookup from './pages/TMDBLookup';
 import { GameProvider } from './context/GameContext';
 import { applyCloak, getSavedCloak } from './cloakUtils';
 import { useGames } from './context/GameContext';
@@ -94,11 +95,11 @@ export default function App() {
               <Route path="/community" element={<Community />} />
               <Route path="/game/:id" element={<GameView />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/tmdb-lookup" element={<TMDBLookup />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/:username" element={<Profile />} />
             </Routes>
             <MiniChat />
-            <MusicPlayer />
             <MultiplayerManager />
           </OSShell>
         </ThemeWrapper>

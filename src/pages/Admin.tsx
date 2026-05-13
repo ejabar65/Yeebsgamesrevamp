@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Plus, Tag, FileCode, Type, Image as ImageIcon, CheckCircle2, AlertCircle, Trash2, Globe, Edit2, X, Play, Users, Ban, UserCheck, Gamepad2 } from 'lucide-react';
+import { Shield, Plus, Tag, FileCode, Type, Image as ImageIcon, CheckCircle2, AlertCircle, Trash2, Globe, Edit2, X, Play, Users, Ban, UserCheck, Gamepad2, Search, ChevronRight } from 'lucide-react';
 import { addGame, deleteGame, updateGame } from '../services/gameService';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGames } from '../context/GameContext';
@@ -474,10 +474,20 @@ export default function Admin() {
       ) : activeTab === 'cinema' ? (
         <div className="space-y-12">
           <section className="card-subtle p-8 space-y-10">
-            <h2 className="text-xl font-bold text-white flex items-center gap-3">
-              <Play className="w-5 h-5 text-gray-500" />
-              Add Movie
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                <Play className="w-5 h-5 text-gray-500" />
+                Add Movie
+              </h2>
+              <Link 
+                to="/tmdb-lookup" 
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-500 text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all shadow-lg shadow-blue-500/10"
+              >
+                <Search className="w-3 h-3" />
+                TMDB ID Lookup
+                <ChevronRight className="w-3 h-3" />
+              </Link>
+            </div>
 
             <form onSubmit={handleMovieSubmit} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
