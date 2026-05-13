@@ -19,11 +19,30 @@
     -webkit-font-smoothing: antialiased;
     letter-spacing: -0.01em;
   }
+
+  /* Performance Mode Overrides */
+  .perf-mode {
+    --glass-blur: 0px;
+    --glass-background: rgba(5, 5, 5, 0.95);
+  }
+
+  /* Force disable all backdrop filters in performance mode */
+  .perf-mode * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Disable heavy shadows in performance mode */
+  .perf-mode .shadow-2xl,
+  .perf-mode .shadow-xl,
+  .perf-mode .shadow-lg {
+    box-shadow: none !important;
+  }
 }
 
 @utility glass {
-  background-color: rgba(5, 5, 5, 0.8);
-  backdrop-filter: blur(12px);
+  background-color: var(--glass-background, rgba(5, 5, 5, 0.8));
+  backdrop-filter: blur(var(--glass-blur, 12px));
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 

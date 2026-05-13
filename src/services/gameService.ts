@@ -2,6 +2,8 @@ import { GAMES as STATIC_GAMES } from '../constants';
 import { Game } from '../types';
 import { db, collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
+import { supabase } from '../lib/supabase';
+import { withFallback } from '../lib/dbFallback';
 
 const GAMES_COLLECTION = 'games';
 
@@ -17,8 +19,17 @@ export async function getGames(): Promise<Game[]> {
       return JSON.parse(cached);
     }
 
-    const querySnapshot = await getDocs(collection(db, GAMES_COLLECTION));
-    const firestoreGames = querySnapshot.docs.map(doc => doc.data() as Game);
+    const firestoreGames = await withFallback(
+      async () => {
+        const querySnapshot = await getDocs(collection(db, GAMES_COLLECTION));
+        return querySnapshot.docs.map(doc => doc.data() as Game);
+      },
+      async () => {
+        const { data, error } = await supabase.from(GAMES_COLLECTION).select('*');
+        if (error) throw error;
+        return (data || []) as Game[];
+      }
+    );
     
     // Combine with static games, deduplicate by ID
     const combined = [...STATIC_GAMES, ...firestoreGames];
@@ -30,12 +41,14 @@ export async function getGames(): Promise<Game[]> {
     
     return unique;
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, GAMES_COLLECTION);
+    if (!(error instanceof Error && error.message.includes('supabase'))) {
+      handleFirestoreError(error, OperationType.LIST, GAMES_COLLECTION);
+    }
     
     // On quota error, try to use stale cache
     const stale = localStorage.getItem('yeebsgames_cache_games');
     if (stale) {
-      console.warn('Firestore error, using stale cache');
+      console.warn('Database error, using stale cache');
       return JSON.parse(stale);
     }
     
@@ -44,15 +57,27 @@ export async function getGames(): Promise<Game[]> {
 }
 
 export async function addGame(game: Game): Promise<boolean> {
+  const gameData = {
+    ...game,
+    createdAt: new Date().toISOString(),
+    playCount: game.playCount || 0,
+    rating: game.rating || 5
+  };
+
   try {
-    const docRef = doc(db, GAMES_COLLECTION, game.id);
-    await setDoc(docRef, {
-      ...game,
-      createdAt: new Date().toISOString(),
-      playCount: game.playCount || 0,
-      rating: game.rating || 5
-    });
-    return true;
+    return await withFallback(
+      async () => {
+        const docRef = doc(db, GAMES_COLLECTION, game.id);
+        await setDoc(docRef, gameData);
+        return true;
+      },
+      async () => {
+        const { error } = await supabase.from(GAMES_COLLECTION).upsert([gameData]);
+        if (error) throw error;
+        return true;
+      },
+      { dualWrite: true }
+    );
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, GAMES_COLLECTION);
     return false;
@@ -61,9 +86,19 @@ export async function addGame(game: Game): Promise<boolean> {
 
 export async function updateGame(game: Game): Promise<boolean> {
   try {
-    const docRef = doc(db, GAMES_COLLECTION, game.id);
-    await updateDoc(docRef, { ...game });
-    return true;
+    return await withFallback(
+      async () => {
+        const docRef = doc(db, GAMES_COLLECTION, game.id);
+        await updateDoc(docRef, { ...game });
+        return true;
+      },
+      async () => {
+        const { error } = await supabase.from(GAMES_COLLECTION).update({ ...game }).eq('id', game.id);
+        if (error) throw error;
+        return true;
+      },
+      { dualWrite: true }
+    );
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `${GAMES_COLLECTION}/${game.id}`);
     return false;
@@ -72,9 +107,19 @@ export async function updateGame(game: Game): Promise<boolean> {
 
 export async function deleteGame(gameId: string): Promise<boolean> {
   try {
-    const docRef = doc(db, GAMES_COLLECTION, gameId);
-    await deleteDoc(docRef);
-    return true;
+    return await withFallback(
+      async () => {
+        const docRef = doc(db, GAMES_COLLECTION, gameId);
+        await deleteDoc(docRef);
+        return true;
+      },
+      async () => {
+        const { error } = await supabase.from(GAMES_COLLECTION).delete().eq('id', gameId);
+        if (error) throw error;
+        return true;
+      },
+      { dualWrite: true }
+    );
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${GAMES_COLLECTION}/${gameId}`);
     return false;

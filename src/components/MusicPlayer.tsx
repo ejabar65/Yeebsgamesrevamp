@@ -90,10 +90,25 @@ export default function MusicPlayer() {
   };
 
   const addToPlaylist = (track: Track) => {
-    setPlaylist(prev => [...prev, track]);
+    setPlaylist(prev => [...prev, { ...track, id: `${track.id}-${Date.now()}` }]); // Ensure unique IDs for duplicate additions
     setShowSearch(false);
     setSearchQuery('');
     setSearchResults([]);
+  };
+
+  const removeFromPlaylist = (index: number) => {
+    if (playlist.length <= 1) return; // Keep at least one track
+    const newPlaylist = [...playlist];
+    newPlaylist.splice(index, 1);
+    
+    // If we removed the current track, adjust index
+    if (index === currentTrackIndex) {
+      setCurrentTrackIndex(prev => Math.min(prev, newPlaylist.length - 1));
+    } else if (index < currentTrackIndex) {
+      setCurrentTrackIndex(prev => prev - 1);
+    }
+    
+    setPlaylist(newPlaylist);
   };
 
   useEffect(() => {
@@ -124,11 +139,20 @@ export default function MusicPlayer() {
 
   const togglePlay = () => {
     if (playerRef.current) {
-      if (isPlaying) {
-        playerRef.current.pauseVideo();
-      } else {
-        playerRef.current.playVideo();
+      try {
+        if (isPlaying) {
+          playerRef.current.pauseVideo();
+        } else {
+          playerRef.current.playVideo();
+        }
+        setIsPlaying(!isPlaying);
+      } catch (err) {
+        console.error("Player toggle failed:", err);
+        // Fallback: just toggle state, player might catch up
+        setIsPlaying(!isPlaying);
       }
+    } else {
+      // If player not ready, at least set state so it plays onReady
       setIsPlaying(!isPlaying);
     }
   };
@@ -163,25 +187,37 @@ export default function MusicPlayer() {
   };
 
   const opts: YouTubeProps['opts'] = {
-    height: '0',
-    width: '0',
+    height: '100',
+    width: '100',
     playerVars: {
-      autoplay: 0,
+      autoplay: 1,
       controls: 0,
       modestbranding: 1,
       rel: 0,
+      showinfo: 0,
+      iv_load_policy: 3,
+      enablejsapi: 1,
+      origin: typeof window !== 'undefined' ? window.location.origin : undefined
     },
   };
 
   return (
     <div className="fixed bottom-20 right-6 z-50">
-      <div className="hidden">
+      {/* Invisible YouTube Player */}
+      <div 
+        className="fixed bottom-4 left-4 w-10 h-10 overflow-hidden pointer-events-none opacity-[0.01] bg-black rounded-full" 
+        style={{ zIndex: -100 }}
+        aria-hidden="true"
+      >
         {currentTrack && (
           <YouTube 
             videoId={currentTrack.videoId} 
             opts={opts} 
             onReady={onReady} 
-            onStateChange={onStateChange} 
+            onStateChange={onStateChange}
+            onEnd={handleNext}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
           />
         )}
       </div>
@@ -351,28 +387,39 @@ export default function MusicPlayer() {
                   </div>
                   <div className="flex-1 overflow-y-auto p-2 scrollbar-none">
                     {playlist.map((track, index) => (
-                      <button
-                        key={track.id + index}
-                        onClick={() => {
-                          setCurrentTrackIndex(index);
-                          setIsPlaying(true);
-                          setShowPlaylist(false);
-                        }}
-                        className={`w-full p-3 rounded-xl flex items-center gap-3 transition-colors ${index === currentTrackIndex ? 'bg-blue-500/20' : 'hover:bg-white/5'}`}
-                      >
-                        <img src={track.cover} className="w-10 h-10 rounded-lg object-cover" alt="" />
-                        <div className="flex flex-col items-start min-w-0 flex-1">
-                          <span className={`text-xs font-bold truncate w-full flex-1 ${index === currentTrackIndex ? 'text-blue-500' : 'text-white'}`}>{track.title}</span>
-                          <span className="text-[9px] text-gray-500 uppercase font-black truncate w-full">{track.artist}</span>
-                        </div>
-                        {index === currentTrackIndex && isPlaying && (
-                          <div className="flex items-end gap-[2px] h-3 shrink-0">
-                            <motion.div animate={{ height: [2, 8, 4] }} transition={{ repeat: Infinity, duration: 0.5 }} className="w-[2px] bg-blue-500 rounded-full" />
-                            <motion.div animate={{ height: [8, 2, 6] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-[2px] bg-blue-500 rounded-full" />
-                            <motion.div animate={{ height: [4, 6, 2] }} transition={{ repeat: Infinity, duration: 0.4 }} className="w-[2px] bg-blue-500 rounded-full" />
+                      <div key={track.id + index} className="group/item relative">
+                        <button
+                          onClick={() => {
+                            setCurrentTrackIndex(index);
+                            setIsPlaying(true);
+                            setShowPlaylist(false);
+                          }}
+                          className={`w-full p-3 rounded-xl flex items-center gap-3 transition-colors ${index === currentTrackIndex ? 'bg-blue-500/20' : 'hover:bg-white/5'}`}
+                        >
+                          <img src={track.cover} className="w-10 h-10 rounded-lg object-cover" alt="" />
+                          <div className="flex flex-col items-start min-w-0 flex-1">
+                            <span className={`text-xs font-bold truncate w-full flex-1 ${index === currentTrackIndex ? 'text-blue-500' : 'text-white'}`}>{track.title}</span>
+                            <span className="text-[9px] text-gray-500 uppercase font-black truncate w-full text-left">{track.artist}</span>
                           </div>
-                        )}
-                      </button>
+                          {index === currentTrackIndex && isPlaying && (
+                            <div className="flex items-end gap-[2px] h-3 shrink-0">
+                              <motion.div animate={{ height: [2, 8, 4] }} transition={{ repeat: Infinity, duration: 0.5 }} className="w-[2px] bg-blue-500 rounded-full" />
+                              <motion.div animate={{ height: [8, 2, 6] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-[2px] bg-blue-500 rounded-full" />
+                              <motion.div animate={{ height: [4, 6, 2] }} transition={{ repeat: Infinity, duration: 0.4 }} className="w-[2px] bg-blue-500 rounded-full" />
+                            </div>
+                          )}
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFromPlaylist(index);
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 opacity-0 group-hover/item:opacity-100 hover:bg-red-500/20 hover:text-red-500 text-gray-500 rounded-lg transition-all"
+                          title="Remove from playlist"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </motion.div>

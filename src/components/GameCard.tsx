@@ -9,23 +9,24 @@ interface GameCardProps {
 }
 
 export default function GameCard({ game }: GameCardProps) {
-  const { toggleFavorite, isFavorite } = useGames();
+  const { toggleFavorite, isFavorite, user } = useGames();
+  const isPerfMode = user?.settings?.performanceMode;
   const favorite = isFavorite(game.id);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: isPerfMode ? 0 : 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       className="group"
     >
       <Link to={`/game/${game.id}`} className="block space-y-3">
-        <div className="relative aspect-video rounded-lg bg-white/[0.02] overflow-hidden border border-white/5 transition-all duration-500 group-hover:border-blue-500/30">
+        <div className={`relative aspect-video rounded-lg bg-white/[0.02] overflow-hidden border border-white/5 transition-all duration-500 ${!isPerfMode ? 'group-hover:border-blue-500/30' : ''}`}>
           {game.thumbnail ? (
             <img
               src={game.thumbnail}
               alt={game.title}
-              className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-700 group-hover:scale-105"
+              className={`w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-700 ${!isPerfMode ? 'group-hover:scale-105' : ''}`}
               referrerPolicy="no-referrer"
             />
           ) : (
@@ -35,7 +36,7 @@ export default function GameCard({ game }: GameCardProps) {
           )}
           
           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center translate-y-2 group-hover:translate-y-0 transition-transform">
+            <div className={`w-10 h-10 rounded-full bg-white text-black flex items-center justify-center ${!isPerfMode ? 'translate-y-2 group-hover:translate-y-0' : ''} transition-transform`}>
                <Play className="w-4 h-4 fill-current ml-0.5" />
             </div>
           </div>

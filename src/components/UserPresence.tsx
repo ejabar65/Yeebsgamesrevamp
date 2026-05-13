@@ -3,6 +3,9 @@ import { db } from '../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 
+import { onSnapshotWithFallback } from '../lib/dbFallback';
+import { supabase } from '../lib/supabase';
+
 // Shared status cache to avoid duplicate listeners for the same user
 const statusCache: { [username: string]: 'online' | 'offline' | 'away' } = {};
 const statusListeners: { [username: string]: Set<(status: 'online' | 'offline' | 'away') => void> } = {};
@@ -19,15 +22,24 @@ export default function UserPresence({ username }: { username: string }) {
     if (!statusListeners[key]) {
       statusListeners[key] = new Set();
       
-      const unsub = onSnapshot(doc(db, 'users', key), (snap) => {
-        const newStatus = snap.exists() ? (snap.data().status || 'offline') : 'offline';
-        statusCache[key] = newStatus;
-        statusListeners[key].forEach(cb => cb(newStatus));
-      }, (error) => {
-        handleFirestoreError(error, OperationType.GET, `users/${key}`);
-      });
+      const unsubscribe = onSnapshotWithFallback(
+        (next, err) => onSnapshot(doc(db, 'users', key), next, err),
+        async (next) => {
+          const { data, error } = await supabase.from('users').select('status').eq('username', key).single();
+          if (error && error.code !== 'PGRST116') throw error;
+          next({ exists: () => !!data, data: () => data || { status: 'offline' } } as any);
+        },
+        (snap: any) => {
+          const newStatus = snap.exists() ? (snap.data().status || 'offline') : 'offline';
+          statusCache[key] = newStatus;
+          statusListeners[key].forEach(cb => cb(newStatus));
+        },
+        (error) => {
+          handleFirestoreError(error, OperationType.GET, `users/${key}`);
+        }
+      );
       
-      unsubs[key] = unsub;
+      unsubs[key] = unsubscribe;
     }
 
     const handleChange = (newStatus: 'online' | 'offline' | 'away') => {

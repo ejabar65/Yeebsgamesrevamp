@@ -2,18 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { useGames } from '../context/GameContext';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
+import { onSnapshotWithFallback } from '../lib/dbFallback';
+import { supabase } from '../lib/supabase';
 import { 
   collection, 
   query, 
   where, 
   onSnapshot, 
   addDoc, 
+  getDocs,
   serverTimestamp,
   doc,
+  setDoc,
   updateDoc,
   deleteDoc,
   orderBy
 } from 'firebase/firestore';
+import { withFallback } from '../lib/dbFallback';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Users, MessageSquare, Trash2, Settings, Shield, Zap, Phone } from 'lucide-react';
 import { ChatRoom } from './ChatRoom';
@@ -45,30 +50,42 @@ export const GroupChats: React.FC = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Fetch all groups
-    const q = query(
-      collection(db, 'groups'),
-      orderBy('createdAt', 'desc')
+    const unsubscribe = onSnapshotWithFallback(
+      (next, err) => {
+        const q = query(
+          collection(db, 'groups'),
+          orderBy('createdAt', 'desc')
+        );
+        return onSnapshot(q, next, err);
+      },
+      async (next) => {
+        const { data, error } = await supabase.from('groups')
+          .select('*')
+          .order('createdAt', { ascending: false });
+        
+        if (error) throw error;
+        next({ docs: (data || []).map(d => ({ id: d.id, data: () => d })) } as any);
+      },
+      (snapshot: any) => {
+        const g = snapshot.docs.map((doc: any) => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Group[];
+        
+        // Filter client-side: user must be an owner, member, or Admin/Mod
+        const filtered = g.filter(group => 
+          group.members.includes(user.uid) || 
+          group.ownerId === user.uid ||
+          user.isAdmin
+        );
+        
+        setGroups(filtered);
+        setLoading(false);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'groups');
+      }
     );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const g = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Group[];
-      
-      // Filter client-side: user must be an owner, member, or Admin/Mod
-      const filtered = g.filter(group => 
-        group.members.includes(user.uid) || 
-        group.ownerId === user.uid ||
-        user.isAdmin
-      );
-      
-      setGroups(filtered);
-      setLoading(false);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'groups');
-    });
 
     return () => unsubscribe();
   }, [user]);
@@ -82,7 +99,9 @@ export const GroupChats: React.FC = () => {
     if (!user || !newGroupName.trim()) return;
 
     try {
+      const gId = 'group_' + Math.random().toString(36).substr(2, 9);
       const groupData = {
+        id: gId,
         name: newGroupName.trim(),
         code: generateCode(),
         ownerId: user.uid,
@@ -91,14 +110,29 @@ export const GroupChats: React.FC = () => {
         settings: {
           spamLimit: true,
           filterEnabled: true
-        },
-        createdAt: serverTimestamp()
+        }
       };
 
-      const docRef = await addDoc(collection(db, 'groups'), groupData);
+      await withFallback(
+        async () => {
+          await setDoc(doc(db, 'groups', gId), {
+            ...groupData,
+            createdAt: serverTimestamp()
+          });
+        },
+        async () => {
+          const { error } = await supabase.from('groups').upsert([{
+            ...groupData,
+            createdAt: new Date().toISOString()
+          }]);
+          if (error) throw error;
+        },
+        { dualWrite: true }
+      );
+
       setNewGroupName('');
       setShowCreateModal(false);
-      setSelectedGroup({ ...groupData, id: docRef.id } as Group);
+      setSelectedGroup({ ...groupData, createdAt: new Date() } as any);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'groups');
     }
@@ -109,35 +143,51 @@ export const GroupChats: React.FC = () => {
     if (!user || !joinCode.trim()) return;
 
     try {
-      const q = query(collection(db, 'groups'), where('code', '==', joinCode.trim().toUpperCase()));
-      const unsubscribe = onSnapshot(q, async (snapshot) => {
-        if (snapshot.empty) {
-          alert('Invalid Sector Code. Transmission rejected.');
-          unsubscribe();
-          return;
+      const code = joinCode.trim().toUpperCase();
+      
+      const group = await withFallback(
+        async () => {
+          const q = query(collection(db, 'groups'), where('code', '==', code));
+          const snap = await getDocs(q);
+          if (snap.empty) return null;
+          return { id: snap.docs[0].id, ...snap.docs[0].data() } as Group;
+        },
+        async () => {
+          const { data, error } = await supabase.from('groups').select('*').eq('code', code).single();
+          if (error) return null;
+          return data as Group;
         }
+      );
 
-        const groupDoc = snapshot.docs[0];
-        const groupData = groupDoc.data() as Group;
+      if (!group) {
+        alert('Invalid Sector Code. Transmission rejected.');
+        return;
+      }
 
-        if (groupData.members.includes(user.uid)) {
-          setSelectedGroup({ ...groupData, id: groupDoc.id } as Group);
-          setJoinCode('');
-          setShowJoinModal(false);
-          unsubscribe();
-          return;
-        }
-
-        const groupRef = doc(db, 'groups', groupDoc.id);
-        await updateDoc(groupRef, {
-          members: [...groupData.members, user.uid]
-        });
-
-        setSelectedGroup({ ...groupData, id: groupDoc.id, members: [...groupData.members, user.uid] } as Group);
+      if (group.members.includes(user.uid)) {
+        setSelectedGroup(group);
         setJoinCode('');
         setShowJoinModal(false);
-        unsubscribe();
-      });
+        return;
+      }
+
+      const updatedMembers = [...group.members, user.uid];
+
+      await withFallback(
+        async () => {
+          const groupRef = doc(db, 'groups', group.id);
+          await updateDoc(groupRef, { members: updatedMembers });
+        },
+        async () => {
+          const { error } = await supabase.from('groups').update({ members: updatedMembers }).eq('id', group.id);
+          if (error) throw error;
+        },
+        { dualWrite: true }
+      );
+
+      setSelectedGroup({ ...group, members: updatedMembers });
+      setJoinCode('');
+      setShowJoinModal(false);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'groups');
     }
@@ -148,7 +198,16 @@ export const GroupChats: React.FC = () => {
     if (!confirm('Warning: This will terminate the group and all associated data. Proceed?')) return;
     
     try {
-      await deleteDoc(doc(db, 'groups', groupId));
+      await withFallback(
+        async () => {
+          await deleteDoc(doc(db, 'groups', groupId));
+        },
+        async () => {
+          const { error } = await supabase.from('groups').delete().eq('id', groupId);
+          if (error) throw error;
+        },
+        { dualWrite: true }
+      );
       if (selectedGroup?.id === groupId) setSelectedGroup(null);
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `groups/${groupId}`);

@@ -5,6 +5,8 @@ import { useGames } from '../context/GameContext';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, getDocs, limit } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
+import { onSnapshotWithFallback } from '../lib/dbFallback';
+import { supabase } from '../lib/supabase';
 import { GameInvite, AuthUser } from '../types';
 import { useNavigate } from 'react-router-dom';
 
@@ -26,15 +28,29 @@ export default function MultiplayerManager() {
       where('status', '==', 'pending')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const newInvites = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as GameInvite[];
-      setInvites(newInvites);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'game_invites');
-    });
+    const unsubscribe = onSnapshotWithFallback(
+      (next, err) => onSnapshot(q, next, err),
+      async (next) => {
+        const { data, error } = await supabase
+          .from('game_invites')
+          .select('*')
+          .eq('to', user.username.toLowerCase())
+          .eq('status', 'pending');
+        
+        if (error) throw error;
+        next({ docs: (data || []).map(d => ({ id: d.id, data: () => d })) } as any);
+      },
+      (snapshot: any) => {
+        const newInvites = snapshot.docs.map((doc: any) => ({
+          id: doc.id,
+          ...doc.data()
+        })) as GameInvite[];
+        setInvites(newInvites);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'game_invites');
+      }
+    );
 
     return () => unsubscribe();
   }, [user?.username]);

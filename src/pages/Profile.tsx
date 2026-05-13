@@ -59,6 +59,7 @@ export default function Profile() {
     customTheme: currentUser?.settings?.customTheme || 'default',
     soundsEnabled: currentUser?.settings?.soundsEnabled ?? true,
     privateProfile: currentUser?.settings?.privateProfile ?? false,
+    performanceMode: currentUser?.settings?.performanceMode ?? false,
     panicKey: localStorage.getItem('yeebsgames_panic_key') || '`',
     panicUrl: localStorage.getItem('yeebsgames_panic_url') || 'https://classroom.google.com',
     cloak: getSavedCloak()
@@ -524,6 +525,26 @@ export default function Profile() {
                      >
                         <motion.div 
                           animate={{ x: settingsForm.privateProfile ? 26 : 2 }}
+                          className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-md" 
+                        />
+                     </button>
+                  </div>
+
+                  {/* Performance Mode */}
+                  <div className="p-6 rounded-2xl bg-white/2 border border-white/5 flex items-center justify-between hover:bg-white/5 transition-all">
+                     <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                           <h4 className="font-bold text-sm text-white">Performance Mode</h4>
+                           <Zap className="w-3 h-3 text-yellow-500" />
+                        </div>
+                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Disable blurs and heavy animations.</p>
+                     </div>
+                     <button 
+                       onClick={() => setSettingsForm({ ...settingsForm, performanceMode: !settingsForm.performanceMode })}
+                       className={`w-12 h-6 rounded-full relative transition-all ${settingsForm.performanceMode ? 'bg-blue-500' : 'bg-white/10'}`}
+                     >
+                        <motion.div 
+                          animate={{ x: settingsForm.performanceMode ? 26 : 2 }}
                           className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-md" 
                         />
                      </button>

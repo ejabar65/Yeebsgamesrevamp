@@ -10,8 +10,8 @@ const SOURCES = [
   { 
     id: 'vidking', 
     name: 'VidKing', 
-    movieUrl: (id: string) => `https://vidking.net/embed/movie/${id}?autoPlay=true`,
-    tvUrl: (id: string, s: number, e: number) => `https://vidking.net/embed/tv/${id}/${s}/${e}?autoPlay=true`
+    movieUrl: (id: string, color: string = '3b82f6') => `https://vidking.net/embed/movie/${id}?color=${color.replace('#', '')}&autoPlay=true`,
+    tvUrl: (id: string, s: number, e: number, color: string = '3b82f6') => `https://vidking.net/embed/tv/${id}/${s}/${e}?color=${color.replace('#', '')}&autoPlay=true&nextEpisode=true&episodeSelector=true`
   },
   { 
     id: 'vidsrc-xyz', 
@@ -187,7 +187,9 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
 
   const playerUrl = media.isCustom 
     ? media.url 
-    : (type === 'movie' ? getUrl(activeSource.movieUrl(id!)) : getUrl(activeSource.tvUrl(id!, season, episode)));
+    : (type === 'movie' 
+        ? getUrl(activeSource.id === 'vidking' ? (activeSource as any).movieUrl(id!, '3b82f6') : activeSource.movieUrl(id!)) 
+        : getUrl(activeSource.id === 'vidking' ? (activeSource as any).tvUrl(id!, season, episode, '3b82f6') : activeSource.tvUrl(id!, season, episode)));
 
   return (
     <main className="min-h-screen bg-[#020202] text-white font-sans selection:bg-blue-500 pb-32">

@@ -16,6 +16,9 @@ import {
   deleteDoc
 } from 'firebase/firestore';
 import { useGames } from '../context/GameContext';
+import { onSnapshotWithFallback, withFallback } from '../lib/dbFallback';
+import { supabase } from '../lib/supabase';
+import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
@@ -132,17 +135,31 @@ export const DirectMessages: React.FC = () => {
       where('participants', 'array-contains', user.username.toLowerCase())
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const chatData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setChats(chatData.sort((a: any, b: any) => {
-        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : 0);
-        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt?.seconds ? b.updatedAt.seconds * 1000 : 0);
-        return timeB - timeA;
-      }));
-    });
+    const unsubscribe = onSnapshotWithFallback(
+      (next, err) => onSnapshot(q, next, err),
+      async (next) => {
+        const { data, error } = await supabase.from('chats')
+          .select('*')
+          .contains('participants', [user.username.toLowerCase()]);
+        
+        if (error) throw error;
+        next({ docs: (data || []).map(d => ({ id: d.id, data: () => d })) } as any);
+      },
+      (snapshot: any) => {
+        const chatData = snapshot.docs.map((doc: any) => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setChats(chatData.sort((a: any, b: any) => {
+          const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : 0);
+          const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt?.seconds ? b.updatedAt.seconds * 1000 : 0);
+          return timeB - timeA;
+        }));
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'chats');
+      }
+    );
 
     return () => unsubscribe();
   }, [user]);
@@ -157,23 +174,37 @@ export const DirectMessages: React.FC = () => {
       collection(db, 'chats', activeChat.id, 'messages')
     );
 
-    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-      const msgs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })).sort((a: any, b: any) => {
-        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
-        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
-        return timeA - timeB;
-      });
-      setMessages(msgs);
-      
-      setTimeout(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-      }, 100);
-    });
+    const unsubscribe = onSnapshotWithFallback(
+      (next, err) => onSnapshot(messagesQuery, next, err),
+      async (next) => {
+        const { data, error } = await supabase.from('direct_messages')
+          .select('*')
+          .eq('chatId', activeChat.id);
+        
+        if (error) throw error;
+        next({ docs: (data || []).map(d => ({ id: d.id, data: () => d })) } as any);
+      },
+      (snapshot: any) => {
+        const msgs = snapshot.docs.map((doc: any) => ({
+          id: doc.id,
+          ...doc.data()
+        })).sort((a: any, b: any) => {
+          const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+          const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+          return timeA - timeB;
+        });
+        setMessages(msgs);
+        
+        setTimeout(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          }
+        }, 100);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, `chats/${activeChat.id}/messages`);
+      }
+    );
 
     return () => unsubscribe();
   }, [activeChat]);
@@ -407,10 +438,20 @@ export const DirectMessages: React.FC = () => {
 
     setIsSearching(true);
     try {
-      const userRef = doc(db, 'users', targetName);
-      const userSnap = await getDoc(userRef);
+      const userData = await withFallback(
+        async () => {
+          const userRef = doc(db, 'users', targetName);
+          const snap = await getDoc(userRef);
+          return snap.exists() ? snap.data() : null;
+        },
+        async () => {
+          const { data, error } = await supabase.from('users').select('*').eq('username', targetName).single();
+          if (error && error.code !== 'PGRST116') throw error;
+          return data;
+        }
+      );
       
-      if (!userSnap.exists()) {
+      if (!userData) {
         alert("User not found.");
         setIsSearching(false);
         return;
@@ -419,12 +460,26 @@ export const DirectMessages: React.FC = () => {
       const participants = [user.username.toLowerCase(), targetName].sort();
       const chatId = participants.join('_');
 
-      const chatRef = doc(db, 'chats', chatId);
-      await setDoc(chatRef, {
-        participants,
-        updatedAt: serverTimestamp(),
-        lastMessage: 'Started'
-      }, { merge: true });
+      await withFallback(
+        async () => {
+          const chatRef = doc(db, 'chats', chatId);
+          await setDoc(chatRef, {
+            participants,
+            updatedAt: serverTimestamp(),
+            lastMessage: 'Started'
+          }, { merge: true });
+        },
+        async () => {
+          const { error } = await supabase.from('chats').upsert([{
+            id: chatId,
+            participants,
+            updatedAt: new Date().toISOString(),
+            lastMessage: 'Started'
+          }]);
+          if (error) throw error;
+        },
+        { dualWrite: true }
+      );
 
       setActiveChat({ id: chatId, participants });
       setSearchName('');
@@ -440,20 +495,44 @@ export const DirectMessages: React.FC = () => {
     if (!user || !activeChat || (!newMessage.trim() && !selectedImage && !gifUrl)) return;
 
     const text = filter.isProfane(newMessage) ? filter.clean(newMessage) : newMessage;
+    const msgId = 'dm_' + Math.random().toString(36).substr(2, 9);
     const msgData = {
+      id: msgId,
+      chatId: activeChat.id,
       text: gifUrl ? "" : text,
       image: selectedImage,
       gif: gifUrl || null,
-      senderId: user.username.toLowerCase(),
-      createdAt: serverTimestamp()
+      senderId: user.username.toLowerCase()
     };
 
     try {
-      await addDoc(collection(db, 'chats', activeChat.id, 'messages'), msgData);
-      await updateDoc(doc(db, 'chats', activeChat.id), {
-        lastMessage: gifUrl ? '🎬 GIF' : (selectedImage ? '📷 Image' : text),
-        updatedAt: serverTimestamp()
-      });
+      await withFallback(
+        async () => {
+          await addDoc(collection(db, 'chats', activeChat.id, 'messages'), {
+            ...msgData,
+            createdAt: serverTimestamp()
+          });
+          await updateDoc(doc(db, 'chats', activeChat.id), {
+            lastMessage: gifUrl ? '🎬 GIF' : (selectedImage ? '📷 Image' : text),
+            updatedAt: serverTimestamp()
+          });
+        },
+        async () => {
+          const { error: msgErr } = await supabase.from('direct_messages').insert([{
+            ...msgData,
+            createdAt: new Date().toISOString()
+          }]);
+          if (msgErr) throw msgErr;
+
+          const { error: chatErr } = await supabase.from('chats').update({
+            lastMessage: gifUrl ? '🎬 GIF' : (selectedImage ? '📷 Image' : text),
+            updatedAt: new Date().toISOString()
+          }).eq('id', activeChat.id);
+          if (chatErr) throw chatErr;
+        },
+        { dualWrite: true }
+      );
+
       setNewMessage('');
       setSelectedImage(null);
     } catch (err) {

@@ -5,6 +5,7 @@
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import React, { useEffect } from 'react';
+import { MotionConfig } from 'motion/react';
 import Home from './pages/Home';
 import GameView from './pages/GameView';
 import Admin from './pages/Admin';
@@ -17,6 +18,7 @@ import Tutorials from './pages/Tutorials';
 import Reviews from './pages/Reviews';
 import Legal from './pages/Legal';
 import Updates from './pages/Updates';
+import VideoPortal from './pages/VideoPortal';
 import { GameProvider } from './context/GameContext';
 import { applyCloak, getSavedCloak } from './cloakUtils';
 import { useGames } from './context/GameContext';
@@ -29,10 +31,13 @@ import MultiplayerManager from './components/MultiplayerManager';
 function ThemeWrapper({ children }: { children: React.ReactNode }) {
   const { user } = useGames();
   const theme = user?.settings?.customTheme || 'default';
+  const isPerfMode = user?.settings?.performanceMode;
   
   return (
     <div className="min-h-screen bg-dark-surface" data-theme={theme}>
-      {children}
+      <MotionConfig reducedMotion={isPerfMode ? "always" : "user"}>
+        {children}
+      </MotionConfig>
     </div>
   );
 }
@@ -78,6 +83,7 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/movies" element={<Movies />} />
+              <Route path="/streaming" element={<VideoPortal />} />
               <Route path="/tutorials" element={<Tutorials />} />
               <Route path="/reviews" element={<Reviews />} />
               <Route path="/legal" element={<Legal />} />

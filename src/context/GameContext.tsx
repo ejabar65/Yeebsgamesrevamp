@@ -20,6 +20,8 @@ import {
 } from '../lib/firebase';
 
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
+import { supabase } from '../lib/supabase';
+import { withFallback } from '../lib/dbFallback';
 
 interface GameContextType {
   games: Game[];
@@ -67,11 +69,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const username = localStorage.getItem('yeebsgames_username');
       if (username) {
         try {
-          const userRef = doc(db, 'users', username.toLowerCase());
-          await updateDoc(userRef, { 
-            status, 
-            lastSeen: new Date().toISOString() 
-          });
+          await withFallback(
+            async () => {
+              const userRef = doc(db, 'users', username.toLowerCase());
+              await updateDoc(userRef, { 
+                status, 
+                lastSeen: new Date().toISOString() 
+              });
+            },
+            async () => {
+              const { error } = await supabase.from('users').update({ 
+                status, 
+                lastSeen: new Date().toISOString() 
+              }).eq('username', username.toLowerCase());
+              if (error) throw error;
+            },
+            { dualWrite: true }
+          );
         } catch (e) {
           // Ignore presence errors to avoid loop/quota issues
         }
@@ -105,11 +119,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
         // Verify credentials if no cache or expired
         try {
-          const userRef = doc(db, 'users', savedUsername.toLowerCase());
-          const userSnap = await getDoc(userRef);
+          const data = await withFallback(
+            async () => {
+              const userRef = doc(db, 'users', savedUsername.toLowerCase());
+              const userSnap = await getDoc(userRef);
+              return userSnap.exists() ? userSnap.data() : null;
+            },
+            async () => {
+              const { data, error } = await supabase.from('users').select('*').eq('username', savedUsername.toLowerCase()).single();
+              if (error && error.code !== 'PGRST116') throw error;
+              return data;
+            }
+          );
           
-          if (userSnap.exists() && userSnap.data().password === savedPassword) {
-            const data = userSnap.data();
+          if (data && data.password === savedPassword) {
             if (data.isBanned) {
               localStorage.removeItem('yeebsgames_username');
               localStorage.removeItem('yeebsgames_password');
@@ -129,7 +152,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
               banLimitInfo: data.banLimitInfo || { count: 0, lastReset: new Date().toISOString() },
               photoURL: data.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${savedUsername}`,
               avatarConfig: data.avatarConfig || { style: 'avataaars', seed: savedUsername },
-              settings: data.settings || { compactMode: false, showChatPreview: true, soundsEnabled: true, privateProfile: false },
+              settings: data.settings || { 
+                compactMode: false, 
+                showChatPreview: true, 
+                soundsEnabled: true, 
+                privateProfile: false,
+                performanceMode: false
+              },
               history: data.history || [],
               bio: data.bio || '',
               tabs: data.tabs || []
@@ -188,12 +217,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const cleanPassword = password?.trim();
       if (!cleanUsername || !cleanPassword) return false;
 
-      const userRef = doc(db, 'users', lowerUsername);
-      const userSnap = await getDoc(userRef);
+      const userData = await withFallback(
+        async () => {
+          const userRef = doc(db, 'users', lowerUsername);
+          const userSnap = await getDoc(userRef);
+          return userSnap.exists() ? { data: userSnap.data(), exists: true } : { data: null, exists: false };
+        },
+        async () => {
+          const { data, error } = await supabase.from('users').select('*').eq('username', lowerUsername).single();
+           if (error && error.code !== 'PGRST116') throw error;
+           return { data, exists: !!data };
+        }
+      );
 
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        const userLower = lowerUsername;
+      if (userData.exists) {
+        const data = userData.data;
         if (data.isBanned) {
           alert('This account has been banned from the system.');
           return false;
@@ -204,13 +242,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
       } else {
         // Register new username
-        // Special case for Yeebs admin account
         if (lowerUsername === 'yeebs' && cleanPassword !== '$#GS29gs1') {
           alert('Unauthorized admin registration.');
           return false;
         }
 
-        await setDoc(userRef, {
+        const newUser = {
           username: cleanUsername,
           password: cleanPassword,
           uid: 'user_' + Math.random().toString(36).substr(2, 9),
@@ -218,24 +255,42 @@ export function GameProvider({ children }: { children: ReactNode }) {
           createdAt: new Date().toISOString(),
           isAdmin: ADMIN_LIST.includes(lowerUsername),
           isMod: MOD_LIST.includes(lowerUsername)
-        });
+        };
+
+        await withFallback(
+          async () => {
+            const userRef = doc(db, 'users', lowerUsername);
+            await setDoc(userRef, newUser);
+          },
+          async () => {
+            const { error } = await supabase.from('users').upsert([newUser]);
+            if (error) throw error;
+          },
+          { dualWrite: true }
+        );
       }
 
-      const isAdmin = ADMIN_LIST.includes(lowerUsername) || (userSnap.exists() && userSnap.data().isAdmin);
-      const isMod = MOD_LIST.includes(lowerUsername) || (userSnap.exists() && userSnap.data().isMod);
+      const isAdmin = ADMIN_LIST.includes(lowerUsername) || (userData.exists && userData.data.isAdmin);
+      const isMod = MOD_LIST.includes(lowerUsername) || (userData.exists && userData.data.isMod);
 
       const finalUser: AuthUser = {
-        uid: userSnap.exists() ? userSnap.data().uid : 'user_' + Math.random().toString(36).substr(2, 9),
+        uid: userData.exists ? userData.data.uid : 'user_' + Math.random().toString(36).substr(2, 9),
         username: cleanUsername,
         isAdmin,
         isMod,
-        banLimitInfo: (userSnap.exists() && userSnap.data().banLimitInfo) || { count: 0, lastReset: new Date().toISOString() },
-        photoURL: (userSnap.exists() && userSnap.data().photoURL) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`,
-        avatarConfig: (userSnap.exists() && userSnap.data().avatarConfig) || { style: 'avataaars', seed: cleanUsername },
-        settings: userSnap.exists() ? userSnap.data().settings : { compactMode: false, showChatPreview: true, soundsEnabled: true, privateProfile: false },
-        history: userSnap.exists() ? userSnap.data().history : [],
-        bio: userSnap.exists() ? userSnap.data().bio : '',
-        tabs: userSnap.exists() ? (userSnap.data().tabs || []) : []
+        banLimitInfo: (userData.exists && userData.data.banLimitInfo) || { count: 0, lastReset: new Date().toISOString() },
+        photoURL: (userData.exists && userData.data.photoURL) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`,
+        avatarConfig: (userData.exists && userData.data.avatarConfig) || { style: 'avataaars', seed: cleanUsername },
+        settings: userData.exists ? userData.data.settings : { 
+          compactMode: false, 
+          showChatPreview: true, 
+          soundsEnabled: true, 
+          privateProfile: false,
+          performanceMode: false
+        },
+        history: userData.exists ? userData.data.history : [],
+        bio: userData.exists ? userData.data.bio : '',
+        tabs: userData.exists ? (userData.data.tabs || []) : []
       };
 
       setUser(finalUser);
@@ -244,7 +299,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (e: any) {
       console.error("Login failed", e);
-      alert('Login failed. Please verify your Firestore rules are deployed.');
+      alert('Login failed. Please verify your Database rules are deployed.');
       return false;
     }
   };
@@ -284,9 +339,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setFavorites(next);
 
     if (user) {
-      const userRef = doc(db, 'users', user.username.toLowerCase());
       try {
-        await updateDoc(userRef, { favoriteGameIds: next });
+        await withFallback(
+          async () => {
+            const userRef = doc(db, 'users', user.username.toLowerCase());
+            await updateDoc(userRef, { favoriteGameIds: next });
+          },
+          async () => {
+            const { error } = await supabase.from('users').update({ favoriteGameIds: next }).eq('username', user.username.toLowerCase());
+            if (error) throw error;
+          },
+          { dualWrite: true }
+        );
       } catch (error) {
         handleFirestoreError(error, OperationType.UPDATE, `users/${user.username.toLowerCase()}`);
       }
@@ -300,9 +364,26 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const updateSettings = async (settings: UserSettings) => {
     if (!user) return;
     try {
-      const userRef = doc(db, 'users', user.username.toLowerCase());
-      await updateDoc(userRef, { settings });
+      await withFallback(
+        async () => {
+          const userRef = doc(db, 'users', user.username.toLowerCase());
+          await updateDoc(userRef, { settings });
+        },
+        async () => {
+          const { error } = await supabase.from('users').update({ settings }).eq('username', user.username.toLowerCase());
+          if (error) throw error;
+        },
+        { dualWrite: true }
+      );
       setUser({ ...user, settings });
+      
+      // Handle performance mode class
+      if (settings.performanceMode) {
+        document.body.classList.add('perf-mode');
+      } else {
+        document.body.classList.remove('perf-mode');
+      }
+
       if (settings.soundsEnabled) {
         // Optional: play a subtle click sound
       }
@@ -310,6 +391,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${user.username.toLowerCase()}`);
     }
   };
+
+  // On user change, sync body class
+  useEffect(() => {
+    if (user?.settings?.performanceMode) {
+      document.body.classList.add('perf-mode');
+    } else {
+      document.body.classList.remove('perf-mode');
+    }
+  }, [user?.settings?.performanceMode]);
 
   const addToHistory = async (gameId: string) => {
     // Local storage history always happens
@@ -319,8 +409,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     if (user) {
       try {
-        const userRef = doc(db, 'users', user.username.toLowerCase());
-        await updateDoc(userRef, { history: newHistory });
+        await withFallback(
+          async () => {
+            const userRef = doc(db, 'users', user.username.toLowerCase());
+            await updateDoc(userRef, { history: newHistory });
+          },
+          async () => {
+             const { error } = await supabase.from('users').update({ history: newHistory }).eq('username', user.username.toLowerCase());
+             if (error) throw error;
+          },
+          { dualWrite: true }
+        );
         setUser({ ...user, history: newHistory });
       } catch (error) {
         // Silent error for history
@@ -332,12 +431,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const updateAvatar = async (config: AvatarConfig & { photoURLOverride?: string }) => {
     if (!user) return;
     try {
-      const userRef = doc(db, 'users', user.username.toLowerCase());
       const newPhotoURL = config.photoURLOverride || `https://api.dicebear.com/7.x/${config.style}/svg?seed=${config.seed}${config.backgroundColor ? `&backgroundColor=${config.backgroundColor}` : ''}${config.rotate ? `&rotate=${config.rotate}` : ''}`;
-      await updateDoc(userRef, { 
-        avatarConfig: config,
-        photoURL: newPhotoURL
-      });
+      await withFallback(
+        async () => {
+          const userRef = doc(db, 'users', user.username.toLowerCase());
+          await updateDoc(userRef, { 
+            avatarConfig: config,
+            photoURL: newPhotoURL
+          });
+        },
+        async () => {
+          const { error } = await supabase.from('users').update({ 
+            avatarConfig: config,
+            photoURL: newPhotoURL
+          }).eq('username', user.username.toLowerCase());
+          if (error) throw error;
+        },
+        { dualWrite: true }
+      );
       setUser({ ...user, avatarConfig: config, photoURL: newPhotoURL });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${user.username.toLowerCase()}/avatar`);
@@ -347,8 +458,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const updateBio = async (bio: string) => {
     if (!user) return;
     try {
-      const userRef = doc(db, 'users', user.username.toLowerCase());
-      await updateDoc(userRef, { bio });
+      await withFallback(
+        async () => {
+          const userRef = doc(db, 'users', user.username.toLowerCase());
+          await updateDoc(userRef, { bio });
+        },
+        async () => {
+          const { error } = await supabase.from('users').update({ bio }).eq('username', user.username.toLowerCase());
+          if (error) throw error;
+        },
+        { dualWrite: true }
+      );
       setUser({ ...user, bio });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${user.username.toLowerCase()}/bio`);
@@ -357,10 +477,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const getPublicProfile = async (username: string) => {
     try {
-      const userRef = doc(db, 'users', username.toLowerCase());
-      const snap = await getDoc(userRef);
-      if (snap.exists()) {
-        const data = snap.data();
+      const data = await withFallback(
+        async () => {
+          const userRef = doc(db, 'users', username.toLowerCase());
+          const snap = await getDoc(userRef);
+          return snap.exists() ? snap.data() : null;
+        },
+        async () => {
+           const { data, error } = await supabase.from('users').select('*').eq('username', username.toLowerCase()).single();
+           if (error && error.code !== 'PGRST116') throw error;
+           return data;
+        }
+      );
+
+      if (data) {
         if (data.settings?.privateProfile) return null;
         
         return {
@@ -383,8 +513,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const syncTabs = async (tabs: { id: string; title: string; path: string; }[]) => {
     if (!user) return;
     try {
-      const userRef = doc(db, 'users', user.username.toLowerCase());
-      await updateDoc(userRef, { tabs });
+      await withFallback(
+        async () => {
+          const userRef = doc(db, 'users', user.username.toLowerCase());
+          await updateDoc(userRef, { tabs });
+        },
+        async () => {
+          const { error } = await supabase.from('users').update({ tabs }).eq('username', user.username.toLowerCase());
+          if (error) throw error;
+        },
+        { dualWrite: true }
+      );
       // We don't update local state here to avoid loops, OSShell handles its own state
     } catch (error) {
       console.error("Failed to sync tabs to cloud", error);

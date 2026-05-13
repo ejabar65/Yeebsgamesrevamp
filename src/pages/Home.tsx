@@ -9,14 +9,15 @@ import { MASCOT_URL } from '../constants';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { games } = useGames();
+  const { games, user } = useGames();
+  const isPerfMode = user?.settings?.performanceMode;
   const [recentIds, setRecentIds] = React.useState<string[]>([]);
   const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = React.useState(false);
   const mascotRef = React.useRef<HTMLDivElement>(null);
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (mascotRef.current) {
+    if (mascotRef.current && !isPerfMode) {
       const rect = mascotRef.current.getBoundingClientRect();
       setMousePos({
         x: e.clientX - rect.left,
@@ -41,41 +42,45 @@ export default function Home() {
         <motion.div 
           ref={mascotRef}
           initial={{ opacity: 0, scale: 0.9 }}
-          whileHover={{ scale: 1.05 }}
+          whileHover={isPerfMode ? undefined : { scale: 1.05 }}
           animate={{ opacity: 1, scale: 1 }}
           onMouseMove={handleMouseMove}
           onMouseEnter={() => setIsHovering(true)}
           onMouseLeave={() => setIsHovering(false)}
-          className="relative w-48 h-48 sm:w-64 sm:h-64 rounded-[3rem] overflow-hidden shrink-0 border border-white/5 shadow-2xl shadow-blue-500/20 group cursor-none"
+          className={`relative w-48 h-48 sm:w-64 sm:h-64 rounded-[3rem] overflow-hidden shrink-0 border border-white/5 shadow-2xl ${!isPerfMode ? 'shadow-blue-500/20 group cursor-none' : ''}`}
         >
-          {/* Grayscale Base */}
+          {/* Base Mascot */}
           <img 
             src={MASCOT_URL} 
             alt="Mascot" 
-            className="w-full h-full object-cover grayscale opacity-25 filter blur-[2px] scale-110 transition-all duration-700" 
+            className={`w-full h-full object-cover transition-all duration-700 ${!isPerfMode ? 'grayscale opacity-25 filter blur-[2px] scale-110' : ''}`} 
           />
           
           {/* Color Reveal Layer */}
-          <motion.div
-            className="absolute inset-0 pointer-events-none"
-            animate={{
-              clipPath: isHovering 
-                ? `circle(80px at ${mousePos.x}px ${mousePos.y}px)` 
-                : `circle(0px at ${mousePos.x}px ${mousePos.y}px)`
-            }}
-            transition={{ type: 'spring', damping: 30, stiffness: 250, mass: 0.5 }}
-          >
-            <img 
-              src={MASCOT_URL} 
-              alt="Mascot" 
-              className="w-full h-full object-cover scale-110" 
-            />
-          </motion.div>
+          {!isPerfMode && (
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              animate={{
+                clipPath: isHovering 
+                  ? `circle(80px at ${mousePos.x}px ${mousePos.y}px)` 
+                  : `circle(0px at ${mousePos.x}px ${mousePos.y}px)`
+              }}
+              transition={{ type: 'spring', damping: 30, stiffness: 250, mass: 0.5 }}
+            >
+              <img 
+                src={MASCOT_URL} 
+                alt="Mascot" 
+                className="w-full h-full object-cover scale-110" 
+              />
+            </motion.div>
+          )}
 
           {/* Glint Effect */}
-          <div 
-            className="absolute inset-0 pointer-events-none bg-linear-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"
-          />
+          {!isPerfMode && (
+            <div 
+              className="absolute inset-0 pointer-events-none bg-linear-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"
+            />
+          )}
         </motion.div>
         
         <div className="text-center lg:text-left space-y-4 max-w-2xl">

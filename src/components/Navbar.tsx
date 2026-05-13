@@ -4,6 +4,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 
+import { onSnapshotWithFallback } from '../lib/dbFallback';
+import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
+
 import { MASCOT_URL, CLOAK_OPTIONS } from '../constants';
 import { applyCloak, getSavedCloak } from '../cloakUtils';
 import { db, collection, query, orderBy, limit, onSnapshot } from '../lib/firebase';
@@ -19,19 +22,31 @@ export default function Navbar() {
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (user?.settings?.showChatPreview) {
-      const q = query(collection(db, 'global_messages'), orderBy('createdAt', 'desc'), limit(1));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-          const data = snapshot.docs[0].data();
-          // Don't show if user is on chat page
-          if (location.pathname === '/chat') return;
-          
-          setLatestMessage({ text: data.text, sender: data.senderName });
-          
-          if (timer) clearTimeout(timer);
-          timer = setTimeout(() => setLatestMessage(null), 5000);
-        }
-      });
+      const unsubscribe = onSnapshotWithFallback(
+        (onNext) => {
+          const q = query(collection(db, 'global_messages'), orderBy('createdAt', 'desc'), limit(1));
+          return onSnapshot(q, onNext, (err) => handleFirestoreError(err, OperationType.LIST, 'global_messages'));
+        },
+        async (onNext) => {
+          const { data, error } = await supabase.from('global_messages').select('*').order('createdAt', { ascending: false }).limit(1);
+          if (error) throw error;
+          if (data && data.length > 0) {
+            onNext({ docs: data.map(d => ({ data: () => d })) } as any);
+          }
+        },
+        (snapshot: any) => {
+          if (snapshot && !snapshot.empty && snapshot.docs.length > 0) {
+            const data = snapshot.docs[0].data();
+            if (location.pathname === '/chat') return;
+            
+            setLatestMessage({ text: data.text, sender: data.senderName });
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => setLatestMessage(null), 5000);
+          }
+        },
+        (error) => console.error("Chat preview fallback error", error),
+        60 * 1000 // Poll every minute for notifications if in fallback
+      );
       return () => {
         unsubscribe();
         if (timer) clearTimeout(timer);
@@ -83,6 +98,7 @@ export default function Navbar() {
   const navItems = [
     { name: 'Games', icon: Home, path: '/', sort: 'newest' },
     { name: 'Movies', icon: Film, path: '/movies' },
+    { name: 'Streaming', icon: Monitor, path: '/streaming' },
     { name: 'Chat', icon: MessageSquare, path: '/chat' },
     { name: 'Tutorials', icon: Monitor, path: '/tutorials' },
     { name: 'Reviews', icon: MessageSquare, path: '/reviews' },
@@ -270,7 +286,7 @@ export default function Navbar() {
                     key={item.name}
                     onClick={() => {
                       setIsMobileMenuOpen(false);
-                      if (['/chat', '/movies', '/admin', '/tutorials', '/reviews'].includes(item.path)) {
+                      if (['/chat', '/movies', '/streaming', '/admin', '/tutorials', '/reviews'].includes(item.path)) {
                         navigate(item.path);
                       } else {
                         handleNavClick(item.path, item.sort);

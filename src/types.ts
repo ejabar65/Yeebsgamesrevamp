@@ -4,6 +4,7 @@ export interface UserSettings {
   customTheme?: string;
   soundsEnabled?: boolean;
   privateProfile?: boolean;
+  performanceMode?: boolean;
 }
 
 export interface AvatarConfig {

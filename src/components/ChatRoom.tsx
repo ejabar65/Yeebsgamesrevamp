@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
+import { onSnapshotWithFallback, withFallback } from '../lib/dbFallback';
+import { supabase } from '../lib/supabase';
 import { 
   collection, 
   query, 
@@ -127,28 +129,48 @@ export const ChatRoom: React.FC<{
 
   useEffect(() => {
     const colPath = groupId ? `groups/${groupId}/messages` : 'global_messages';
-    const q = query(
-      collection(db, colPath),
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })).reverse();
-      setMessages(msgs);
-      setLoading(false);
-      
-      setTimeout(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    
+    const unsubscribe = onSnapshotWithFallback(
+      (next, err) => {
+        const q = query(
+          collection(db, colPath),
+          orderBy('createdAt', 'desc'),
+          limit(50)
+        );
+        return onSnapshot(q, next, err);
+      },
+      async (next) => {
+        let query = supabase.from(colPath === 'global_messages' ? 'global_messages' : 'group_messages')
+          .select('*')
+          .order('createdAt', { ascending: false })
+          .limit(50);
+        
+        if (groupId) {
+          query = query.eq('groupId', groupId);
         }
-      }, 100);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, colPath);
-    });
+
+        const { data, error } = await query;
+        if (error) throw error;
+        next({ docs: (data || []).map(d => ({ id: d.id, data: () => d })) } as any);
+      },
+      (snapshot: any) => {
+        const msgs = snapshot.docs.map((doc: any) => ({
+          id: doc.id,
+          ...doc.data()
+        })).reverse();
+        setMessages(msgs);
+        setLoading(false);
+        
+        setTimeout(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          }
+        }, 100);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, colPath);
+      }
+    );
 
     return () => unsubscribe();
   }, [groupId]);
@@ -169,25 +191,49 @@ export const ChatRoom: React.FC<{
     try {
       const censoredText = (filterEnabled && filter.isProfane(newMessage)) ? filter.clean(newMessage) : newMessage;
       const colPath = groupId ? `groups/${groupId}/messages` : 'global_messages';
+      const supabaseTable = colPath === 'global_messages' ? 'global_messages' : 'group_messages';
 
-      await addDoc(collection(db, colPath), {
+      const msgId = 'msg_' + Math.random().toString(36).substr(2, 9);
+      const msgData = {
+        id: msgId,
         text: gifUrl ? "" : censoredText,
         image: selectedImage,
         gif: gifUrl || null,
         senderId: user.uid,
         senderName: user.username,
         senderAvatar: user.photoURL,
-        createdAt: serverTimestamp()
-      });
+        groupId: groupId || null
+      };
 
-      const lowerUsername = user.username.toLowerCase();
-      const userRef = doc(db, 'users', lowerUsername);
-      await updateDoc(userRef, { lastMessageAt: serverTimestamp() });
+      await withFallback(
+        async () => {
+          await addDoc(collection(db, colPath), {
+            ...msgData,
+            createdAt: serverTimestamp()
+          });
+          
+          const lowerUsername = user.username.toLowerCase();
+          const userRef = doc(db, 'users', lowerUsername);
+          await updateDoc(userRef, { lastMessageAt: serverTimestamp() });
+        },
+        async () => {
+          const { error } = await supabase.from(supabaseTable).insert([{
+            ...msgData,
+            createdAt: new Date().toISOString()
+          }]);
+          if (error) throw error;
+          
+          await supabase.from('users').update({ 
+            lastMessageAt: new Date().toISOString() 
+          }).eq('username', user.username.toLowerCase());
+        },
+        { dualWrite: true }
+      );
       
       setNewMessage('');
       setSelectedImage(null);
     } catch (error) {
-       handleFirestoreError(error, OperationType.WRITE, 'global_messages');
+       handleFirestoreError(error, OperationType.WRITE, 'messages');
     }
   };
 
@@ -228,10 +274,21 @@ export const ChatRoom: React.FC<{
   const handleUpdateSetting = async (key: string, value: boolean) => {
     if (!groupId || !onUpdateSettings) return;
     try {
-      const groupRef = doc(db, 'groups', groupId);
       const newSettings = { ...settings, [key]: value };
-      await updateDoc(groupRef, { settings: newSettings });
-      onUpdateSettings(newSettings);
+      
+      await withFallback(
+        async () => {
+          const groupRef = doc(db, 'groups', groupId);
+          await updateDoc(groupRef, { settings: newSettings });
+        },
+        async () => {
+          const { error } = await supabase.from('groups').update({ settings: newSettings }).eq('id', groupId);
+          if (error) throw error;
+        },
+        { dualWrite: true }
+      );
+      
+      if (onUpdateSettings) onUpdateSettings(newSettings);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `groups/${groupId}`);
     }
