@@ -59,9 +59,9 @@ export default function UserPresence({ username }: { username: string }) {
   }, [username]);
 
   return (
-    <div className={`w-2.5 h-2.5 rounded-full border-2 border-[#0c0c0c] shrink-0 transition-all duration-500 scale-110 ${
-      status === 'online' ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' :
-      status === 'away' ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]' : 'bg-gray-800'
-    }`} title={`${username} is ${status}`} />
+    <div className={`w-2 h-2 rounded-full border border-black shrink-0 ${
+      status === 'online' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' :
+      status === 'away' ? 'bg-yellow-500' : 'bg-gray-800'
+    }`} title={status} />
   );
 }

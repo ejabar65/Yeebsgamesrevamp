@@ -160,28 +160,6 @@ export const ChatRoom: React.FC<{
         })).reverse();
         setMessages(msgs);
         setLoading(false);
-
-        // Background Data Transfer (Sync missing messages to Supabase)
-        if (supabase.from && msgs.length > 0 && user) {
-          const syncMsgs = async () => {
-            const batch = msgs.filter(m => m.senderId === user.uid).slice(-5);
-            const table = colPath === 'global_messages' ? 'global_messages' : 'group_messages';
-            for (const m of batch) {
-              await supabase.from(table).upsert([{
-                id: m.id,
-                text: m.text,
-                image: m.image,
-                gif: m.gif,
-                senderId: m.senderId,
-                senderName: m.senderName,
-                senderAvatar: m.senderAvatar,
-                groupId: groupId || null,
-                createdAt: m.createdAt?.toDate?.()?.toISOString() || m.createdAt
-              }]);
-            }
-          };
-          syncMsgs().catch(() => {});
-        }
         
         setTimeout(() => {
           if (scrollRef.current) {
@@ -191,10 +169,7 @@ export const ChatRoom: React.FC<{
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, colPath);
-      },
-      2000,
-      colPath === 'global_messages' ? 'global_messages' : 'group_messages',
-      groupId ? `groupId=eq.${groupId}` : undefined
+      }
     );
 
     return () => unsubscribe();
@@ -806,10 +781,10 @@ export const ChatRoom: React.FC<{
                   <div className="flex items-center gap-2 mb-1.5 px-1 flex-wrap">
                     <Link 
                       to={`/profile/${msg.senderName.toLowerCase()}`}
-                      className={`text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center gap-2 ${ADMIN_LIST.includes(msg.senderName.toLowerCase()) ? 'text-blue-500' : MOD_LIST.includes(msg.senderName.toLowerCase()) ? 'text-yellow-500' : 'text-gray-600 hover:text-gray-400'}`}
+                      className={`text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center gap-1.5 ${ADMIN_LIST.includes(msg.senderName.toLowerCase()) ? 'text-blue-500' : MOD_LIST.includes(msg.senderName.toLowerCase()) ? 'text-yellow-500' : 'text-gray-600 hover:text-gray-400'}`}
                     >
                       <UserPresence username={msg.senderName} />
-                      <span>{msg.senderName}</span>
+                      {msg.senderName}
                       {ADMIN_LIST.includes(msg.senderName.toLowerCase()) && <CheckCircle2 className="w-2.5 h-2.5" />}
                       {MOD_LIST.includes(msg.senderName.toLowerCase()) && <Star className="w-2.5 h-2.5 fill-current" />}
                     </Link>

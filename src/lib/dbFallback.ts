@@ -48,72 +48,59 @@ export async function withFallback<T>(
 }
 
 /**
- * A real-time fallback that switches to Supabase Realtime if Firebase hits quota.
+ * A simplified real-time fallback that switches to Supabase polling if Firebase hits quota.
  */
 export function onSnapshotWithFallback<T>(
   onSnapshotFn: (onNext: (data: T) => void, onError: (error: any) => void) => () => void,
   supabasePollFn: (onNext: (data: T) => void) => Promise<void>,
   onNext: (data: T) => void,
   onError: (error: any) => void,
-  pollInterval = 3000,
-  supabaseTable?: string,
-  filter?: string
+  pollInterval = 10000
 ): () => void {
   let unsub: (() => void) | null = null;
   let interval: any = null;
-  let channel: any = null;
   let isFallbackActive = false;
 
   const startFallback = () => {
     if (isFallbackActive) return;
     isFallbackActive = true;
-    console.warn(`Starting Supabase fallback for ${supabaseTable || 'general table'}...`);
+    console.warn('Starting Supabase polling fallback...');
     
     // Initial fetch
-    supabasePollFn(onNext).catch(e => console.error('Fallback initial failed', e));
+    supabasePollFn(onNext).catch(e => console.error('Fallback poll initial failed', e));
     
-    // Try Supabase Realtime if table is provided
-    if (supabaseTable && isSupabaseConfigured()) {
-      import('./supabase').then(({ supabase }) => {
-        channel = supabase
-          .channel(`public:${supabaseTable}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table: supabaseTable, filter }, () => {
-            console.log('Supabase Realtime event, refreshing...');
-            supabasePollFn(onNext).catch(e => console.error('Realtime refresh failed', e));
-          })
-          .subscribe();
-      });
-    } else {
-      // Fallback to polling if no table/realtime
-      interval = setInterval(() => {
-        supabasePollFn(onNext).catch(e => console.error('Fallback poll failed', e));
-      }, pollInterval);
-    }
-
-    // Every minute, try to reconnect to Firebase
-    const reconnectInterval = setInterval(() => {
-      console.log('Attempting to reconnect to Firebase...');
-      let tempUnsub: (() => void) | null = null;
-      tempUnsub = onSnapshotFn(
-        (data) => {
-          console.log('Firebase reconnected successfully!');
-          onNext(data);
-          isFallbackActive = false;
-          if (interval) clearInterval(interval);
-          if (channel) channel.unsubscribe();
-          if (unsub) unsub();
-          clearInterval(reconnectInterval);
-          unsub = tempUnsub;
-        },
-        (error) => {
-          if (isQuotaError(error)) {
-            if (tempUnsub) tempUnsub();
-          } else {
-            onError(error);
+    let reconnectCounter = 0;
+    // Set up interval
+    interval = setInterval(() => {
+      // Every 6 polls (approx 1 min at 10s interval), try to reconnect to Firebase
+      reconnectCounter++;
+      if (reconnectCounter >= 6) {
+        reconnectCounter = 0;
+        console.log('Attempting to reconnect to Firebase...');
+        
+        let tempUnsub: (() => void) | null = null;
+        tempUnsub = onSnapshotFn(
+          (data) => {
+            console.log('Firebase reconnected successfully!');
+            onNext(data);
+            isFallbackActive = false;
+            if (interval) clearInterval(interval);
+            if (unsub) unsub();
+            unsub = tempUnsub;
+          },
+          (error) => {
+            if (isQuotaError(error)) {
+              console.log('Firebase still on quota, staying on fallback...');
+              if (tempUnsub) tempUnsub();
+            } else {
+              onError(error);
+            }
           }
-        }
-      );
-    }, 60000);
+        );
+      }
+
+      supabasePollFn(onNext).catch(e => console.error('Fallback poll failed', e));
+    }, pollInterval);
   };
 
   const startFirebase = () => {
@@ -121,6 +108,7 @@ export function onSnapshotWithFallback<T>(
       (data) => onNext(data),
       (error) => {
         if (isQuotaError(error) && isSupabaseConfigured()) {
+          onError(error); // Still inform the UI of the error
           startFallback();
         } else {
           onError(error);
@@ -134,6 +122,5 @@ export function onSnapshotWithFallback<T>(
   return () => {
     if (unsub) unsub();
     if (interval) clearInterval(interval);
-    if (channel) channel.unsubscribe();
   };
 }

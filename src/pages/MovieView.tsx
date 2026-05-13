@@ -60,8 +60,8 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
   useEffect(() => {
     const loadMedia = async () => {
       setLoading(true);
-      try {
-        if (type === 'custom') {
+      if (type === 'custom') {
+        try {
           const docSnap = await getDoc(doc(db, 'custom_movies', id!));
           if (docSnap.exists()) {
             const data = docSnap.data();
@@ -75,15 +75,14 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
               isCustom: true
             });
           }
-        } else {
-          const data = await movieService.getDetails(id!, type as any);
-          setMedia(data);
+        } catch (error) {
+          console.error(error);
         }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
+      } else {
+        const data = await movieService.getDetails(id!, type as any);
+        setMedia(data);
       }
+      setLoading(false);
     };
     loadMedia();
     window.scrollTo(0, 0);

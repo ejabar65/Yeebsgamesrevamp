@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, LogOut, Package, Heart, History, Trash2, Settings as SettingsIcon, Layout, MessageCircle, Palette, Save, CheckCircle2, Zap, Shield, Globe, ExternalLink, Search } from 'lucide-react';
+import { User, LogOut, Package, Heart, History, Trash2, Settings as SettingsIcon, Layout, MessageCircle, Palette, Save, CheckCircle2, Zap, Shield, Globe, ExternalLink } from 'lucide-react';
 import { auth, signOut } from '../lib/firebase';
 import { useNavigate, Link, useParams, useLocation } from 'react-router-dom';
 import GameCard from '../components/GameCard';
 import Login from '../components/Login';
-import AvatarSearchModal from '../components/AvatarSearchModal';
 import { CLOAK_OPTIONS } from '../constants';
 import { applyCloak, getSavedCloak, launchAboutBlank } from '../cloakUtils';
 
@@ -87,7 +86,6 @@ export default function Profile() {
   });
 
   const [useCustomUrl, setUseCustomUrl] = useState(!!currentUser?.photoURL && !currentUser?.photoURL.includes('dicebear'));
-  const [showSearchModal, setShowSearchModal] = useState(false);
 
   const previewUrl = useCustomUrl 
     ? (avatarForm.customUrl || currentUser?.photoURL || '') 
@@ -368,13 +366,6 @@ export default function Profile() {
                   >
                     Custom URL
                   </button>
-                  <button 
-                    onClick={() => setShowSearchModal(true)}
-                    className="flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white border border-blue-500/20 flex items-center justify-center gap-2"
-                  >
-                    <Search className="w-3 h-3" />
-                    <span>Search</span>
-                  </button>
                 </div>
 
                 {!useCustomUrl ? (
@@ -646,18 +637,6 @@ export default function Profile() {
                </button>
             </div>
           </motion.section>
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {showSearchModal && (
-          <AvatarSearchModal 
-            onSelect={(url) => {
-              setAvatarForm({ ...avatarForm, customUrl: url });
-              setUseCustomUrl(true);
-              setShowSearchModal(false);
-            }}
-            onClose={() => setShowSearchModal(false)}
-          />
         )}
       </AnimatePresence>
     </div>
