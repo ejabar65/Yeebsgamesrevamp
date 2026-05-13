@@ -22,8 +22,9 @@ import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Filter } from 'bad-words';
-import { Image as ImageIcon, Send, X, User, Bell, Film, Phone, Video, VideoOff, Mic, MicOff } from 'lucide-react';
+import { MapPin, Image as ImageIcon, Send, X, User, Bell, Film, Phone, Video, VideoOff, Mic, MicOff, Clock } from 'lucide-react';
 import { GifPicker } from './GifPicker';
+import UserPresence from './UserPresence';
 
 const filter = new Filter();
 
@@ -158,20 +159,24 @@ export const DirectMessages: React.FC = () => {
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, 'chats');
-      }
+      },
+      3000,
+      'chats'
     );
 
     return () => unsubscribe();
   }, [user]);
 
   useEffect(() => {
-    if (!activeChat) {
+    if (!activeChat || !user) {
       setMessages([]);
       return;
     }
 
     const messagesQuery = query(
-      collection(db, 'chats', activeChat.id, 'messages')
+      collection(db, 'chats', activeChat.id, 'messages'),
+      orderBy('createdAt', 'desc'),
+      limit(50)
     );
 
     const unsubscribe = onSnapshotWithFallback(
@@ -179,7 +184,9 @@ export const DirectMessages: React.FC = () => {
       async (next) => {
         const { data, error } = await supabase.from('direct_messages')
           .select('*')
-          .eq('chatId', activeChat.id);
+          .eq('chatId', activeChat.id)
+          .order('createdAt', { ascending: false })
+          .limit(50);
         
         if (error) throw error;
         next({ docs: (data || []).map(d => ({ id: d.id, data: () => d })) } as any);
@@ -188,13 +195,28 @@ export const DirectMessages: React.FC = () => {
         const msgs = snapshot.docs.map((doc: any) => ({
           id: doc.id,
           ...doc.data()
-        })).sort((a: any, b: any) => {
-          const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
-          const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
-          return timeA - timeB;
-        });
+        })).reverse();
         setMessages(msgs);
         
+        // Background Data Transfer (Sync missing messages to Supabase)
+        if (isSupabaseConfigured() && msgs.length > 0) {
+          const syncMsgs = async () => {
+            const batch = msgs.filter(m => m.senderId === user.username.toLowerCase()).slice(-10);
+            for (const m of batch) {
+              await supabase.from('direct_messages').upsert([{
+                id: m.id,
+                chatId: activeChat.id,
+                text: m.text,
+                image: m.image,
+                gif: m.gif,
+                senderId: m.senderId,
+                createdAt: m.createdAt?.toDate?.()?.toISOString() || m.createdAt
+              }]);
+            }
+          };
+          syncMsgs().catch(() => {});
+        }
+
         setTimeout(() => {
           if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -203,11 +225,14 @@ export const DirectMessages: React.FC = () => {
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, `chats/${activeChat.id}/messages`);
-      }
+      },
+      2000,
+      'direct_messages',
+      `chatId=eq.${activeChat.id}`
     );
 
     return () => unsubscribe();
-  }, [activeChat]);
+  }, [activeChat, user]);
 
   useEffect(() => {
     if (!activeChat || !user) return;
@@ -617,8 +642,13 @@ export const DirectMessages: React.FC = () => {
                 onClick={() => setActiveChat(chat)}
                 className={`w-full p-4 flex items-center gap-3 rounded-xl transition-all duration-200 group ${isActive ? 'bg-blue-500/10 border border-blue-500/20' : 'hover:bg-white/5 border border-transparent'}`}
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm ${isActive ? 'bg-blue-500 text-white' : 'bg-white/5 text-gray-500'}`}>
-                  {recipient?.[0]?.toUpperCase()}
+                <div className="relative">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm ${isActive ? 'bg-blue-500 text-white' : 'bg-white/5 text-gray-500'}`}>
+                    {recipient?.[0]?.toUpperCase()}
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 scale-75">
+                    <UserPresence username={recipient || ''} />
+                  </div>
                 </div>
                 <div className="flex-1 min-w-0 text-left">
                   <div className="flex justify-between items-center">
@@ -651,8 +681,13 @@ export const DirectMessages: React.FC = () => {
                   <X className="w-5 h-5" />
                 </button>
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 font-bold text-sm md:text-lg shrink-0">
-                    {activeChat.participants.find((p: string) => p !== user.username.toLowerCase())?.[0]?.toUpperCase()}
+                   <div className="relative">
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 font-bold text-sm md:text-lg shrink-0">
+                      {activeChat.participants.find((p: string) => p !== user.username.toLowerCase())?.[0]?.toUpperCase()}
+                    </div>
+                    <div className="absolute -bottom-0.5 -right-0.5">
+                      <UserPresence username={activeChat.participants.find((p: string) => p !== user.username.toLowerCase()) || ''} />
+                    </div>
                   </div>
                   <div className="min-w-0">
                     <Link 
@@ -661,7 +696,9 @@ export const DirectMessages: React.FC = () => {
                     >
                       {activeChat.participants.find((p: string) => p !== user.username.toLowerCase())}
                     </Link>
-                    <p className="text-[8px] md:text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5 truncate">Private Chat</p>
+                    <div className="flex items-center gap-2">
+                       <p className="text-[8px] md:text-[9px] font-bold text-blue-500 uppercase tracking-widest italic">Private Chat</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -758,7 +795,7 @@ export const DirectMessages: React.FC = () => {
                       key={`${msg.id}-${i}`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                      className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}
                     >
                       <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm shadow-lg relative ${isOwn ? 'bg-blue-500 text-white font-medium rounded-tr-none' : 'bg-white/5 text-gray-200 border border-white/10 rounded-tl-none'}`}>
                         {msg.image && (
@@ -773,6 +810,14 @@ export const DirectMessages: React.FC = () => {
                         )}
                         <p>{msg.text}</p>
                       </div>
+                      {msg.createdAt && (
+                        <div className="flex items-center gap-1 mt-1 px-1">
+                          <Clock className="w-2.5 h-2.5 text-gray-700" />
+                          <span className="text-[9px] font-bold text-gray-700 uppercase tracking-widest">
+                            {new Date(msg.createdAt?.toDate?.() || msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      )}
                     </motion.div>
                   );
                 })}

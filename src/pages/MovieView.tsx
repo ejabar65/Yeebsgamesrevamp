@@ -60,8 +60,8 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
   useEffect(() => {
     const loadMedia = async () => {
       setLoading(true);
-      if (type === 'custom') {
-        try {
+      try {
+        if (type === 'custom') {
           const docSnap = await getDoc(doc(db, 'custom_movies', id!));
           if (docSnap.exists()) {
             const data = docSnap.data();
@@ -75,14 +75,15 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
               isCustom: true
             });
           }
-        } catch (error) {
-          console.error(error);
+        } else {
+          const data = await movieService.getDetails(id!, type as any);
+          setMedia(data);
         }
-      } else {
-        const data = await movieService.getDetails(id!, type as any);
-        setMedia(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     loadMedia();
     window.scrollTo(0, 0);
@@ -161,7 +162,7 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
           <p className="text-[10px] uppercase font-black tracking-widest text-gray-400">The requested media is currently out of orbital range.</p>
         </div>
         <button 
-          onClick={() => navigate('/movies')}
+          onClick={() => navigate(-1)}
           className="px-12 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white hover:bg-white/10 transition-all"
         >
           Return to Cinema
@@ -209,7 +210,7 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
       {/* Floating Header */}
       <header className="fixed top-0 inset-x-0 h-16 sm:h-24 flex items-center justify-between px-4 sm:px-10 z-50 backdrop-blur-md border-b border-white/5 bg-black/20">
         <button 
-          onClick={() => navigate('/movies')}
+          onClick={() => navigate(-1)}
           className="flex items-center gap-3 group"
         >
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">

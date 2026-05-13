@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import GameGrid from '../components/GameGrid';
 import { useNavigate } from 'react-router-dom';
 import { useGames } from '../context/GameContext';
-import { Film, MessageSquare, Users, Shield, Globe, ExternalLink } from 'lucide-react';
+import { Film, MessageSquare, Users, Shield, Globe, ExternalLink, Monitor } from 'lucide-react';
 import { launchAboutBlank } from '../cloakUtils';
 import { MASCOT_URL } from '../constants';
 
@@ -94,42 +94,43 @@ export default function Home() {
         </div>
       </div>
       
-      {/* Quick Launch */}
-      {recentGames.length > 0 && (
-        <div className="space-y-6">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-500/80">Recents</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {recentGames.slice(0, 6).map((game) => (
-              <motion.button
-                key={game.id}
-                whileHover={{ y: -2 }}
-                onClick={() => navigate(`/game/${game.id}`)}
-                className="card-subtle p-3 flex flex-col items-start gap-3 text-left group"
-              >
-                <div className="w-full aspect-video rounded-lg overflow-hidden bg-white/[0.02] border border-white/5">
-                  <img src={game.thumbnail} alt="" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />
-                </div>
-                <div className="w-full px-1">
-                  <h3 className="font-bold text-xs truncate w-full text-gray-300 group-hover:text-white transition-colors">{game.name}</h3>
-                  <p className="text-[9px] text-gray-600 uppercase font-bold tracking-widest mt-0.5">Play Now</p>
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Main Grid */}
+      {/* Quick Launch & Content */}
       <div className="space-y-8">
-        <div className="flex items-center justify-between border-b border-white/5 pb-4">
-          <h2 className="text-xl font-bold tracking-tight text-white">All Games</h2>
-          <div className="flex items-center gap-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-            <button className="hover:text-white transition-colors">All</button>
-            <button className="hover:text-white transition-colors">Categories</button>
+        {recentGames.length > 0 && (
+          <div className="space-y-6">
+            <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-500/80">Recents</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {recentGames.slice(0, 8).map((game) => (
+                <motion.button
+                  key={game.id}
+                  whileHover={{ y: -2 }}
+                  onClick={() => navigate(`/game/${game.id}`)}
+                  className="card-subtle p-3 flex flex-col items-start gap-3 text-left group"
+                >
+                  <div className="w-full aspect-video rounded-lg overflow-hidden bg-white/[0.02] border border-white/5">
+                    <img src={game.thumbnail} alt="" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />
+                  </div>
+                  <div className="w-full px-1">
+                    <h3 className="font-bold text-xs truncate w-full text-gray-300 group-hover:text-white transition-colors">{game.name}</h3>
+                    <p className="text-[9px] text-gray-600 uppercase font-bold tracking-widest mt-0.5">Play Now</p>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
           </div>
+        )}
+
+        <div className="space-y-8">
+          <div className="flex items-center justify-between border-b border-white/5 pb-4">
+            <h2 className="text-xl font-bold tracking-tight text-white">All Games</h2>
+            <div className="flex items-center gap-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              <button className="hover:text-white transition-colors">All</button>
+              <button className="hover:text-white transition-colors">Categories</button>
+            </div>
+          </div>
+          
+          <GameGrid />
         </div>
-        
-        <GameGrid />
       </div>
 
       {/* Minimal Footer CTA */}

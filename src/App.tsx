@@ -14,11 +14,9 @@ import Community from './pages/Community';
 import Chat from './pages/Chat';
 import Movies from './pages/Movies';
 import MovieView from './pages/MovieView';
-import Tutorials from './pages/Tutorials';
-import Reviews from './pages/Reviews';
+import VideoPortal from './pages/VideoPortal';
 import Legal from './pages/Legal';
 import Updates from './pages/Updates';
-import VideoPortal from './pages/VideoPortal';
 import { GameProvider } from './context/GameContext';
 import { applyCloak, getSavedCloak } from './cloakUtils';
 import { useGames } from './context/GameContext';
@@ -83,8 +81,6 @@ export default function App() {
               <Route path="/chat" element={<Chat />} />
               <Route path="/movies" element={<Movies />} />
               <Route path="/streaming" element={<VideoPortal />} />
-              <Route path="/tutorials" element={<Tutorials />} />
-              <Route path="/reviews" element={<Reviews />} />
               <Route path="/legal" element={<Legal />} />
               <Route path="/updates" element={<Updates />} />
               <Route path="/media/:type/:id" element={<MovieView />} />

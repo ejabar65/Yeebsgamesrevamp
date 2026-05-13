@@ -98,11 +98,8 @@ export default function Navbar() {
 
   const navItems = [
     { name: 'Games', icon: Home, path: '/', sort: 'newest' },
-    { name: 'Movies', icon: Film, path: '/movies' },
     { name: 'Streaming', icon: Monitor, path: '/streaming' },
     { name: 'Chat', icon: MessageSquare, path: '/chat' },
-    { name: 'Tutorials', icon: Monitor, path: '/tutorials' },
-    { name: 'Reviews', icon: MessageSquare, path: '/reviews' },
     ...(user?.isAdmin || user?.isMod ? [{ name: 'Admin', icon: Shield, path: '/admin' }] : []),
   ];
 
@@ -152,7 +149,7 @@ export default function Navbar() {
           <button
             key={item.name}
             onClick={() => {
-              if (['/chat', '/movies', '/admin', '/tutorials', '/reviews'].includes(item.path)) {
+              if (['/chat', '/movies', '/streaming', '/admin'].includes(item.path)) {
                 navigate(item.path);
               } else {
                 handleNavClick(item.path, item.sort);
@@ -287,7 +284,7 @@ export default function Navbar() {
                     key={item.name}
                     onClick={() => {
                       setIsMobileMenuOpen(false);
-                      if (['/chat', '/movies', '/streaming', '/admin', '/tutorials', '/reviews'].includes(item.path)) {
+                      if (['/chat', '/movies', '/streaming', '/admin'].includes(item.path)) {
                         navigate(item.path);
                       } else {
                         handleNavClick(item.path, item.sort);
