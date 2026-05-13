@@ -161,7 +161,7 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
           <p className="text-[10px] uppercase font-black tracking-widest text-gray-400">The requested media is currently out of orbital range.</p>
         </div>
         <button 
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/movies')}
           className="px-12 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white hover:bg-white/10 transition-all"
         >
           Return to Cinema
@@ -209,7 +209,7 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
       {/* Floating Header */}
       <header className="fixed top-0 inset-x-0 h-16 sm:h-24 flex items-center justify-between px-4 sm:px-10 z-50 backdrop-blur-md border-b border-white/5 bg-black/20">
         <button 
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/movies')}
           className="flex items-center gap-3 group"
         >
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
@@ -375,6 +375,7 @@ export default function MovieView({ typeOverride }: { typeOverride?: 'movie' | '
                className="w-full h-full"
                allowFullScreen
                allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope; clipboard-write; payment; geolocation"
+               sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation"
                referrerPolicy="no-referrer"
                title="Archive Playback"
              />

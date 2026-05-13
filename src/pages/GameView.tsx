@@ -84,6 +84,8 @@ export default function GameView() {
               src={!game.htmlBlock ? (game.url || undefined) : undefined}
               className="w-full h-full border-0"
               allowFullScreen
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope; clipboard-write; payment; geolocation"
+              sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation"
               title={game.title}
             />
           </div>

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Bug, Search, Trophy, TrendingUp, Home, LogIn, LogOut, User as UserIcon, X, Shield, Zap, MessageSquare, ChevronDown, Monitor, Users, Film } from 'lucide-react';
+import { Bug, Search, Home, LogIn, LogOut, User as UserIcon, X, Shield, MessageSquare, ChevronDown, Monitor } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGames } from '../context/GameContext';
 import { motion, AnimatePresence } from 'motion/react';
 
+import { supabase } from '../lib/supabase';
 import { onSnapshotWithFallback } from '../lib/dbFallback';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
-import { supabase } from '../lib/supabase';
 
 import { MASCOT_URL, CLOAK_OPTIONS } from '../constants';
 import { applyCloak, getSavedCloak } from '../cloakUtils';
@@ -149,7 +149,7 @@ export default function Navbar() {
           <button
             key={item.name}
             onClick={() => {
-              if (['/chat', '/movies', '/streaming', '/admin'].includes(item.path)) {
+              if (['/chat', '/streaming', '/admin'].includes(item.path)) {
                 navigate(item.path);
               } else {
                 handleNavClick(item.path, item.sort);
@@ -284,7 +284,7 @@ export default function Navbar() {
                     key={item.name}
                     onClick={() => {
                       setIsMobileMenuOpen(false);
-                      if (['/chat', '/movies', '/streaming', '/admin'].includes(item.path)) {
+                      if (['/chat', '/streaming', '/admin'].includes(item.path)) {
                         navigate(item.path);
                       } else {
                         handleNavClick(item.path, item.sort);

@@ -14,15 +14,18 @@ import Community from './pages/Community';
 import Chat from './pages/Chat';
 import Movies from './pages/Movies';
 import MovieView from './pages/MovieView';
-import VideoPortal from './pages/VideoPortal';
+import Tutorials from './pages/Tutorials';
+import Reviews from './pages/Reviews';
 import Legal from './pages/Legal';
 import Updates from './pages/Updates';
+import VideoPortal from './pages/VideoPortal';
 import { GameProvider } from './context/GameContext';
 import { applyCloak, getSavedCloak } from './cloakUtils';
 import { useGames } from './context/GameContext';
 
 import OSShell from './components/OSShell';
 import { MiniChat } from './components/MiniChat';
+import MusicPlayer from './components/MusicPlayer';
 import MultiplayerManager from './components/MultiplayerManager';
 
 function ThemeWrapper({ children }: { children: React.ReactNode }) {
@@ -81,6 +84,8 @@ export default function App() {
               <Route path="/chat" element={<Chat />} />
               <Route path="/movies" element={<Movies />} />
               <Route path="/streaming" element={<VideoPortal />} />
+              <Route path="/tutorials" element={<Tutorials />} />
+              <Route path="/reviews" element={<Reviews />} />
               <Route path="/legal" element={<Legal />} />
               <Route path="/updates" element={<Updates />} />
               <Route path="/media/:type/:id" element={<MovieView />} />
@@ -93,6 +98,7 @@ export default function App() {
               <Route path="/profile/:username" element={<Profile />} />
             </Routes>
             <MiniChat />
+            <MusicPlayer />
             <MultiplayerManager />
           </OSShell>
         </ThemeWrapper>
