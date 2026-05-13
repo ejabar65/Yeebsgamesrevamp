@@ -1,53 +1,66 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, Music, ListMusic, X, Minimize2, Search, Loader2, Plus } from 'lucide-react';
+import { 
+  Play, Pause, SkipBack, SkipForward, Volume2, Music, ListMusic, 
+  X, Minimize2, Search, Loader2, Plus, Shuffle, Repeat, Repeat1, 
+  Trash2
+} from 'lucide-react';
 import YouTube, { YouTubeProps } from 'react-youtube';
+import { musicService, MusicTrack } from '../services/musicService';
 
-interface Track {
-  id: string;
-  title: string;
-  artist: string;
-  videoId: string;
-  cover: string;
-}
+type RepeatMode = 'none' | 'all' | 'one';
 
-const DEFAULT_PLAYLIST: Track[] = [
+const DEFAULT_PLAYLIST: MusicTrack[] = [
   {
-    id: '1',
+    id: 'hSfM9T4fN1E',
+    title: 'Sweater Weather',
+    artist: 'The Neighbourhood',
+    videoId: 'hSfM9T4fN1E',
+    cover: 'https://img.youtube.com/vi/hSfM9T4fN1E/hqdefault.jpg'
+  },
+  {
+    id: 'jfKfPfyJRdk',
     title: 'Lofi Girl - Chill Beats',
     artist: 'Lofi Records',
     videoId: 'jfKfPfyJRdk',
-    cover: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=300&h=300&fit=crop'
+    cover: 'https://img.youtube.com/vi/jfKfPfyJRdk/hqdefault.jpg'
   },
   {
-    id: '2',
+    id: '4xDzrJKXOOY',
     title: 'Synthwave Radio',
     artist: 'Nightride FM',
     videoId: '4xDzrJKXOOY',
-    cover: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop'
+    cover: 'https://img.youtube.com/vi/4xDzrJKXOOY/hqdefault.jpg'
   },
   {
-    id: '3',
+    id: 'O9YhYInuY3w',
     title: 'Cyberpunk Mix 2077',
     artist: 'Infraction',
     videoId: 'O9YhYInuY3w',
-    cover: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&h=300&fit=crop'
+    cover: 'https://img.youtube.com/vi/O9YhYInuY3w/hqdefault.jpg'
   }
 ];
 
 export default function MusicPlayer() {
-  const [playlist, setPlaylist] = useState<Track[]>(DEFAULT_PLAYLIST);
+  const [playlist, setPlaylist] = useState<MusicTrack[]>(() => {
+    const saved = localStorage.getItem('yeebsgames_playlist');
+    return saved ? JSON.parse(saved) : DEFAULT_PLAYLIST;
+  });
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [isMinimized, setIsMinimized] = useState(true);
-  const [showPlaylist, setShowPlaylist] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
   const [volume, setVolume] = useState(50);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('all');
+  const [isShuffle, setIsShuffle] = useState(false);
   
   // Search state
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Track[]>([]);
+  const [searchResults, setSearchResults] = useState<MusicTrack[]>([]);
   const [showSearch, setShowSearch] = useState(false);
 
   const playerRef = useRef<any>(null);
@@ -55,32 +68,36 @@ export default function MusicPlayer() {
 
   const currentTrack = playlist[currentTrackIndex];
 
+  // Save playlist to localStorage
+  useEffect(() => {
+    localStorage.setItem('yeebsgames_playlist', JSON.stringify(playlist));
+  }, [playlist]);
+
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!searchQuery.trim()) return;
 
+    // Check if it's a direct YouTube URL or ID
+    const ytIdMatch = searchQuery.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+    const videoId = ytIdMatch ? ytIdMatch[1] : (searchQuery.length === 11 && !searchQuery.includes(' ') ? searchQuery : null);
+
+    if (videoId) {
+      const track: MusicTrack = {
+        id: videoId,
+        videoId: videoId,
+        title: 'Imported Track',
+        artist: 'YouTube',
+        cover: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+      };
+      addToPlaylist(track);
+      setSearchQuery('');
+      setShowSearch(false);
+      return;
+    }
+
     setIsSearching(true);
     try {
-      const apiKey = "AIzaSyBUOinM4-wQ1dI2axGQgwfh5iFGAV5OIso";
-
-      const response = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=5&q=${encodeURIComponent(searchQuery)}&type=video&videoEmbeddable=true&key=${apiKey}`
-      );
-      
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error.message);
-      }
-
-      const results: Track[] = data.items.map((item: any) => ({
-        id: item.id.videoId,
-        title: item.snippet.title,
-        artist: item.snippet.channelTitle,
-        videoId: item.id.videoId,
-        cover: item.snippet.thumbnails.high.url
-      }));
-
+      const results = await musicService.searchMusic(searchQuery);
       setSearchResults(results);
     } catch (error) {
       console.error("Search failed:", error);
@@ -89,26 +106,33 @@ export default function MusicPlayer() {
     }
   };
 
-  const addToPlaylist = (track: Track) => {
-    setPlaylist(prev => [...prev, { ...track, id: `${track.id}-${Date.now()}` }]); // Ensure unique IDs for duplicate additions
-    setShowSearch(false);
-    setSearchQuery('');
-    setSearchResults([]);
+  const addToPlaylist = (track: MusicTrack) => {
+    setPlaylist(prev => {
+      if (prev.find(t => t.videoId === track.videoId)) return prev;
+      return [...prev, track];
+    });
+    if (playlist.length === 0) setCurrentTrackIndex(0);
   };
 
-  const removeFromPlaylist = (index: number) => {
-    if (playlist.length <= 1) return; // Keep at least one track
-    const newPlaylist = [...playlist];
-    newPlaylist.splice(index, 1);
+  const removeFromPlaylist = (id: string) => {
+    if (playlist.length <= 1) return;
+    const newPlaylist = playlist.filter(t => t.id !== id);
+    const removedIndex = playlist.findIndex(t => t.id === id);
     
-    // If we removed the current track, adjust index
-    if (index === currentTrackIndex) {
+    if (removedIndex === currentTrackIndex) {
       setCurrentTrackIndex(prev => Math.min(prev, newPlaylist.length - 1));
-    } else if (index < currentTrackIndex) {
+    } else if (removedIndex < currentTrackIndex) {
       setCurrentTrackIndex(prev => prev - 1);
     }
     
     setPlaylist(newPlaylist);
+  };
+
+  const clearPlaylist = () => {
+    if (confirm("Clear all songs from queue?")) {
+      setPlaylist(DEFAULT_PLAYLIST);
+      setCurrentTrackIndex(0);
+    }
   };
 
   useEffect(() => {
@@ -117,73 +141,90 @@ export default function MusicPlayer() {
     }
   }, [volume]);
 
+  const updateProgress = useCallback(() => {
+    if (playerRef.current && isPlaying) {
+      const time = playerRef.current.getCurrentTime();
+      const dur = playerRef.current.getDuration();
+      setCurrentTime(time);
+      setDuration(dur);
+      if (dur > 0) {
+        setProgress((time / dur) * 100);
+      }
+    }
+  }, [isPlaying]);
+
   useEffect(() => {
     if (isPlaying) {
-      progressInterval.current = setInterval(() => {
-        if (playerRef.current) {
-          const currentTime = playerRef.current.getCurrentTime();
-          const duration = playerRef.current.getDuration();
-          if (duration > 0) {
-            setProgress((currentTime / duration) * 100);
-          }
-        }
-      }, 1000);
+      progressInterval.current = setInterval(updateProgress, 1000);
     } else {
       if (progressInterval.current) clearInterval(progressInterval.current);
     }
-
     return () => {
       if (progressInterval.current) clearInterval(progressInterval.current);
     };
-  }, [isPlaying]);
+  }, [isPlaying, updateProgress]);
+
+  const handleNext = useCallback(() => {
+    if (isShuffle) {
+      const nextIndex = Math.floor(Math.random() * playlist.length);
+      setCurrentTrackIndex(nextIndex);
+    } else {
+      setCurrentTrackIndex((prev) => (prev + 1) % playlist.length);
+    }
+    setIsPlaying(true);
+  }, [playlist.length, isShuffle]);
+
+  const handlePrev = () => {
+    setCurrentTrackIndex((prev) => (prev - 1 + playlist.length) % playlist.length);
+    setIsPlaying(true);
+  };
 
   const togglePlay = () => {
     if (playerRef.current) {
-      try {
-        if (isPlaying) {
-          playerRef.current.pauseVideo();
-        } else {
-          playerRef.current.playVideo();
-        }
-        setIsPlaying(!isPlaying);
-      } catch (err) {
-        console.error("Player toggle failed:", err);
-        // Fallback: just toggle state, player might catch up
-        setIsPlaying(!isPlaying);
+      if (isPlaying) {
+        playerRef.current.pauseVideo();
+      } else {
+        playerRef.current.playVideo();
       }
+      setIsPlaying(!isPlaying);
     } else {
-      // If player not ready, at least set state so it plays onReady
       setIsPlaying(!isPlaying);
     }
   };
 
-  const handleNext = useCallback(() => {
-    setCurrentTrackIndex((prev) => (prev + 1) % playlist.length);
-  }, [playlist.length]);
-
-  const handlePrev = () => {
-    setCurrentTrackIndex((prev) => (prev - 1 + playlist.length) % playlist.length);
-  };
-
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const seekTo = (parseFloat(e.target.value) / 100) * (playerRef.current?.getDuration() || 0);
+    const seekTo = (parseFloat(e.target.value) / 100) * duration;
     if (playerRef.current) {
       playerRef.current.seekTo(seekTo, true);
+      setProgress(parseFloat(e.target.value));
     }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const onReady = (event: any) => {
     playerRef.current = event.target;
     playerRef.current.setVolume(volume);
-    if (isPlaying) {
-      playerRef.current.playVideo();
-    }
+    if (isPlaying) playerRef.current.playVideo();
   };
 
   const onStateChange = (event: any) => {
     if (event.data === 1) setIsPlaying(true);
     if (event.data === 2) setIsPlaying(false);
-    if (event.data === 0) handleNext();
+    if (event.data === 0) {
+      if (repeatMode === 'one') {
+        playerRef.current.seekTo(0);
+        playerRef.current.playVideo();
+      } else if (repeatMode === 'all' || currentTrackIndex < playlist.length - 1) {
+        handleNext();
+      } else {
+        setIsPlaying(false);
+      }
+    }
   };
 
   const opts: YouTubeProps['opts'] = {
@@ -194,7 +235,6 @@ export default function MusicPlayer() {
       controls: 0,
       modestbranding: 1,
       rel: 0,
-      showinfo: 0,
       iv_load_policy: 3,
       enablejsapi: 1,
       origin: typeof window !== 'undefined' ? window.location.origin : undefined
@@ -203,11 +243,10 @@ export default function MusicPlayer() {
 
   return (
     <div className="fixed bottom-20 right-6 z-50">
-      {/* Invisible YouTube Player */}
+      {/* Background Player */}
       <div 
-        className="fixed bottom-4 left-4 w-10 h-10 overflow-hidden pointer-events-none opacity-[0.01] bg-black rounded-full" 
+        className="fixed bottom-4 left-4 w-32 h-32 overflow-hidden pointer-events-none opacity-[0.01] bg-black rounded-full" 
         style={{ zIndex: -100 }}
-        aria-hidden="true"
       >
         {currentTrack && (
           <YouTube 
@@ -215,12 +254,38 @@ export default function MusicPlayer() {
             opts={opts} 
             onReady={onReady} 
             onStateChange={onStateChange}
-            onEnd={handleNext}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
+            onError={(e) => console.error("YT Player Error:", e)}
           />
         )}
       </div>
+
+      {/* Audio Interaction Overlay (Common for browser autoplay blocks) */}
+      <AnimatePresence>
+        {isPlaying && currentTime === 0 && duration > 0 && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none"
+          >
+            <div className="bg-black/90 p-8 rounded-[3rem] border border-white/10 text-center space-y-4 pointer-events-auto">
+              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto animate-bounce">
+                <Music className="w-8 h-8 text-white" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-xl font-bold text-white">Audio Blocked by Browser</h3>
+                <p className="text-sm text-gray-500">Tap anywhere to resume playback</p>
+              </div>
+              <button 
+                onClick={() => {
+                  if (playerRef.current) playerRef.current.playVideo();
+                }}
+                className="w-full py-4 bg-white text-black font-black uppercase tracking-widest rounded-2xl"
+              >
+                Enable Sound
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {!isMinimized ? (
@@ -228,23 +293,23 @@ export default function MusicPlayer() {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="w-80 glass rounded-3xl border border-white/10 p-6 shadow-2xl relative overflow-hidden bg-black/80 backdrop-blur-xl"
+            className="w-80 glass rounded-[2.5rem] border border-white/5 p-6 shadow-2xl relative overflow-hidden bg-black/90 backdrop-blur-2xl"
           >
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-2">
-                <Music className="w-4 h-4 text-blue-500" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Media System v2.0</span>
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Music Core High-Res</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1">
                 <button 
                   onClick={() => setShowSearch(!showSearch)}
-                  className={`p-1.5 rounded-lg transition-colors ${showSearch ? 'bg-blue-500 text-white' : 'hover:bg-white/10 text-gray-500'}`}
+                  className={`p-1.5 rounded-lg transition-colors ${showSearch ? 'bg-blue-500 text-white' : 'hover:bg-white/5 text-gray-500'}`}
                 >
                   <Search className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => setIsMinimized(true)}
-                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-gray-500"
+                  className="p-1.5 hover:bg-white/5 rounded-lg transition-colors text-gray-500"
                 >
                   <Minimize2 className="w-4 h-4" />
                 </button>
@@ -253,206 +318,178 @@ export default function MusicPlayer() {
 
             <AnimatePresence mode="wait">
               {showSearch ? (
-                <motion.div
-                  key="search"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-4"
-                >
+                <motion.div key="search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4 h-[380px] flex flex-col">
                   <form onSubmit={handleSearch} className="relative">
                     <input
                       type="text"
-                      placeholder="Search songs or artists..."
+                      placeholder="Search tracks or paste YouTube link..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-gray-600 outline-none focus:border-blue-500/50 transition-all font-medium"
                     />
-                    <button 
-                      type="submit"
-                      disabled={isSearching}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-                    >
+                    <button type="submit" disabled={isSearching} className="absolute right-3 top-1/2 -translate-y-1/2">
                       {isSearching ? <Loader2 className="w-4 h-4 text-blue-500 animate-spin" /> : <Search className="w-4 h-4 text-gray-500" />}
                     </button>
                   </form>
 
-                  <div className="max-h-[300px] overflow-y-auto scrollbar-none space-y-2">
+                  <div className="flex-1 overflow-y-auto scrollbar-none space-y-2 pr-1">
                     {searchResults.map((track) => (
-                      <div key={track.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 group border border-transparent hover:border-white/5 transition-all">
-                        <img src={track.cover} className="w-10 h-10 rounded-lg object-cover" alt="" />
+                      <div key={track.id} className="flex items-center gap-3 p-2 rounded-2xl hover:bg-white/5 group transition-all border border-transparent hover:border-white/5">
+                        <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0">
+                          <img src={track.cover} className="w-full h-full object-cover" alt="" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <Plus className="w-5 h-5 text-white" />
+                          </div>
+                        </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-white truncate">{track.title}</p>
-                          <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest truncate">{track.artist}</p>
+                          <p className="text-[10px] text-gray-500 font-medium truncate uppercase tracking-wider">{track.artist}</p>
                         </div>
-                        <button 
-                          onClick={() => addToPlaylist(track)}
-                          className="p-2 bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-black rounded-lg transition-all"
-                        >
+                        <button onClick={() => addToPlaylist(track)} className="p-2.5 bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-black rounded-xl transition-all">
                           <Plus className="w-4 h-4" />
                         </button>
                       </div>
                     ))}
-                    {searchResults.length === 0 && !isSearching && (
-                      <div className="py-10 text-center opacity-40">
-                        <Music className="w-8 h-8 mx-auto mb-2" />
-                        <p className="text-[10px] font-black uppercase tracking-widest">Search for anything</p>
+                    {!isSearching && searchResults.length === 0 && (
+                      <div className="flex flex-col items-center justify-center h-full opacity-20 text-center">
+                        <Music className="w-12 h-12 mb-4" />
+                        <p className="text-xs font-black uppercase tracking-widest leading-relaxed">Search High Fidelity Audio<br/>AI-Powered Retrieval</p>
                       </div>
                     )}
                   </div>
+                  <button onClick={() => setShowSearch(false)} className="text-[10px] font-black uppercase text-gray-500 tracking-widest py-2 hover:text-white transition-all">Back to Player</button>
                 </motion.div>
               ) : (
-                <motion.div
-                  key="player"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                >
-                  <div className="flex flex-col items-center mb-6">
+                <motion.div key="player" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <div className="relative flex flex-col items-center mb-8">
                     <motion.div 
                       key={currentTrack?.id}
-                      initial={{ opacity: 0, rotate: -10 }}
-                      animate={{ opacity: 1, rotate: 0 }}
-                      className="w-48 h-48 rounded-2xl overflow-hidden shadow-2xl mb-4 border border-white/5"
+                      animate={isPlaying ? { rotate: 360 } : {}}
+                      transition={isPlaying ? { repeat: Infinity, duration: 8, ease: "linear" } : {}}
+                      className="relative w-48 h-48 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-4 border-white/5 overflow-hidden"
                     >
                       <img src={currentTrack?.cover} alt={currentTrack?.title} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/10 rounded-full border-[1.5rem] border-black/40 pointer-events-none" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-[#0a0a0a] border border-white/10" />
+                      </div>
                     </motion.div>
-                    <h3 className="text-xl font-black uppercase tracking-tighter text-white truncate w-full text-center">{currentTrack?.title}</h3>
-                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-1 italic">{currentTrack?.artist}</p>
+                    <div className="text-center mt-6 space-y-1 w-full px-2">
+                      <h3 className="text-xl font-black uppercase tracking-tighter text-white truncate drop-shadow-lg">{currentTrack?.title}</h3>
+                      <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] italic">{currentTrack?.artist}</p>
+                    </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="relative group">
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={progress}
-                        onChange={handleSeek}
-                        className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-blue-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
-                      />
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <div className="relative group p-1">
+                        <input type="range" min="0" max="100" value={progress} onChange={handleSeek} className="w-full h-1 bg-white/5 rounded-full appearance-none cursor-pointer accent-blue-500 hover:h-2 transition-all" />
+                      </div>
+                      <div className="flex justify-between text-[9px] font-black text-gray-500 uppercase tracking-widest font-mono">
+                        <span>{formatTime(currentTime)}</span>
+                        <span>{formatTime(duration)}</span>
+                      </div>
                     </div>
 
-                    <div className="flex justify-between items-center px-4">
-                      <button onClick={handlePrev} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white">
-                        <SkipBack className="w-5 h-5 fill-current" />
+                    <div className="flex justify-between items-center px-2">
+                      <button onClick={() => setIsShuffle(!isShuffle)} className={`p-2 transition-all ${isShuffle ? 'text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 hover:text-white'}`}>
+                        <Shuffle className="w-4 h-4" />
                       </button>
-                      <button 
-                        onClick={togglePlay}
-                        className="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all"
-                      >
-                        {isPlaying ? <Pause className="w-6 h-6 text-black fill-black" /> : <Play className="w-6 h-6 text-black fill-black ml-1" />}
-                      </button>
-                      <button onClick={handleNext} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white">
-                        <SkipForward className="w-5 h-5 fill-current" />
+                      <div className="flex items-center gap-4">
+                        <button onClick={handlePrev} className="p-3 hover:bg-white/5 rounded-full transition-all text-white"><SkipBack className="w-6 h-6 fill-current" /></button>
+                        <button onClick={togglePlay} className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all">
+                          {isPlaying ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current ml-1" />}
+                        </button>
+                        <button onClick={handleNext} className="p-3 hover:bg-white/5 rounded-full transition-all text-white"><SkipForward className="w-6 h-6 fill-current" /></button>
+                      </div>
+                      <button onClick={() => setRepeatMode(prev => prev === 'none' ? 'all' : prev === 'all' ? 'one' : 'none')} className={`p-2 transition-all ${repeatMode !== 'none' ? 'text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 hover:text-white'}`}>
+                        {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
                       </button>
                     </div>
 
                     <div className="flex items-center gap-3 px-2">
-                      <Volume2 className="w-4 h-4 text-gray-500" />
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        step="1"
-                        value={volume}
-                        onChange={(e) => setVolume(parseInt(e.target.value))}
-                        className="flex-1 h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-blue-500"
-                      />
+                      <Volume2 className="w-4 h-4 text-gray-600" />
+                      <input type="range" min="0" max="100" step="1" value={volume} onChange={(e) => setVolume(parseInt(e.target.value))} className="flex-1 h-1 bg-white/5 rounded-full appearance-none cursor-pointer accent-white" />
                     </div>
                   </div>
 
-                  <button 
-                    onClick={() => setShowPlaylist(!showPlaylist)}
-                    className="mt-6 w-full py-3 rounded-xl border border-white/5 hover:bg-white/5 transition-all flex items-center justify-center gap-2 text-gray-400"
-                  >
-                    <ListMusic className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Queue List ({playlist.length})</span>
+                  <button onClick={() => setShowQueue(!showQueue)} className="mt-8 w-full py-4 rounded-3xl bg-white/[0.03] border border-white/5 hover:bg-white/5 transition-all flex items-center justify-center gap-3 group">
+                    <ListMusic className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">View Audio Queue</span>
                   </button>
                 </motion.div>
               )}
             </AnimatePresence>
 
             <AnimatePresence>
-              {showPlaylist && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  className="absolute inset-x-6 top-24 bottom-24 bg-black rounded-2xl border border-white/10 overflow-hidden flex flex-col z-10"
-                >
-                  <div className="p-4 border-b border-white/5 flex justify-between items-center bg-zinc-900">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white">Playlist</span>
-                    <button onClick={() => setShowPlaylist(false)}><X className="w-4 h-4 text-gray-500" /></button>
+              {showQueue && (
+                <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 30 }} className="absolute inset-0 bg-[#0a0a0a] z-50 flex flex-col p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Audio Stream</span>
+                      <span className="text-sm font-bold text-white italic uppercase">Queue Management</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={clearPlaylist} className="p-2 hover:bg-red-500/20 text-red-500 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => setShowQueue(false)} className="p-2 hover:bg-white/5 text-gray-500 rounded-lg"><X className="w-4 h-4" /></button>
+                    </div>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-2 scrollbar-none">
-                    {playlist.map((track, index) => (
-                      <div key={track.id + index} className="group/item relative">
-                        <button
-                          onClick={() => {
-                            setCurrentTrackIndex(index);
-                            setIsPlaying(true);
-                            setShowPlaylist(false);
-                          }}
-                          className={`w-full p-3 rounded-xl flex items-center gap-3 transition-colors ${index === currentTrackIndex ? 'bg-blue-500/20' : 'hover:bg-white/5'}`}
-                        >
-                          <img src={track.cover} className="w-10 h-10 rounded-lg object-cover" alt="" />
-                          <div className="flex flex-col items-start min-w-0 flex-1">
-                            <span className={`text-xs font-bold truncate w-full flex-1 ${index === currentTrackIndex ? 'text-blue-500' : 'text-white'}`}>{track.title}</span>
-                            <span className="text-[9px] text-gray-500 uppercase font-black truncate w-full text-left">{track.artist}</span>
+                  <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-none">
+                    {playlist.map((track, idx) => (
+                      <div key={track.id + idx} className="flex items-center gap-3 p-2.5 rounded-2xl group transition-all relative overflow-hidden">
+                        {idx === currentTrackIndex && <div className="absolute inset-0 bg-blue-500/10 -z-10" />}
+                        <button onClick={() => { setCurrentTrackIndex(idx); setIsPlaying(true); setShowQueue(false); }} className="flex-1 flex items-center gap-3 min-w-0">
+                          <div className="relative w-10 h-10 rounded-xl overflow-hidden shrink-0">
+                            <img src={track.cover} className="w-full h-full object-cover" alt="" />
+                            {idx === currentTrackIndex && isPlaying && (
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <div className="flex items-end gap-[2px] h-3">
+                                  <motion.div animate={{ height: [4, 10, 4] }} transition={{ repeat: Infinity, duration: 0.5 }} className="w-[2px] bg-blue-500 rounded-full" />
+                                  <motion.div animate={{ height: [10, 4, 10] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-[2px] bg-blue-500 rounded-full" />
+                                  <motion.div animate={{ height: [6, 12, 6] }} transition={{ repeat: Infinity, duration: 0.4 }} className="w-[2px] bg-blue-500 rounded-full" />
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          {index === currentTrackIndex && isPlaying && (
-                            <div className="flex items-end gap-[2px] h-3 shrink-0">
-                              <motion.div animate={{ height: [2, 8, 4] }} transition={{ repeat: Infinity, duration: 0.5 }} className="w-[2px] bg-blue-500 rounded-full" />
-                              <motion.div animate={{ height: [8, 2, 6] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-[2px] bg-blue-500 rounded-full" />
-                              <motion.div animate={{ height: [4, 6, 2] }} transition={{ repeat: Infinity, duration: 0.4 }} className="w-[2px] bg-blue-500 rounded-full" />
-                            </div>
-                          )}
+                          <div className="flex-1 min-w-0 text-left">
+                            <p className={`text-xs font-bold truncate ${idx === currentTrackIndex ? 'text-blue-500' : 'text-white'}`}>{track.title}</p>
+                            <p className="text-[9px] text-gray-600 font-black uppercase tracking-widest truncate">{track.artist}</p>
+                          </div>
                         </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeFromPlaylist(index);
-                          }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 opacity-0 group-hover/item:opacity-100 hover:bg-red-500/20 hover:text-red-500 text-gray-500 rounded-lg transition-all"
-                          title="Remove from playlist"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                        <button onClick={() => removeFromPlaylist(track.id)} className="p-2 opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     ))}
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl -z-10 rounded-full" />
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 blur-3xl -z-10 rounded-full transition-colors" />
           </motion.div>
         ) : (
           <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+            whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}
             onClick={() => setIsMinimized(false)}
-            className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center shadow-2xl relative group"
+            className="w-16 h-16 rounded-[1.5rem] glass border border-white/10 flex items-center justify-center shadow-2xl relative group overflow-hidden"
           >
             {isPlaying && (
               <motion.div 
-                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="absolute inset-0 rounded-full bg-blue-500 -z-10"
+                animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+                className="absolute inset-[10%] rounded-full border-2 border-blue-500/20 border-dashed"
               />
             )}
-            <div className="flex items-end gap-[2px] h-4">
-              <motion.div animate={{ height: isPlaying ? [4, 12, 6, 16, 4] : 4 }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-[3px] bg-black rounded-full" />
-              <motion.div animate={{ height: isPlaying ? [16, 4, 12, 6, 16] : 8 }} transition={{ repeat: Infinity, duration: 1.0 }} className="w-[3px] bg-black rounded-full" />
-              <motion.div animate={{ height: isPlaying ? [6, 16, 4, 12, 6] : 4 }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-[3px] bg-black rounded-full" />
-              <motion.div animate={{ height: isPlaying ? [12, 6, 16, 4, 12] : 10 }} transition={{ repeat: Infinity, duration: 1.2 }} className="w-[3px] bg-black rounded-full" />
-            </div>
-            
-            {/* Tooltip on hover minimized */}
-            <div className="absolute right-full mr-4 bg-black/90 px-3 py-1.5 rounded-lg border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-              <p className="text-[9px] font-black uppercase tracking-widest text-blue-500">{isPlaying ? 'Now Playing' : 'Music Player'}</p>
-              <p className="text-xs font-bold text-white max-w-[120px] truncate">{currentTrack?.title || 'No track'}</p>
+            <Music className={`w-6 h-6 transition-all ${isPlaying ? 'text-blue-500 scale-110 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'text-gray-500'}`} />
+            <div className="absolute right-full mr-4 bg-black/95 px-4 py-2 rounded-2xl border border-white/5 opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap shadow-2xl translate-x-2 group-hover:translate-x-0">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/10">
+                  <img src={currentTrack?.cover} className="w-full h-full object-cover" alt="" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{isPlaying ? 'Streaming Active' : 'System Idle'}</span>
+                  <p className="text-xs font-bold text-white max-w-[150px] truncate">{currentTrack?.title}</p>
+                </div>
+              </div>
             </div>
           </motion.button>
         )}

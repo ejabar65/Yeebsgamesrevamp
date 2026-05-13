@@ -36,9 +36,9 @@ export default function Home() {
     .filter((g): g is any => !!g);
 
   return (
-    <div className="flex flex-col gap-16 font-sans">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 items-center lg:items-center py-8 lg:py-16">
+    <div className="flex flex-col gap-16 font-sans overflow-x-hidden">
+      {/* Header - Fixed to screen vibe */}
+      <div className="relative flex flex-col lg:flex-row gap-8 lg:gap-16 items-center lg:items-center py-8 lg:py-16 bg-linear-to-b from-blue-500/5 to-transparent rounded-[4rem] px-8">
         <motion.div 
           ref={mascotRef}
           initial={{ opacity: 0, scale: 0.9 }}
@@ -62,7 +62,7 @@ export default function Home() {
               className="absolute inset-0 pointer-events-none"
               animate={{
                 clipPath: isHovering 
-                  ? `circle(80px at ${mousePos.x}px ${mousePos.y}px)` 
+                  ? `circle(35px at ${mousePos.x}px ${mousePos.y}px)` 
                   : `circle(0px at ${mousePos.x}px ${mousePos.y}px)`
               }}
               transition={{ type: 'spring', damping: 30, stiffness: 250, mass: 0.5 }}
