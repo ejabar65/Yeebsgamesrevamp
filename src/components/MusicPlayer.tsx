@@ -203,16 +203,10 @@ export default function MusicPlayer() {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0.2, scale: 0.8 }}
-      animate={{ 
-        opacity: (!isMinimized || isHovered) ? 1 : 0.15,
-        scale: (!isMinimized || isHovered) ? 1 : 0.8,
-        x: (!isMinimized || isHovered) ? 0 : 20
-      }}
+    <div 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="fixed bottom-20 right-6 z-[102]"
+      className={`fixed bottom-20 right-6 z-[102] transition-all duration-500 ${(!isMinimized || isHovered) ? 'opacity-100 scale-100 translate-x-0' : 'opacity-10 scale-90 translate-x-4'}`}
     >
       {/* Invisible YouTube Player */}
       <div 
@@ -468,6 +462,6 @@ export default function MusicPlayer() {
           </motion.button>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }

@@ -15,16 +15,10 @@ export const MiniChat: React.FC = () => {
   if (location.pathname === '/chat') return null;
 
   return (
-    <motion.div 
-      initial={{ opacity: 0.2, scale: 0.8 }}
-      animate={{ 
-        opacity: (isOpen || isHovered) ? 1 : 0.15,
-        scale: (isOpen || isHovered) ? 1 : 0.8,
-        x: (isOpen || isHovered) ? 0 : 20
-      }}
+    <div 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="fixed bottom-8 right-8 z-[100] font-sans"
+      className={`fixed bottom-8 right-8 z-[100] font-sans transition-all duration-500 ${(isOpen || isHovered) ? 'opacity-100 scale-100 translate-x-0' : 'opacity-10 scale-90 translate-x-4'}`}
     >
       <AnimatePresence>
         {isOpen && (
@@ -98,6 +92,6 @@ export const MiniChat: React.FC = () => {
           )}
         </AnimatePresence>
       </motion.button>
-    </motion.div>
+    </div>
   );
 };
