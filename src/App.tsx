@@ -48,6 +48,16 @@ export default function App() {
     const saved = getSavedCloak();
     applyCloak(saved);
 
+    // Panic Button Listener
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const panicKey = localStorage.getItem('yeebsgames_panic_key') || '`';
+      const panicUrl = localStorage.getItem('yeebsgames_panic_url') || 'https://classroom.google.com';
+      
+      if (e.key === panicKey) {
+        window.location.href = panicUrl;
+      }
+    };
+
     // Tab Blur Cloaking (Optional enhancement)
     const handleBlur = () => {
        const saved = getSavedCloak();
@@ -56,9 +66,11 @@ export default function App() {
        }
     };
 
+    window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('blur', handleBlur);
     
     return () => {
+      window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('blur', handleBlur);
     };
   }, []);

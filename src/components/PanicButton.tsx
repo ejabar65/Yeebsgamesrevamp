@@ -24,10 +24,16 @@ export default function PanicButton() {
   };
 
   return (
-    <div 
+    <motion.div 
+      initial={{ opacity: 0.2, scale: 0.8 }}
+      animate={{ 
+        opacity: isHovered ? 1 : 0.1,
+        scale: isHovered ? 1 : 0.8,
+        x: isHovered ? 0 : 20
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`fixed bottom-6 right-6 z-[101] transition-all duration-500 ${isHovered ? 'opacity-100 scale-100 translate-x-0' : 'opacity-10 scale-90 translate-x-4'}`}
+      className="fixed bottom-6 right-6 z-[101]"
     >
       <motion.button
         whileHover={{ scale: 1.1 }}
@@ -41,6 +47,6 @@ export default function PanicButton() {
           Panic Button (Esc)
         </span>
       </motion.button>
-    </div>
+    </motion.div>
   );
 }

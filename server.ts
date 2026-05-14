@@ -6,8 +6,16 @@ import fs from 'fs';
 import cors from 'cors';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import fetch from 'node-fetch';
 
 dotenv.config();
+
+console.log('[System] Environment variables loaded:', {
+  hasCloudflareToken: !!process.env.CLOUDFLARE_TOKEN,
+  hasZoneId: !!process.env.ZONE_ID,
+  hasMainUrl: !!process.env.MAIN_HOSTING_URL,
+  mainUrl: process.env.MAIN_HOSTING_URL
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
