@@ -6,8 +6,16 @@ import fs from 'fs';
 import cors from 'cors';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import fetch from 'node-fetch';
 
 dotenv.config();
+
+console.log('[System] Environment variables loaded:', {
+  hasCloudflareToken: !!process.env.CLOUDFLARE_TOKEN,
+  hasZoneId: !!process.env.ZONE_ID,
+  hasMainUrl: !!process.env.MAIN_HOSTING_URL,
+  mainUrl: process.env.MAIN_HOSTING_URL
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -147,8 +155,16 @@ async function startServer() {
     const zoneId = process.env.ZONE_ID;
     const mainUrl = process.env.MAIN_HOSTING_URL;
 
+    console.log('[Admin] Mirror creation request received');
+    console.log('[Admin] Config check:', { 
+      hasToken: !!token, 
+      hasZoneId: !!zoneId, 
+      hasMainUrl: !!mainUrl,
+      mainUrl 
+    });
+
     if (!token || !zoneId || !mainUrl) {
-      return res.status(500).json({ error: 'Cloudflare configuration missing' });
+      return res.status(500).json({ error: `Cloudflare configuration missing. Token: ${!!token}, Zone: ${!!zoneId}, URL: ${!!mainUrl}` });
     }
 
     const subdomains: string[] = [];
@@ -160,6 +176,7 @@ async function startServer() {
     const results = [];
     for (const sub of subdomains) {
       try {
+        console.log(`[Admin] Registering subdomain: ${sub}`);
         const response = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`, {
           method: 'POST',
           headers: {
@@ -174,9 +191,17 @@ async function startServer() {
             proxied: true
           })
         });
+        
         const result: any = await response.json();
+        console.log(`[Admin] Cloudflare response for ${sub}:`, { status: response.status, success: result.success });
+        
+        if (!result.success) {
+          console.error(`[Admin] Cloudflare errors for ${sub}:`, result.errors);
+        }
+        
         results.push({ subdomain: sub, success: result.success, errors: result.errors });
       } catch (e) {
+        console.error(`[Admin] Fetch error for ${sub}:`, e);
         results.push({ subdomain: sub, success: false, error: String(e) });
       }
     }

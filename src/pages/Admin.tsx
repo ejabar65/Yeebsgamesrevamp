@@ -60,7 +60,8 @@ export default function Admin() {
         setStatus({ type: 'error', message: data.error || 'Failed to generate mirrors' });
       }
     } catch (err) {
-      setStatus({ type: 'error', message: 'Network error during mirror generation' });
+      console.error('Mirror generation failed:', err);
+      setStatus({ type: 'error', message: `Network error: ${err instanceof Error ? err.message : String(err)}` });
     }
     setLoading(false);
   };
