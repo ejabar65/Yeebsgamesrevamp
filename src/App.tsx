@@ -27,6 +27,7 @@ import OSShell from './components/OSShell';
 import { MiniChat } from './components/MiniChat';
 import MusicPlayer from './components/MusicPlayer';
 import MultiplayerManager from './components/MultiplayerManager';
+import PanicButton from './components/PanicButton';
 
 function ThemeWrapper({ children }: { children: React.ReactNode }) {
   const { user } = useGames();
@@ -100,6 +101,7 @@ export default function App() {
             <MiniChat />
             <MusicPlayer />
             <MultiplayerManager />
+            <PanicButton />
           </OSShell>
         </ThemeWrapper>
       </GameProvider>

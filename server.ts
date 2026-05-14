@@ -4,6 +4,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import cors from 'cors';
+import crypto from 'crypto';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -131,6 +135,53 @@ async function startServer() {
     } catch (error) {
       res.status(500).json({ status: 'Degraded', error: 'TMDB Unreachable' });
     }
+  });
+
+  app.post('/api/admin/generate-mirrors', async (req, res) => {
+    const { password } = req.body;
+    if (password !== '$#GS29gs67') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const token = process.env.CLOUDFLARE_TOKEN;
+    const zoneId = process.env.ZONE_ID;
+    const mainUrl = process.env.MAIN_HOSTING_URL;
+
+    if (!token || !zoneId || !mainUrl) {
+      return res.status(500).json({ error: 'Cloudflare configuration missing' });
+    }
+
+    const subdomains: string[] = [];
+    while (subdomains.length < 5) { // Generating 5 for quick UI feedback, workflow does 50
+      const str = crypto.randomBytes(3).toString('hex');
+      if (!subdomains.includes(str)) subdomains.push(str);
+    }
+
+    const results = [];
+    for (const sub of subdomains) {
+      try {
+        const response = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            type: 'CNAME',
+            name: sub,
+            content: mainUrl,
+            ttl: 1,
+            proxied: true
+          })
+        });
+        const result: any = await response.json();
+        results.push({ subdomain: sub, success: result.success, errors: result.errors });
+      } catch (e) {
+        results.push({ subdomain: sub, success: false, error: String(e) });
+      }
+    }
+
+    res.json({ success: true, results, mainUrl });
   });
 
   app.get('/api/games', (req, res) => {

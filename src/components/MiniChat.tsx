@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 
 export const MiniChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -14,7 +15,17 @@ export const MiniChat: React.FC = () => {
   if (location.pathname === '/chat') return null;
 
   return (
-    <div className="fixed bottom-8 right-8 z-[100] font-sans">
+    <motion.div 
+      initial={{ opacity: 0.2, scale: 0.8 }}
+      animate={{ 
+        opacity: (isOpen || isHovered) ? 1 : 0.15,
+        scale: (isOpen || isHovered) ? 1 : 0.8,
+        x: (isOpen || isHovered) ? 0 : 20
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="fixed bottom-8 right-8 z-[100] font-sans"
+    >
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -87,6 +98,6 @@ export const MiniChat: React.FC = () => {
           )}
         </AnimatePresence>
       </motion.button>
-    </div>
+    </motion.div>
   );
 };

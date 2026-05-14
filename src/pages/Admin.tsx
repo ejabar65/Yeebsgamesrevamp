@@ -7,12 +7,14 @@ import { useGames } from '../context/GameContext';
 import { db, collection, getDocs, doc, updateDoc, deleteDoc, query, limit, setDoc } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 
+import { migrateFirebaseToSupabase } from '../lib/migrateService';
+
 export default function Admin() {
   const { games, refreshGames, user, authLoading, setSearchQuery, setSortBy } = useGames();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'games' | 'users' | 'cinema'>('games');
+  const [activeTab, setActiveTab] = useState<'games' | 'users' | 'cinema' | 'system'>('games');
   const [users, setUsers] = useState<any[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -25,6 +27,43 @@ export default function Admin() {
     thumbnail: '',
     type: 'movie' as 'movie' | 'tv' | 'outside'
   });
+  const [migrationResults, setMigrationResults] = useState<any>(null);
+
+  const handleMigration = async () => {
+    if (!confirm('This will transfer all data from Firebase to Supabase. This may take a moment. Continue?')) return;
+    setLoading(true);
+    try {
+      const results = await migrateFirebaseToSupabase();
+      setMigrationResults(results);
+      setStatus({ type: 'success', message: 'Migration completed successfully!' });
+    } catch (error) {
+      console.error(error);
+      setStatus({ type: 'error', message: 'Migration failed. See console.' });
+    }
+    setLoading(false);
+  };
+
+  const handleGenerateMirrors = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/admin/generate-mirrors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: '$#GS29gs67' })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setStatus({ type: 'success', message: `Successfully generated ${data.results.length} mirrors!` });
+        const lastMirror = data.results[data.results.length - 1];
+        alert(`Mirrors created on Cloudflare! Try: ${lastMirror.subdomain}.${data.mainUrl}`);
+      } else {
+        setStatus({ type: 'error', message: data.error || 'Failed to generate mirrors' });
+      }
+    } catch (err) {
+      setStatus({ type: 'error', message: 'Network error during mirror generation' });
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
     if (activeTab === 'users' && (user?.isAdmin || user?.isMod)) {
@@ -339,6 +378,7 @@ export default function Admin() {
           { id: 'games', label: 'Games', icon: Gamepad2 },
           ...(user?.isAdmin ? [{ id: 'cinema', label: 'Movies', icon: Play }] : []),
           { id: 'users', label: 'Users', icon: Users },
+          ...(user?.isAdmin ? [{ id: 'system', label: 'System', icon: Shield }] : []),
         ].map(tab => (
           <button
             key={tab.id}
@@ -555,6 +595,84 @@ export default function Admin() {
                   </button>
                 </div>
               ))}
+            </div>
+          </section>
+        </div>
+      ) : activeTab === 'system' ? (
+        <div className="space-y-12">
+          {status && (
+            <div className={`p-4 rounded-xl flex items-center gap-3 ${status.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+              {status.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+              <span className="text-xs font-bold uppercase tracking-widest">{status.message}</span>
+            </div>
+          )}
+
+          <section className="card-subtle p-8 space-y-10">
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                <Shield className="w-5 h-5 text-blue-500" />
+                Data Migration
+              </h2>
+              <p className="text-xs text-gray-500">Transfer all resources from Firebase Firestore to Supabase Database.</p>
+            </div>
+
+            <div className="p-6 bg-white/[0.02] border border-white/5 rounded-xl space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-300">Firebase → Supabase</h3>
+                  <p className="text-[10px] text-gray-600 uppercase tracking-widest mt-1">Sync games, users, and movies</p>
+                </div>
+                <button
+                  disabled={loading}
+                  onClick={handleMigration}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all"
+                >
+                  {loading ? 'Migrating...' : 'Start Transfer'}
+                </button>
+              </div>
+
+              {migrationResults && (
+                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/5">
+                  {Object.entries(migrationResults).map(([key, value]: [string, any]) => (
+                    <div key={key} className="space-y-1">
+                      <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">{key}</p>
+                      <p className="text-lg font-bold text-white">{value.success}<span className="text-[10px] text-gray-700 ml-1">/ {value.success + value.fail}</span></p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="card-subtle p-8 space-y-10">
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                <Globe className="w-5 h-5 text-purple-500" />
+                Custom Proxy Mirrors
+              </h2>
+              <p className="text-xs text-gray-500">Generate unique, temporary proxy URLs to bypass filters.</p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  placeholder="Mirrors will be generated on Cloudflare..."
+                  value={migrationResults ? "Mirrors Active on Cloudflare" : "Cloudflare Integration Active"}
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-white/[0.02] border border-white/5 text-[10px] text-gray-500 font-mono"
+                />
+                <button 
+                  disabled={loading}
+                  onClick={handleGenerateMirrors} 
+                  className="px-4 py-2 bg-white text-black rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-gray-200 transition-all disabled:opacity-50"
+                >
+                  {loading ? 'Generating...' : 'Generate Mirrors'}
+                </button>
+              </div>
+              <p className="text-[8px] text-gray-700 leading-relaxed italic">
+                * This will create CNAME records on Cloudflare pointing to your domain. Use the provided GitHub Action for mass generation (50+ links).
+              </p>
             </div>
           </section>
         </div>

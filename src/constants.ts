@@ -8,6 +8,7 @@ export const CLOAK_OPTIONS = [
   { name: 'Google Drive', title: 'My Drive - Google Drive', icon: 'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png' },
   { name: 'Khan Academy', title: 'Khan Academy | Free Online Courses', icon: 'https://www.khanacademy.org/favicon.ico' },
   { name: 'Quizlet', title: 'Flashcards, Learning tools and Textbook solutions | Quizlet', icon: 'https://quizlet.com/favicon.ico' },
+  { name: 'Canvas', title: 'Dashboard', icon: 'https://du11hjcvx0wq0.cloudfront.net/favicon.ico' },
   { name: 'Schoology', title: 'Home | Schoology', icon: 'https://asset-cdn.schoology.com/sites/all/themes/schoology_theme/favicon.ico' },
   { name: 'Desmos', title: 'Desmos | Graphing Calculator', icon: 'https://www.desmos.com/favicon.ico' }
 ];

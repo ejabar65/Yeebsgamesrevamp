@@ -43,6 +43,7 @@ export default function MusicPlayer() {
   const [isMinimized, setIsMinimized] = useState(true);
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [volume, setVolume] = useState(50);
+  const [isHovered, setIsHovered] = useState(false);
   
   // Search state
   const [isSearching, setIsSearching] = useState(false);
@@ -202,7 +203,17 @@ export default function MusicPlayer() {
   };
 
   return (
-    <div className="fixed bottom-20 right-6 z-50">
+    <motion.div 
+      initial={{ opacity: 0.2, scale: 0.8 }}
+      animate={{ 
+        opacity: (!isMinimized || isHovered) ? 1 : 0.15,
+        scale: (!isMinimized || isHovered) ? 1 : 0.8,
+        x: (!isMinimized || isHovered) ? 0 : 20
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="fixed bottom-20 right-6 z-[102]"
+    >
       {/* Invisible YouTube Player */}
       <div 
         className="fixed bottom-4 left-4 w-10 h-10 overflow-hidden pointer-events-none opacity-[0.01] bg-black rounded-full" 
@@ -457,6 +468,6 @@ export default function MusicPlayer() {
           </motion.button>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
