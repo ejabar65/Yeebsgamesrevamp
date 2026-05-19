@@ -156,19 +156,16 @@ async function startServer() {
     const mainUrl = process.env.MAIN_HOSTING_URL;
 
     console.log('[Admin] Mirror creation request received');
-    console.log('[Admin] Config check:', { 
-      hasToken: !!token, 
-      hasZoneId: !!zoneId, 
-      hasMainUrl: !!mainUrl,
-      mainUrl 
-    });
-
+    
     if (!token || !zoneId || !mainUrl) {
-      return res.status(500).json({ error: `Cloudflare configuration missing. Token: ${!!token}, Zone: ${!!zoneId}, URL: ${!!mainUrl}` });
+      return res.status(500).json({ 
+        error: 'Cloudflare configuration missing',
+        details: { token: !!token, zone: !!zoneId, url: !!mainUrl }
+      });
     }
 
     const subdomains: string[] = [];
-    while (subdomains.length < 5) { // Generating 5 for quick UI feedback, workflow does 50
+    while (subdomains.length < 5) {
       const str = crypto.randomBytes(3).toString('hex');
       if (!subdomains.includes(str)) subdomains.push(str);
     }
@@ -176,7 +173,7 @@ async function startServer() {
     const results = [];
     for (const sub of subdomains) {
       try {
-        console.log(`[Admin] Registering subdomain: ${sub}`);
+        console.log(`[Admin] Registering subdomain: ${sub}.${mainUrl}`);
         const response = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`, {
           method: 'POST',
           headers: {
@@ -192,16 +189,29 @@ async function startServer() {
           })
         });
         
-        const result: any = await response.json();
-        console.log(`[Admin] Cloudflare response for ${sub}:`, { status: response.status, success: result.success });
+        const contentType = response.headers.get('content-type');
+        let result: any;
         
-        if (!result.success) {
+        if (contentType && contentType.includes('application/json')) {
+          result = await response.json();
+        } else {
+          const text = await response.text();
+          throw new Error(`Cloudflare returned non-JSON response: ${text.substring(0, 100)}`);
+        }
+
+        console.log(`[Admin] Cloudflare response for ${sub}:`, { status: response.status, success: result?.success });
+        
+        if (result && !result.success) {
           console.error(`[Admin] Cloudflare errors for ${sub}:`, result.errors);
         }
         
-        results.push({ subdomain: sub, success: result.success, errors: result.errors });
+        results.push({ 
+          subdomain: sub, 
+          success: result?.success || false, 
+          errors: result?.errors || [] 
+        });
       } catch (e) {
-        console.error(`[Admin] Fetch error for ${sub}:`, e);
+        console.error(`[Admin] Error for ${sub}:`, e);
         results.push({ subdomain: sub, success: false, error: String(e) });
       }
     }
@@ -209,28 +219,111 @@ async function startServer() {
     res.json({ success: true, results, mainUrl });
   });
 
-  app.get('/api/discover-games', async (req, res) => {
-    try {
-      // Gamemonetize is a good source for casual games
-      const response = await fetch('https://gamemonetize.com/feed.php?format=0');
-      const data = await response.json();
-      
-      // Limit to first 100 for performance
-      const games = Array.isArray(data) ? data.slice(0, 100).map((g: any) => ({
-        id: g.id || `gm-${Math.random().toString(36).substr(2, 5)}`,
-        title: g.title,
-        description: g.description || 'No description available',
-        category: g.category || 'Casual',
-        thumbnail: g.thumb || g.image,
-        url: g.url,
-        instruction: g.instructions || '',
-        tags: g.tags ? g.tags.split(',') : []
-      })) : [];
+  // Proxy endpoint for Supabase writes if client-side is restricted
+  app.post('/api/admin/supabase-proxy', async (req, res) => {
+    const { password, table, data } = req.body;
+    if (password !== '$#GS29gs67') return res.status(401).json({ error: 'Unauthorized' });
+    
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) return res.status(500).json({ error: 'Supabase not configured on server' });
 
-      res.json(games);
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        const err = await response.json();
+        return res.status(response.status).json(err);
+      }
+      
+      res.json({ success: true });
     } catch (error) {
-      console.error('[Discover] Failed to fetch games:', error);
-      res.status(500).json({ error: 'Failed to fetch external games' });
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  let discoveryCache: { data: any, timestamp: number } | null = null;
+  const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
+  app.get('/api/discover-games', async (req, res) => {
+    console.log('[Discover] Request received');
+
+    // Return cached data if fresh
+    if (discoveryCache && (Date.now() - discoveryCache.timestamp < CACHE_DURATION)) {
+      console.log('[Discover] Serving from server cache');
+      return res.json(discoveryCache.data);
+    }
+
+    try {
+      // Primary source: FreeToGame (very reliable in tests)
+      const ftgUrl = 'https://www.freetogame.com/api/games?platform=browser';
+      console.log('[Discover] Fetching from FreeToGame...');
+      
+      const ftgResponse = await fetch(ftgUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+
+      if (ftgResponse.ok) {
+        const data = await ftgResponse.json() as any[];
+        console.log(`[Discover] Success: Found ${data.length} games from FreeToGame`);
+        
+        const games = data.slice(0, 80).map((g: any) => ({
+          id: `ftg-${g.id}`,
+          title: g.title,
+          description: g.short_description || 'No description available',
+          category: g.genre || 'Action',
+          thumbnail: g.thumbnail,
+          url: g.game_url,
+          instruction: 'Follow on-screen prompts.',
+          tags: [g.genre, g.publisher].filter(Boolean)
+        }));
+        
+        discoveryCache = { data: games, timestamp: Date.now() };
+        return res.json(games);
+      } else {
+        console.warn(`[Discover] FreeToGame failed with status: ${ftgResponse.status}`);
+      }
+
+      // Secondary source: Gamemonetize
+      console.log('[Discover] Attempting fallback to Gamemonetize...');
+      const gmUrl = 'https://gamemonetize.com/feed.php?format=0';
+      const gmResponse = await fetch(gmUrl);
+      
+      if (gmResponse.ok) {
+        const data = await gmResponse.json();
+        const games = Array.isArray(data) ? data.slice(0, 100).map((g: any) => ({
+          id: g.id || `gm-${Math.random().toString(36).substr(2, 5)}`,
+          title: g.title,
+          description: g.description || 'No description available',
+          category: g.category || 'Casual',
+          thumbnail: g.thumb || g.image,
+          url: g.url,
+          instruction: g.instructions || '',
+          tags: g.tags ? g.tags.split(',') : []
+        })) : [];
+        
+        return res.json(games);
+      }
+
+      throw new Error('All game sources failed');
+    } catch (error) {
+      console.error('[Discover] Global failure:', error);
+      res.status(500).json({ 
+        error: 'Discovery engine offline', 
+        details: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Plus, Tag, FileCode, Type, Image as ImageIcon, CheckCircle2, AlertCircle, Trash2, Globe, Edit2, X, Play, Users, Ban, UserCheck, Gamepad2 } from 'lucide-react';
+import { Shield, Plus, Tag, FileCode, Type, Image as ImageIcon, CheckCircle2, AlertCircle, Trash2, Globe, Edit2, X, Play, Users, Ban, UserCheck, Gamepad2, ExternalLink } from 'lucide-react';
 import { addGame, deleteGame, updateGame } from '../services/gameService';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGames } from '../context/GameContext';
@@ -28,6 +28,7 @@ export default function Admin() {
     type: 'movie' as 'movie' | 'tv' | 'outside'
   });
   const [migrationResults, setMigrationResults] = useState<any>(null);
+  const [mirrors, setMirrors] = useState<any[]>([]);
 
   const handleMigration = async () => {
     if (!confirm('This will transfer all data from Firebase to Supabase. This may take a moment. Continue?')) return;
@@ -54,8 +55,10 @@ export default function Admin() {
       const data = await response.json();
       if (data.success) {
         setStatus({ type: 'success', message: `Successfully generated ${data.results.length} mirrors!` });
-        const lastMirror = data.results[data.results.length - 1];
-        alert(`Mirrors created on Cloudflare! Try: ${lastMirror.subdomain}.${data.mainUrl}`);
+        setMirrors(data.results.map((r: any) => ({
+          url: `${r.subdomain}.${data.mainUrl}`,
+          success: r.success
+        })));
       } else {
         setStatus({ type: 'error', message: data.error || 'Failed to generate mirrors' });
       }
@@ -633,13 +636,29 @@ export default function Admin() {
               </div>
 
               {migrationResults && (
-                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/5">
-                  {Object.entries(migrationResults).map(([key, value]: [string, any]) => (
-                    <div key={key} className="space-y-1">
-                      <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">{key}</p>
-                      <p className="text-lg font-bold text-white">{value.success}<span className="text-[10px] text-gray-700 ml-1">/ {value.success + value.fail}</span></p>
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                  <div className="grid grid-cols-3 gap-4">
+                    {Object.entries(migrationResults).map(([key, value]: [string, any]) => (
+                      <div key={key} className="space-y-1">
+                        <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">{key}</p>
+                        <p className="text-lg font-bold text-white">
+                          {value.success}
+                          <span className="text-[10px] text-gray-700 ml-1">/ {value.success + value.fail}</span>
+                        </p>
+                        {value.fail > 0 && (
+                          <p className="text-[8px] text-red-500 font-bold uppercase tracking-tight">{value.fail} Errors</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {Object.entries(migrationResults).some(([_, v]: [any, any]) => v.fail > 0) && (
+                    <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-lg">
+                      <p className="text-[8px] text-red-400 font-mono leading-relaxed">
+                        * Some items failed to migrate. This usually indicates the Supabase table schema doesn't match or the table doesn't exist.
+                      </p>
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>
@@ -654,13 +673,13 @@ export default function Admin() {
               <p className="text-xs text-gray-500">Generate unique, temporary proxy URLs to bypass filters.</p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex gap-2">
                 <input
                   type="text"
                   readOnly
                   placeholder="Mirrors will be generated on Cloudflare..."
-                  value={migrationResults ? "Mirrors Active on Cloudflare" : "Cloudflare Integration Active"}
+                  value={status?.message.includes('mirror') ? status.message : "Cloudflare Integration Active"}
                   className="flex-1 px-4 py-2.5 rounded-lg bg-white/[0.02] border border-white/5 text-[10px] text-gray-500 font-mono"
                 />
                 <button 
@@ -671,6 +690,23 @@ export default function Admin() {
                   {loading ? 'Generating...' : 'Generate Mirrors'}
                 </button>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {mirrors.map((mirror, idx) => (
+                  <div key={idx} className={`p-2 rounded-lg border flex items-center justify-between gap-3 ${mirror.success ? 'bg-green-500/5 border-green-500/10' : 'bg-red-500/5 border-red-500/10'}`}>
+                    <span className="text-[10px] font-mono text-gray-400 truncate">{mirror.url}</span>
+                    <a 
+                      href={`https://${mirror.url}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
+                    >
+                      <ExternalLink className="w-3 h-3 text-gray-500" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+
               <p className="text-[8px] text-gray-700 leading-relaxed italic">
                 * This will create CNAME records on Cloudflare pointing to your domain. Use the provided GitHub Action for mass generation (50+ links).
               </p>

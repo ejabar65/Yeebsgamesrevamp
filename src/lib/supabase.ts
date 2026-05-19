@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = "https://zmuipksmwmgxctlaybdw.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptdWlwa3Ntd21neGN0bGF5YmR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MjQyOTMsImV4cCI6MjA5NDIwMDI5M30.7u-vNgtQVzrlakKJBMPkapyy-b4kqsQOyoEsRg2ADz8";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 const isValidUrl = (url: string) => {
   try {
@@ -16,14 +16,27 @@ export const isSupabaseConfigured = () => {
   return isValidUrl(supabaseUrl) && !!supabaseKey;
 };
 
-// Lazy initialization to avoid crashes if URL is invalid
+// Lazy initialization and dummy chainable proxy to avoid crashes if URL is invalid
 let client: any = null;
+
+const createDummyProxy = (): any => {
+  const dummy: any = () => createDummyProxy();
+  dummy.select = () => createDummyProxy();
+  dummy.insert = () => createDummyProxy();
+  dummy.update = () => createDummyProxy();
+  dummy.delete = () => createDummyProxy();
+  dummy.upsert = () => createDummyProxy();
+  dummy.eq = () => createDummyProxy();
+  dummy.single = () => Promise.resolve({ data: null, error: new Error('Supabase not configured') });
+  dummy.then = (onRes: any) => onRes({ data: null, error: new Error('Supabase not configured') });
+  return dummy;
+};
 
 export const supabase = new Proxy({} as any, {
   get: (target, prop) => {
     if (!isSupabaseConfigured()) {
-      console.warn('Supabase is not configured. Redirecting call to dummy handler.');
-      return () => ({ data: null, error: new Error('Supabase not configured') });
+      console.warn('Supabase is not configured. Accessing dummy chainable proxy.');
+      return createDummyProxy()[prop] || createDummyProxy();
     }
     if (!client) {
       client = createClient(supabaseUrl, supabaseKey);
