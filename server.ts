@@ -209,6 +209,31 @@ async function startServer() {
     res.json({ success: true, results, mainUrl });
   });
 
+  app.get('/api/discover-games', async (req, res) => {
+    try {
+      // Gamemonetize is a good source for casual games
+      const response = await fetch('https://gamemonetize.com/feed.php?format=0');
+      const data = await response.json();
+      
+      // Limit to first 100 for performance
+      const games = Array.isArray(data) ? data.slice(0, 100).map((g: any) => ({
+        id: g.id || `gm-${Math.random().toString(36).substr(2, 5)}`,
+        title: g.title,
+        description: g.description || 'No description available',
+        category: g.category || 'Casual',
+        thumbnail: g.thumb || g.image,
+        url: g.url,
+        instruction: g.instructions || '',
+        tags: g.tags ? g.tags.split(',') : []
+      })) : [];
+
+      res.json(games);
+    } catch (error) {
+      console.error('[Discover] Failed to fetch games:', error);
+      res.status(500).json({ error: 'Failed to fetch external games' });
+    }
+  });
+
   app.get('/api/games', (req, res) => {
     try {
       const data = fs.readFileSync(GAMES_FILE, 'utf-8');

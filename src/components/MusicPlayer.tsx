@@ -204,15 +204,14 @@ export default function MusicPlayer() {
 
   return (
     <motion.div 
-      initial={{ opacity: 0.2, scale: 0.8 }}
+      initial={{ opacity: 0.1, scale: 0.8 }}
       animate={{ 
-        opacity: (!isMinimized || isHovered) ? 1 : 0.15,
+        opacity: (!isMinimized || isHovered) ? 1 : 0.05,
         scale: (!isMinimized || isHovered) ? 1 : 0.8,
-        x: (!isMinimized || isHovered) ? 0 : 20
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="fixed bottom-20 right-6 z-[102]"
+      className="fixed bottom-6 right-36 z-[102]"
     >
       {/* Invisible YouTube Player */}
       <div 

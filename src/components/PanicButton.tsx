@@ -25,11 +25,10 @@ export default function PanicButton() {
 
   return (
     <motion.div 
-      initial={{ opacity: 0.2, scale: 0.8 }}
+      initial={{ opacity: 0.1, scale: 0.8 }}
       animate={{ 
-        opacity: isHovered ? 1 : 0.1,
+        opacity: isHovered ? 1 : 0.05,
         scale: isHovered ? 1 : 0.8,
-        x: isHovered ? 0 : 20
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

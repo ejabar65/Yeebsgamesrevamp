@@ -98,6 +98,7 @@ export default function Navbar() {
 
   const navItems = [
     { name: 'Games', icon: Home, path: '/', sort: 'newest' },
+    { name: 'Discover', icon: Search, path: '/discover' },
     { name: 'Streaming', icon: Monitor, path: '/streaming' },
     { name: 'Chat', icon: MessageSquare, path: '/chat' },
     ...(user?.isAdmin || user?.isMod ? [{ name: 'Admin', icon: Shield, path: '/admin' }] : []),

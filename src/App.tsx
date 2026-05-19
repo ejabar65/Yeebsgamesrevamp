@@ -18,6 +18,7 @@ import Tutorials from './pages/Tutorials';
 import Reviews from './pages/Reviews';
 import Legal from './pages/Legal';
 import Updates from './pages/Updates';
+import Discover from './pages/Discover';
 import VideoPortal from './pages/VideoPortal';
 import { GameProvider } from './context/GameContext';
 import { applyCloak, getSavedCloak } from './cloakUtils';
@@ -89,6 +90,7 @@ export default function App() {
               <Route path="/reviews" element={<Reviews />} />
               <Route path="/legal" element={<Legal />} />
               <Route path="/updates" element={<Updates />} />
+              <Route path="/discover" element={<Discover />} />
               <Route path="/media/:type/:id" element={<MovieView />} />
               <Route path="/movie/:id" element={<MovieView typeOverride="movie" />} />
               <Route path="/tv/:id" element={<MovieView typeOverride="tv" />} />

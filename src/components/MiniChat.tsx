@@ -16,15 +16,14 @@ export const MiniChat: React.FC = () => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0.2, scale: 0.8 }}
+      initial={{ opacity: 0.1, scale: 0.8 }}
       animate={{ 
-        opacity: (isOpen || isHovered) ? 1 : 0.15,
+        opacity: (isOpen || isHovered) ? 1 : 0.05,
         scale: (isOpen || isHovered) ? 1 : 0.8,
-        x: (isOpen || isHovered) ? 0 : 20
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="fixed bottom-8 right-8 z-[100] font-sans"
+      className="fixed bottom-6 right-20 z-[100] font-sans"
     >
       <AnimatePresence>
         {isOpen && (
