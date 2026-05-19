@@ -255,31 +255,55 @@ async function startServer() {
   let discoveryCache: { data: any, timestamp: number } | null = null;
   const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
-  app.get('/api/discover-games', async (req, res) => {
-    console.log('[Discover] Request received');
-
+  app.get('/api/games-discovery', async (req, res) => {
+    console.log('[Discover] Request received at /api/games-discovery');
+    
     // Return cached data if fresh
     if (discoveryCache && (Date.now() - discoveryCache.timestamp < CACHE_DURATION)) {
       console.log('[Discover] Serving from server cache');
       return res.json(discoveryCache.data);
     }
 
-    try {
-      // Primary source: FreeToGame (very reliable in tests)
-      const ftgUrl = 'https://www.freetogame.com/api/games?platform=browser';
-      console.log('[Discover] Fetching from FreeToGame...');
-      
-      const ftgResponse = await fetch(ftgUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-      });
-
-      if (ftgResponse.ok) {
-        const data = await ftgResponse.json() as any[];
-        console.log(`[Discover] Success: Found ${data.length} games from FreeToGame`);
+    const tryFetch = async (url: string, sourceName: string, transform: (data: any) => any[]) => {
+      try {
+        console.log(`[Discover] Fetching from ${sourceName}...`);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
         
-        const games = data.slice(0, 80).map((g: any) => ({
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json'
+          }
+        });
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          console.warn(`[Discover] ${sourceName} returned status ${response.status}`);
+          return null;
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.warn(`[Discover] ${sourceName} returned non-JSON content type: ${contentType}`);
+          return null;
+        }
+
+        const data = await response.json();
+        return transform(data);
+      } catch (err) {
+        console.error(`[Discover] Error fetching from ${sourceName}:`, err instanceof Error ? err.message : String(err));
+        return null;
+      }
+    };
+
+    try {
+      // Try FreeToGame
+      let games = await tryFetch(
+        'https://www.freetogame.com/api/games?platform=browser',
+        'FreeToGame',
+        (data) => (data as any[]).slice(0, 80).map(g => ({
           id: `ftg-${g.id}`,
           title: g.title,
           description: g.short_description || 'No description available',
@@ -288,42 +312,38 @@ async function startServer() {
           url: g.game_url,
           instruction: 'Follow on-screen prompts.',
           tags: [g.genre, g.publisher].filter(Boolean)
-        }));
-        
+        }))
+      );
+
+      // Try Gamemonetize if FreeToGame failed
+      if (!games) {
+        games = await tryFetch(
+          'https://gamemonetize.com/feed.php?format=0',
+          'Gamemonetize',
+          (data) => (data as any[]).slice(0, 100).map(g => ({
+            id: g.id || `gm-${Math.random().toString(36).substring(2, 7)}`,
+            title: g.title,
+            description: g.description || 'No description available',
+            category: g.category || 'Casual',
+            thumbnail: g.thumb || g.image,
+            url: g.url,
+            instruction: g.instructions || '',
+            tags: g.tags ? g.tags.split(',') : []
+          }))
+        );
+      }
+
+      if (games && games.length > 0) {
         discoveryCache = { data: games, timestamp: Date.now() };
         return res.json(games);
-      } else {
-        console.warn(`[Discover] FreeToGame failed with status: ${ftgResponse.status}`);
       }
 
-      // Secondary source: Gamemonetize
-      console.log('[Discover] Attempting fallback to Gamemonetize...');
-      const gmUrl = 'https://gamemonetize.com/feed.php?format=0';
-      const gmResponse = await fetch(gmUrl);
-      
-      if (gmResponse.ok) {
-        const data = await gmResponse.json();
-        const games = Array.isArray(data) ? data.slice(0, 100).map((g: any) => ({
-          id: g.id || `gm-${Math.random().toString(36).substr(2, 5)}`,
-          title: g.title,
-          description: g.description || 'No description available',
-          category: g.category || 'Casual',
-          thumbnail: g.thumb || g.image,
-          url: g.url,
-          instruction: g.instructions || '',
-          tags: g.tags ? g.tags.split(',') : []
-        })) : [];
-        
-        return res.json(games);
-      }
-
-      throw new Error('All game sources failed');
+      // If all failed, return empty array instead of HTML error
+      console.warn('[Discover] All sources failed. Returning empty list.');
+      res.json([]);
     } catch (error) {
-      console.error('[Discover] Global failure:', error);
-      res.status(500).json({ 
-        error: 'Discovery engine offline', 
-        details: error instanceof Error ? error.message : String(error) 
-      });
+      console.error('[Discover] Fatal Error:', error);
+      res.status(500).json({ error: 'Discovery engine failure', details: String(error) });
     }
   });
 

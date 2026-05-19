@@ -20,13 +20,29 @@ export default function Discover() {
 
   const fetchExternalGames = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch('/api/discover-games');
-      if (!response.ok) throw new Error('Failed to fetch from discovery engine');
+      console.log('Discover: Starting fetch from /api/games-discovery');
+      const response = await fetch('/api/games-discovery');
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Discover: Received non-JSON response:', text.substring(0, 500));
+        throw new Error('Server returned an invalid response format (HTML instead of JSON). The server might be restarting or encountered a fatal error.');
+      }
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || `Server error: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('Discover: Successfully received data:', data.length, 'games');
       setExternalGames(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Discover: Fetch error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred connecting to the discovery engine');
     } finally {
       setLoading(false);
     }
