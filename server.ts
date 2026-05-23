@@ -6,7 +6,6 @@ import fs from 'fs';
 import cors from 'cors';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
-import fetch from 'node-fetch';
 
 dotenv.config();
 
@@ -517,7 +516,7 @@ async function startServer() {
   });
 
   // Vite middleware
-  const isProd = process.env.NODE_ENV === 'production' || fs.existsSync(path.join(__dirname, 'dist'));
+  const isProd = process.env.NODE_ENV === 'production';
   
   if (!isProd) {
     console.log('[Cinema-Server] Entering DEVELOPMENT mode (Vite Middleware)');
