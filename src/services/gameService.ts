@@ -41,6 +41,21 @@ export async function getGames(): Promise<Game[]> {
     
     return unique;
   } catch (error) {
+    console.warn('Firebase and Supabase fetch failed or not configured. Trying local server fallback...', error);
+    try {
+      const serverRes = await fetch('/api/games');
+      if (serverRes.ok) {
+        const serverGames = await serverRes.json();
+        if (Array.isArray(serverGames) && serverGames.length > 0) {
+          const combined = [...STATIC_GAMES, ...serverGames];
+          const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+          return unique;
+        }
+      }
+    } catch (serverErr) {
+      console.error('Failed to fetch from local server database:', serverErr);
+    }
+
     if (!(error instanceof Error && error.message.includes('supabase'))) {
       handleFirestoreError(error, OperationType.LIST, GAMES_COLLECTION);
     }

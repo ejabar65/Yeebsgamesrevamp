@@ -11,28 +11,52 @@ export const migrateFirebaseToSupabase = async () => {
   try {
     console.log('Starting migration sequence...');
 
-    // 1. Migrate Games
-    const gamesSnap = await getDocs(collection(db, 'games'));
-    console.log(`Scanning Games: Found ${gamesSnap.size} entries`);
-    for (const doc of gamesSnap.docs) {
-      const data = doc.data();
+    // 1. Migrate Games (including local seeded games if any)
+    let gamesToMigrate: any[] = [];
+    try {
+      const gamesSnap = await getDocs(collection(db, 'games'));
+      gamesSnap.forEach(d => {
+        gamesToMigrate.push({ id: d.id, ...d.data() });
+      });
+    } catch (e) {
+      console.warn('Could not load games from Firebase, using local database games instead:', e);
+    }
+
+    try {
+      const localRes = await fetch('/api/games');
+      if (localRes.ok) {
+        const localGames = await localRes.json();
+        if (Array.isArray(localGames)) {
+          localGames.forEach(lg => {
+            if (!gamesToMigrate.some(g => g.id === lg.id)) {
+              gamesToMigrate.push(lg);
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load local games:', e);
+    }
+
+    console.log(`Scanning Games to Migrate: Found ${gamesToMigrate.length} total entries`);
+    for (const gameData of gamesToMigrate) {
       const { error } = await supabase.from('games').upsert({
-        id: doc.id,
-        title: data.title,
-        description: data.description,
-        thumbnail: data.thumbnail,
-        category: data.category,
-        url: data.url,
-        html_block: data.htmlBlock || '',
-        play_count: data.playCount || 0,
-        rating: data.rating || 5,
-        updated_at: data.updatedAt || new Date().toISOString()
+        id: gameData.id,
+        title: gameData.title || '',
+        description: gameData.description || '',
+        thumbnail: gameData.thumbnail || '',
+        category: gameData.category || 'Arcade',
+        url: gameData.url || '',
+        html_block: gameData.htmlBlock || gameData.html_block || '',
+        play_count: gameData.playCount || gameData.play_count || 0,
+        rating: gameData.rating || 5,
+        updated_at: gameData.updatedAt || gameData.updated_at || new Date().toISOString()
       }, { onConflict: 'id' });
       
       if (error) {
-        console.error(`Game ${doc.id} failed:`, error);
+        console.error(`Game ${gameData.id} failed:`, error);
         results.games.fail++;
-        results.games.errors.push(`${doc.id}: ${error.message}`);
+        results.games.errors.push(`${gameData.id}: ${error.message}`);
       } else {
         results.games.success++;
       }

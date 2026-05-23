@@ -25,8 +25,19 @@ const MIRRORS_FILE = path.join(__dirname, 'mirrors-db.json');
 const CUSTOM_GAMES_DIR = path.join(__dirname, 'public', 'games', 'custom');
 
 // Ensure database and directory exists
-if (!fs.existsSync(GAMES_FILE)) {
-  fs.writeFileSync(GAMES_FILE, JSON.stringify([]));
+if (!fs.existsSync(GAMES_FILE) || fs.readFileSync(GAMES_FILE, 'utf-8').trim() === '[]') {
+  const seedPath = path.join(__dirname, 'unblocked-games.json');
+  if (fs.existsSync(seedPath)) {
+    try {
+      const seedData = fs.readFileSync(seedPath, 'utf-8');
+      fs.writeFileSync(GAMES_FILE, seedData);
+      console.log('[System] games-db.json seeded from unblocked-games.json!');
+    } catch (err) {
+      console.error('[System] Seeding failed:', err);
+    }
+  } else {
+    fs.writeFileSync(GAMES_FILE, JSON.stringify([]));
+  }
 }
 if (!fs.existsSync(MIRRORS_FILE)) {
   fs.writeFileSync(MIRRORS_FILE, JSON.stringify([]));
