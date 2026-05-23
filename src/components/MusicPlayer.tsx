@@ -14,35 +14,71 @@ interface Track {
 const DEFAULT_PLAYLIST: Track[] = [
   {
     id: '1',
-    title: 'Lofi Girl - Chill Beats',
-    artist: 'Lofi Records',
-    videoId: 'jfKfPfyJRdk',
-    cover: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=300&h=300&fit=crop'
-  },
-  {
-    id: '2',
-    title: 'Synthwave Radio',
-    artist: 'Nightride FM',
-    videoId: '4xDzrJKXOOY',
-    cover: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop'
-  },
-  {
-    id: '3',
-    title: 'Cyberpunk Mix 2077',
-    artist: 'Infraction',
-    videoId: 'O9YhYInuY3w',
-    cover: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&h=300&fit=crop'
+    title: 'Half Full Glass of Wine',
+    artist: 'Tame Impala',
+    videoId: 'zfcHq0hs5zU',
+    cover: 'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=300&h=300&fit=crop'
   }
 ];
 
+const YouTubePlayerComponent = (YouTube as any).default || YouTube;
+
 export default function MusicPlayer() {
-  const [playlist, setPlaylist] = useState<Track[]>(DEFAULT_PLAYLIST);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [playlist, setPlaylist] = useState<Track[]>(() => {
+    const saved = localStorage.getItem('yeebs_player_playlist');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error('Failed to parse saved playlist', e);
+      }
+    }
+    return DEFAULT_PLAYLIST;
+  });
+
+  const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(() => {
+    const saved = localStorage.getItem('yeebs_player_current_track_index');
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed >= 0) {
+        return parsed;
+      }
+    }
+    return 0;
+  });
+
+  const [isPlaying, setIsPlaying] = useState<boolean>(() => {
+    const saved = localStorage.getItem('yeebs_player_is_playing');
+    if (saved !== null) {
+      return saved === 'true';
+    }
+    return true; // Play automatically on first load!
+  });
+
   const [progress, setProgress] = useState(0);
-  const [isMinimized, setIsMinimized] = useState(true);
+
+  const [isMinimized, setIsMinimized] = useState<boolean>(() => {
+    const saved = localStorage.getItem('yeebs_player_is_minimized');
+    if (saved !== null) {
+      return saved === 'true';
+    }
+    return true;
+  });
+
   const [showPlaylist, setShowPlaylist] = useState(false);
-  const [volume, setVolume] = useState(50);
+
+  const [volume, setVolume] = useState<number>(() => {
+    const saved = localStorage.getItem('yeebs_player_volume');
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed)) return parsed;
+    }
+    return 50;
+  });
+
   const [isHovered, setIsHovered] = useState(false);
   
   // Search state
@@ -51,10 +87,34 @@ export default function MusicPlayer() {
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [showSearch, setShowSearch] = useState(false);
 
+  // Sync state helpers to localStorage
+  useEffect(() => {
+    localStorage.setItem('yeebs_player_playlist', JSON.stringify(playlist));
+    if (currentTrackIndex >= playlist.length) {
+      setCurrentTrackIndex(0);
+    }
+  }, [playlist]);
+
+  useEffect(() => {
+    localStorage.setItem('yeebs_player_current_track_index', currentTrackIndex.toString());
+  }, [currentTrackIndex]);
+
+  useEffect(() => {
+    localStorage.setItem('yeebs_player_is_playing', isPlaying.toString());
+  }, [isPlaying]);
+
+  useEffect(() => {
+    localStorage.setItem('yeebs_player_volume', volume.toString());
+  }, [volume]);
+
+  useEffect(() => {
+    localStorage.setItem('yeebs_player_is_minimized', isMinimized.toString());
+  }, [isMinimized]);
+
   const playerRef = useRef<any>(null);
   const progressInterval = useRef<any>(null);
 
-  const currentTrack = playlist[currentTrackIndex];
+  const currentTrack = playlist[currentTrackIndex] || playlist[0] || DEFAULT_PLAYLIST[0];
 
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -121,11 +181,16 @@ export default function MusicPlayer() {
   useEffect(() => {
     if (isPlaying) {
       progressInterval.current = setInterval(() => {
-        if (playerRef.current) {
-          const currentTime = playerRef.current.getCurrentTime();
-          const duration = playerRef.current.getDuration();
-          if (duration > 0) {
-            setProgress((currentTime / duration) * 100);
+        if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+          try {
+            const currentTime = playerRef.current.getCurrentTime();
+            const duration = playerRef.current.getDuration();
+            if (duration > 0) {
+              setProgress((currentTime / duration) * 100);
+              localStorage.setItem('yeebs_player_current_time', currentTime.toString());
+            }
+          } catch (e) {
+            console.error("Failed to fetch current track time", e);
           }
         }
       }, 1000);
@@ -149,21 +214,25 @@ export default function MusicPlayer() {
         setIsPlaying(!isPlaying);
       } catch (err) {
         console.error("Player toggle failed:", err);
-        // Fallback: just toggle state, player might catch up
         setIsPlaying(!isPlaying);
       }
     } else {
-      // If player not ready, at least set state so it plays onReady
       setIsPlaying(!isPlaying);
     }
   };
 
   const handleNext = useCallback(() => {
+    localStorage.removeItem('yeebs_player_current_time');
+    setProgress(0);
     setCurrentTrackIndex((prev) => (prev + 1) % playlist.length);
+    setIsPlaying(true);
   }, [playlist.length]);
 
   const handlePrev = () => {
+    localStorage.removeItem('yeebs_player_current_time');
+    setProgress(0);
     setCurrentTrackIndex((prev) => (prev - 1 + playlist.length) % playlist.length);
+    setIsPlaying(true);
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,6 +245,16 @@ export default function MusicPlayer() {
   const onReady = (event: any) => {
     playerRef.current = event.target;
     playerRef.current.setVolume(volume);
+
+    // Exact elapsed time recovery from localStorage
+    const savedTimeRaw = localStorage.getItem('yeebs_player_current_time');
+    if (savedTimeRaw) {
+      const savedTime = parseFloat(savedTimeRaw);
+      if (!isNaN(savedTime) && savedTime > 0) {
+        playerRef.current.seekTo(savedTime, true);
+      }
+    }
+
     if (isPlaying) {
       playerRef.current.playVideo();
     }
@@ -184,7 +263,6 @@ export default function MusicPlayer() {
   const onStateChange = (event: any) => {
     if (event.data === 1) setIsPlaying(true);
     if (event.data === 2) setIsPlaying(false);
-    if (event.data === 0) handleNext();
   };
 
   const opts: YouTubeProps['opts'] = {
@@ -220,7 +298,7 @@ export default function MusicPlayer() {
         aria-hidden="true"
       >
         {currentTrack && (
-          <YouTube 
+          <YouTubePlayerComponent 
             videoId={currentTrack.videoId} 
             opts={opts} 
             onReady={onReady} 
@@ -400,6 +478,8 @@ export default function MusicPlayer() {
                       <div key={track.id + index} className="group/item relative">
                         <button
                           onClick={() => {
+                            localStorage.removeItem('yeebs_player_current_time');
+                            setProgress(0);
                             setCurrentTrackIndex(index);
                             setIsPlaying(true);
                             setShowPlaylist(false);
