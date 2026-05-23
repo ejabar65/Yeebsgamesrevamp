@@ -21,8 +21,6 @@ const DEFAULT_PLAYLIST: Track[] = [
   }
 ];
 
-const YouTubePlayerComponent = (YouTube as any).default || YouTube;
-
 export default function MusicPlayer() {
   const [playlist, setPlaylist] = useState<Track[]>(() => {
     const saved = localStorage.getItem('yeebs_player_playlist');
@@ -298,7 +296,7 @@ export default function MusicPlayer() {
         aria-hidden="true"
       >
         {currentTrack && (
-          <YouTubePlayerComponent 
+          <YouTube 
             videoId={currentTrack.videoId} 
             opts={opts} 
             onReady={onReady} 

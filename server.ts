@@ -409,7 +409,7 @@ async function startServer() {
   });
 
   // Vite middleware
-  const isProd = process.env.NODE_ENV === 'production';
+  const isProd = process.env.NODE_ENV === 'production' || fs.existsSync(path.join(__dirname, 'dist'));
   
   if (!isProd) {
     console.log('[Cinema-Server] Entering DEVELOPMENT mode (Vite Middleware)');
