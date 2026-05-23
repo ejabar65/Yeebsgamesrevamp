@@ -21,11 +21,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const GAMES_FILE = path.join(__dirname, 'games-db.json');
+const MIRRORS_FILE = path.join(__dirname, 'mirrors-db.json');
 const CUSTOM_GAMES_DIR = path.join(__dirname, 'public', 'games', 'custom');
 
 // Ensure database and directory exists
 if (!fs.existsSync(GAMES_FILE)) {
   fs.writeFileSync(GAMES_FILE, JSON.stringify([]));
+}
+if (!fs.existsSync(MIRRORS_FILE)) {
+  fs.writeFileSync(MIRRORS_FILE, JSON.stringify([]));
 }
 if (!fs.existsSync(CUSTOM_GAMES_DIR)) {
   fs.mkdirSync(CUSTOM_GAMES_DIR, { recursive: true });
@@ -145,6 +149,63 @@ async function startServer() {
     }
   });
 
+  app.get('/api/mirrors', (req, res) => {
+    try {
+      const data = fs.readFileSync(MIRRORS_FILE, 'utf-8');
+      res.json(JSON.parse(data));
+    } catch (err) {
+      console.error('[System] Failed to read mirrors database:', err);
+      res.status(500).json({ error: 'Failed to retrieve mirrors' });
+    }
+  });
+
+  app.post('/api/admin/save-mirrors', (req, res) => {
+    const { password, mirrors: list } = req.body;
+    if (password !== '$#GS29gs67') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!Array.isArray(list)) {
+      return res.status(400).json({ error: 'Invalid mirrors list format' });
+    }
+
+    try {
+      let existing: any[] = [];
+      try {
+        existing = JSON.parse(fs.readFileSync(MIRRORS_FILE, 'utf-8'));
+      } catch (e) {
+        existing = [];
+      }
+
+      const mainUrl = process.env.MAIN_HOSTING_URL || 'Yeebsweb.com';
+      const now = new Date().toISOString();
+
+      const normalizedList = list.map((item: any) => {
+        const subdomain = item.subdomain || item.name || '';
+        const urlStr = item.url || (subdomain ? `${subdomain}.${mainUrl}` : '');
+        return {
+          subdomain,
+          url: urlStr,
+          success: item.success !== undefined ? item.success : true,
+          createdAt: item.createdAt || now
+        };
+      }).filter(m => m.subdomain);
+
+      const mirrorMap = new Map();
+      existing.forEach(m => mirrorMap.set(m.subdomain, m));
+      normalizedList.forEach(m => mirrorMap.set(m.subdomain, m));
+
+      const merged = Array.from(mirrorMap.values());
+      fs.writeFileSync(MIRRORS_FILE, JSON.stringify(merged, null, 2));
+      
+      console.log(`[Admin] Saved/updated ${normalizedList.length} mirror(s). Total active: ${merged.length}`);
+      res.json({ success: true, count: merged.length, mirrors: merged });
+    } catch (err) {
+      console.error('[Admin] Failed to save mirrors:', err);
+      res.status(500).json({ error: 'Failed to save mirrors' });
+    }
+  });
+
   app.post('/api/admin/generate-mirrors', async (req, res) => {
     const { password } = req.body;
     if (password !== '$#GS29gs67') {
@@ -214,6 +275,32 @@ async function startServer() {
         console.error(`[Admin] Error for ${sub}:`, e);
         results.push({ subdomain: sub, success: false, error: String(e) });
       }
+    }
+
+    // Save newly generated mirrors
+    try {
+      let existing: any[] = [];
+      try {
+        existing = JSON.parse(fs.readFileSync(MIRRORS_FILE, 'utf-8'));
+      } catch (e) {}
+
+      const now = new Date().toISOString();
+      const newMirrors = results.filter(r => r.success).map(r => ({
+        subdomain: r.subdomain,
+        url: `${r.subdomain}.${mainUrl}`,
+        success: r.success,
+        createdAt: now
+      }));
+
+      const mirrorMap = new Map();
+      existing.forEach(m => mirrorMap.set(m.subdomain, m));
+      newMirrors.forEach(m => mirrorMap.set(m.subdomain, m));
+
+      const merged = Array.from(mirrorMap.values());
+      fs.writeFileSync(MIRRORS_FILE, JSON.stringify(merged, null, 2));
+      console.log(`[Admin] Saved ${newMirrors.length} manually generated mirrors to file. Total mirrors: ${merged.length}`);
+    } catch (writeErr) {
+      console.error('[Admin] Failed to write generated mirrors to database:', writeErr);
     }
 
     res.json({ success: true, results, mainUrl });

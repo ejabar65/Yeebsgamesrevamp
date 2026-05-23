@@ -25,6 +25,8 @@ async function generateMirrors() {
     }
   }
 
+  const generatedList = [];
+
   for (const sub of subdomains) {
     try {
       const response = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`, {
@@ -45,6 +47,7 @@ async function generateMirrors() {
       const result = await response.json();
       if (result.success) {
         console.log(`Successfully created: ${sub}.${mainUrl}`);
+        generatedList.push({ subdomain: sub, url: `${sub}.${mainUrl}`, success: true });
       } else {
         console.error(`Failed to create ${sub}:`, result.errors);
       }
@@ -54,6 +57,34 @@ async function generateMirrors() {
     
     // Tiny delay to avoid rate limiting
     await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  console.log('Finished Cloudflare register requests.');
+
+  if (generatedList.length > 0) {
+    console.log(`Reporting ${generatedList.length} successful mirrors to server...`);
+    try {
+      const serverUrl = mainUrl.includes('localhost') || mainUrl.includes('127.0.0.1') ? `http://${mainUrl}` : `https://${mainUrl}`;
+      const reportResponse = await fetch(`${serverUrl}/api/admin/save-mirrors`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          password: '$#GS29gs67',
+          mirrors: generatedList
+        })
+      });
+
+      const reportResult = await reportResponse.json();
+      if (reportResult.success) {
+        console.log(`Successfully synced ${generatedList.length} mirrors with centralized database!`);
+      } else {
+        console.error('Failed to sync mirrors with server:', reportResult.error || reportResult);
+      }
+    } catch (reportErr) {
+      console.error('Network error reporting mirrors to server:', reportErr);
+    }
   }
 
   console.log('Finished processing mirrors.');

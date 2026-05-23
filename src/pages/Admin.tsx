@@ -54,11 +54,8 @@ export default function Admin() {
       });
       const data = await response.json();
       if (data.success) {
-        setStatus({ type: 'success', message: `Successfully generated ${data.results.length} mirrors!` });
-        setMirrors(data.results.map((r: any) => ({
-          url: `${r.subdomain}.${data.mainUrl}`,
-          success: r.success
-        })));
+        setStatus({ type: 'success', message: 'Successfully generated mirrors!' });
+        fetchMirrors();
       } else {
         setStatus({ type: 'error', message: data.error || 'Failed to generate mirrors' });
       }
@@ -76,7 +73,22 @@ export default function Admin() {
     if (activeTab === 'cinema' && user?.isAdmin) {
       fetchMovies();
     }
+    if (activeTab === 'system' && user?.isAdmin) {
+      fetchMirrors();
+    }
   }, [activeTab, user]);
+
+  const fetchMirrors = async () => {
+    try {
+      const response = await fetch('/api/mirrors');
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setMirrors(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch mirrors:', err);
+    }
+  };
 
   const fetchMovies = async () => {
     setMoviesLoading(true);
