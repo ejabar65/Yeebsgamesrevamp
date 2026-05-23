@@ -28,7 +28,15 @@ export default function MusicPlayer() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          // Overwrite with Tame Impala if the saved playlist contains old defunct default songs
+          const hasOldDefaults = parsed.some(t => 
+            t.videoId === 'jfKfPfyJRdk' || 
+            t.videoId === '4xDzrJKXOOY' || 
+            t.videoId === 'O9YhYInuY3w'
+          );
+          if (!hasOldDefaults) {
+            return parsed;
+          }
         }
       } catch (e) {
         console.error('Failed to parse saved playlist', e);
@@ -261,6 +269,7 @@ export default function MusicPlayer() {
   const onStateChange = (event: any) => {
     if (event.data === 1) setIsPlaying(true);
     if (event.data === 2) setIsPlaying(false);
+    if (event.data === 0) handleNext();
   };
 
   const opts: YouTubeProps['opts'] = {

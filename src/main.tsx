@@ -12,8 +12,26 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+async function init() {
+  try {
+    const res = await fetch('/api/supabase-config');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.isConfigured) {
+        (window as any).SUPABASE_URL = data.supabaseUrl;
+        (window as any).SUPABASE_ANON_KEY = data.supabaseKey;
+        console.log('[Supabase Config] Successfully loaded runtime config from server');
+      }
+    }
+  } catch (err) {
+    console.error('[Supabase Config] Failed to fetch server config', err);
+  }
+
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+}
+
+init();

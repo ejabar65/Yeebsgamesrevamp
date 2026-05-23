@@ -252,6 +252,16 @@ async function startServer() {
     }
   });
 
+  app.get('/api/supabase-config', (req, res) => {
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+    const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+    res.json({
+      supabaseUrl,
+      supabaseKey,
+      isConfigured: !!(supabaseUrl && supabaseKey)
+    });
+  });
+
   let discoveryCache: { data: any, timestamp: number } | null = null;
   const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 

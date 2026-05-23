@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const getSupabaseUrl = () => (window as any).SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL || '';
+const getSupabaseKey = () => (window as any).SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 const isValidUrl = (url: string) => {
   try {
@@ -13,7 +13,7 @@ const isValidUrl = (url: string) => {
 };
 
 export const isSupabaseConfigured = () => {
-  return isValidUrl(supabaseUrl) && !!supabaseKey;
+  return isValidUrl(getSupabaseUrl()) && !!getSupabaseKey();
 };
 
 // Lazy initialization and dummy chainable proxy to avoid crashes if URL is invalid
@@ -39,7 +39,7 @@ export const supabase = new Proxy({} as any, {
       return createDummyProxy()[prop] || createDummyProxy();
     }
     if (!client) {
-      client = createClient(supabaseUrl, supabaseKey);
+      client = createClient(getSupabaseUrl(), getSupabaseKey());
     }
     return client[prop];
   }
